@@ -1,0 +1,71 @@
+package com.bbkmobile.iqoo.console.dao.word;
+
+import java.util.List;
+
+import org.hibernate.Hibernate;
+import org.hibernate.SQLQuery;
+import org.hibernate.Session;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+
+public class AppSearchWordDaoImpl extends HibernateDaoSupport implements AppSearchWordDao{
+
+	@Override
+	public void addAppSearchWord(AppSearchWord word) throws Exception {
+		if(word != null){
+			getHibernateTemplate().save(word);
+		}
+	}
+	@Override
+	public void addAppSearchWord(List<AppSearchWord> words) throws Exception {
+		if(words != null && words.size() >0){
+			for(AppSearchWord word:words){
+				addAppSearchWord(word);
+			}
+		}
+	}
+
+	@Override
+	public int count(AppSearchWord word, AppInfo appInfo) throws Exception {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public List<AppSearchWord> list(AppSearchWord word, AppInfo appInfo,
+			PageVO vo, String orderBy) throws Exception {
+		return null;
+	}
+
+	@Override
+	public List<AppSearchWord> list(AppSearchWord word, AppInfo appInfo,
+			PageVO vo) throws Exception {
+		return null;
+	}
+
+	@Override
+	public List<AppSearchWord> list(AppSearchWord word, AppInfo appInfo)
+			throws Exception {
+		return getHibernateTemplate().find("from AppSearchWord");
+	}
+
+	@Override
+	public void delete(Integer[] ids) throws Exception {
+		for(int id : ids){
+			delete(id);
+		}
+	}
+	@Override
+	public void delete(Integer id) throws Exception {
+		getSession().createSQLQuery("delete from t_search_app where id = ?").setInteger(0, id).executeUpdate();
+	}
+	@Override
+	public List list() throws Exception {
+		String sql = "SELECT t2.appCnName appName,t2.appIcon appIcon,t2.id appId FROM t_search_app t,t_app_info t2 where t.appId = t2.id";
+		Session session = getSession();
+		SQLQuery query = session.createSQLQuery(sql).addScalar("appName", Hibernate.STRING).addScalar("appIcon", Hibernate.STRING).addScalar("appId", Hibernate.LONG);
+		return query.list();
+	}
+}

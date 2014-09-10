@@ -1,0 +1,73 @@
+package com.bbkmobile.iqoo.interfaces.apptype.business;
+
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.lang.StringUtils;
+import org.springframework.stereotype.Service;
+
+import com.bbkmobile.iqoo.common.ServerCfgFileInfo;
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.common.util.cfgfile.PropertiesFileManager;
+import com.bbkmobile.iqoo.common.vo.CommonResultAppInfo;
+import com.bbkmobile.iqoo.console.constants.Constants;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+import com.bbkmobile.iqoo.console.dao.apptype.PersonalType;
+import com.bbkmobile.iqoo.console.dao.apptype.PersonalTypeApp;
+import com.bbkmobile.iqoo.console.dao.modelmgr.Model;
+import com.bbkmobile.iqoo.interfaces.apptype.dao.PersonalTypeAppDao;
+import com.bbkmobile.iqoo.interfaces.model.business.ModelInfoService;
+@Service("iPersonalTypeService")
+public class PersonalTypeServiceImpl implements PersonalTypeService {
+
+	public final static String uploadURI = ServerCfgFileInfo.getFileSeparator()
+			+ "upload" + ServerCfgFileInfo.getFileSeparator() + "typeicon"
+			+ ServerCfgFileInfo.getFileSeparator() + "201207"
+			+ ServerCfgFileInfo.getFileSeparator();
+
+	public final static String uploadDir = PropertiesFileManager.getInstance()
+			.getProperty(Constants.PRO_WEBAPP_WEBROOT) + uploadURI;
+	@Resource(name="iPersonalTypeAppDao")
+	private PersonalTypeAppDao personalTypeAppDao;
+	@Resource(name="iModelInfoService")
+	private ModelInfoService modelInfoService;
+	
+	@Override
+	public List<CommonResultAppInfo>  getRecommendAppsForInterface(PageVO vo, PersonalTypeApp app,
+			String app_version) throws Exception {
+		Model model = filter(app.getAppInfo());
+		vo.setRecordCount(personalTypeAppDao.count(app));
+		return personalTypeAppDao.listForInterface(app, vo,null,model);
+	}
+
+	// 条件过滤介入点，目前支持机型过滤
+	private Model filter(AppInfo info) throws Exception {
+		String model = info.getFilter_model();
+		if (StringUtils.isNotBlank(model)) {
+			// 获取机型相关信息
+			// model = model.split("@")[0];
+			return modelInfoService.findModelByMdName(model);//modelInfoDAO.findModelByMdName(model.trim());
+//			if (null != modelClass) {
+//				// series_id = modelClass.getSeries_id();
+//				info.setMinSdkVersion(modelClass.getSdkVersion());
+//				info.setMaxSdkVersion(modelClass.getSdkVersion());
+//				info.setCPU_ABI(modelClass.getCPU_ABI());
+//				info.setFilter_model(String.valueOf(modelClass.getId()));
+//			}
+		}
+		return null;
+	}
+	public PersonalTypeAppDao getPersonalTypeAppDao() {
+		return personalTypeAppDao;
+	}
+
+	public void setPersonalTypeAppDao(PersonalTypeAppDao personalTypeAppDao) {
+		this.personalTypeAppDao = personalTypeAppDao;
+	}
+
+	@Override
+	public List<PersonalType> list(PersonalType type) throws Exception {
+		return personalTypeAppDao.list(type);
+	}
+}

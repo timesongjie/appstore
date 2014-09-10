@@ -1,0 +1,29 @@
+package com.bbkmobile.iqoo.console.dao.errorreport;
+
+import java.util.List;
+
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+
+public interface ErrorReportDAO {
+
+	int countReportRecords(ErrorReport errorReport) throws Exception;
+
+	List<ErrorReport> getReportList(int start, final ErrorReport errorReport)
+			throws Exception;
+
+	List<ErrorReport> getAllReportList(ErrorReport errorReport)
+			throws Exception;
+
+	boolean deleteReportByID(Long[] ids) throws Exception;
+
+	boolean saveErrorReport(AppInfo appInfo, String user_name, String model,
+			String content, String client_ip, String imei, String errCode,
+			Character type) throws Exception;
+	
+	boolean saveBaiduErrorReport(Long app_id, String user_name, String model,
+            String content, String client_ip, String imei, String errCode,
+            Character type) throws Exception;
+
+	boolean saveAppInstallSucessLog(ErrorReport errorReport, String target,String elapsedtime,String appVersion) throws Exception;
+	ErrorReport findErrorReportById(Long report_id) throws Exception;
+}

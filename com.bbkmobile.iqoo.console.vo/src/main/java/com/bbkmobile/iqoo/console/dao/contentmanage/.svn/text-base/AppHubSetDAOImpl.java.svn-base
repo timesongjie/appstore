@@ -1,0 +1,1417 @@
+package com.bbkmobile.iqoo.console.dao.contentmanage;
+
+import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+
+import org.hibernate.Criteria;
+import org.hibernate.Hibernate;
+import org.hibernate.HibernateException;
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Restrictions;
+import org.springframework.orm.hibernate3.HibernateCallback;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.console.constants.Constants;
+import com.bbkmobile.iqoo.console.dao.advertisement.AdvertisementApp;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+import com.bbkmobile.iqoo.console.dao.appinfo.RequestParameter;
+import com.bbkmobile.iqoo.console.dao.modelmgr.Model;
+
+public class AppHubSetDAOImpl extends HibernateDaoSupport implements AppHubSetDAO {
+
+	@Override
+	public boolean addHubSetByHubType(Long[] ids, int hub_type, String admin_name)
+			throws Exception {
+		// TODO Auto-generated method stub
+//		int rank_order=findMaxOrderHubSet(hub_type);
+//		Session session=getSession();
+//		Date date=new Date();
+//		for(int i=0; i<ids.length; i++)
+//		{
+//			AppInfo appInfo=getHibernateTemplate().load(AppInfo.class, ids[i]);
+//			AppHubSet appHubSet=new AppHubSet();
+//			appHubSet.setAdmin_name(admin_name);
+//			appHubSet.setHub_type(hub_type);
+//			appHubSet.setAppInfo(appInfo);
+//			appHubSet.setHub_order(++rank_order);
+//			appHubSet.setSet_date(date);
+//			appHubSet.setHub_status('1');
+//			session.save(appHubSet);
+//		}
+		return true;
+	}
+	
+	public int findMaxOrderHubSet(int hub_type)
+	{
+		Session session =getSession();
+		Query query=null;
+		int result=0;
+		String sql1="select * from t_hub_set where hub_type="+hub_type;
+		query=session.createSQLQuery(sql1);
+		if(null!=query.list()&&query.list().size()>0)
+		{
+			String sql2="select max(hub_order) from t_hub_set where hub_type="+hub_type;
+			query=session.createSQLQuery(sql2);
+			result=(Integer)query.uniqueResult();
+		}
+		return result;
+		
+	}
+
+	@Override
+	public boolean deleteHubSetByAppId(Long[] ids) throws Exception {
+		// TODO Auto-generated method stub
+		for(Long id : ids)
+		{
+			AppHubSet appHubSet=this.getHibernateTemplate().load(AppHubSet.class, id);
+			this.getHibernateTemplate().delete(appHubSet);
+		}
+		
+		return true;
+	}
+
+	@Override
+	public List<AppHubSet> findAllHubSet() throws Exception {
+		// TODO Auto-generated method stub
+		Session session =getSession();
+		String sql="from AppHubSet";
+		Query query =session.createQuery(sql);
+		return query.list();
+	}
+
+	@Override
+	public Integer countHubSetByHubType(int hubType) throws Exception {
+		// TODO Auto-generated method stub
+		Session session =getSession();
+		String sql="from AppHubSet where hub_type=?";
+		Query query=session.createQuery(sql);
+		query.setInteger(0, hubType);
+		query.list();
+		if(null!=query.list()&&query.list().size()>0)
+		{
+			return query.list().size();
+		}
+		return 0;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppHubSet> findHubSetByHubType(final int hubType, final int startRecord)
+			throws Exception {
+		// TODO Auto-generated method stub
+		List<AppHubSet> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException, SQLException{
+						String hql="from AppHubSet where hub_type="+hubType+" order by hub_order";
+						Query  query=session.createQuery(hql);       
+						query.setFirstResult(startRecord);       
+						query.setMaxResults(1000);       
+						List<AppHubSet> list =query.list();       
+						return   list; 
+					}
+				});
+		return list;
+	}
+
+	@Override
+	public boolean updateShowOrderForHubSet(String[] str) throws Exception {
+		// TODO Auto-generated method stub
+		Session session=getSession();
+		String sql="update AppHubSet set hub_order=? where id=?";
+		for(int i=0; i<str.length; i++)
+		{
+			if(null!=str[i]&&str[i].length()>0)
+			{
+				String order[]=str[i].split(",");
+				if(null!=order&&order.length==2)
+				{
+					Query query=session.createQuery(sql);
+					query.setInteger(0, Integer.parseInt(order[1]));
+					query.setLong(1, Long.parseLong(order[0]));
+					query.executeUpdate();
+				}
+			}
+		}
+		return true;
+	}
+	
+    public Integer countAllHubHotContents(final HubHotContent hubHotContent) throws Exception {
+
+        Criteria criteria = getSession().createCriteria(HubHotContent.class);
+        criteria.add(Restrictions.eq("hub_id", hubHotContent.getHub_id()));
+        criteria.add(Restrictions.eq("series_id", hubHotContent.getSeries_id()));
+
+        Integer totalRows = ((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult()).intValue();
+        return totalRows;
+    }
+	
+	public List<HubHotContent> getAllHubHotContents(final HubHotContent hubHotContent, final PageVO page) throws Exception {
+        @SuppressWarnings("unchecked")
+        List<HubHotContent> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session.createCriteria(HubHotContent.class);
+                        criteria.add(Restrictions.eq("hub_id", hubHotContent.getHub_id()));
+                        criteria.add(Restrictions.eq("series_id", hubHotContent.getSeries_id()));
+
+                        criteria.addOrder(Order.asc("show_order"));
+                        
+                        Integer startRecord = (page.getCurrentPageNum()-1)*page.getNumPerPage();
+                        criteria.setFirstResult(startRecord);
+                        criteria.setMaxResults(page.getNumPerPage());
+                        
+                        List<HubHotContent> result=criteria.list();  
+                        return result;
+                    }
+                });
+        
+        if(null!=list && list.size()>0){
+            return list;
+        }else{
+            return null;
+        }   
+    }
+	
+	public HubHotContent getHubHotContent(final HubHotContent hubHotContent) throws Exception{
+	    try {
+	        @SuppressWarnings("unchecked")
+	        List<HubHotContent> list = this.getHibernateTemplate().executeFind(
+	                new HibernateCallback() {
+	                    public Object doInHibernate(Session session)
+	                            throws HibernateException {
+	                        Criteria criteria = session.createCriteria(HubHotContent.class);
+	                        if(null!=hubHotContent.getHub_id()){
+	                            criteria.add(Restrictions.eq("hub_id", hubHotContent.getHub_id()));
+	                        }
+	                        if(null!=hubHotContent.getSeries_id()){
+	                            criteria.add(Restrictions.eq("series_id", hubHotContent.getSeries_id()));
+	                        }
+	                        if(null!=hubHotContent.getObject_id()){
+	                            criteria.add(Restrictions.eq("object_id", hubHotContent.getObject_id()));
+	                        }
+	                        List<HubHotContent> result=criteria.list();  
+	                        return result;
+	                    }
+	                });
+	        
+	        if(null!=list && list.size()>0){
+	            return list.get(0);
+	        }else{
+	            return null;
+	        }   
+        } catch (Exception e) {
+            throw e;
+        }
+	}
+
+	public void addHubHotContentSeries(HubHotContent hubHotContent) throws Exception{
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//设置日期格式
+        String now_time = sdf.format(new Date());
+	    String sql = "insert into t_hub_content(hub_id,object_id,type,series_id,show_order," +
+	    		"app_package,min_sdkversion,max_sdkversion,cpu_abi,filter_model,filter_screen,set_date) " +
+	    		"select hub_id,object_id,type," + hubHotContent.getSeries_id() + ",show_order," +
+	    		"app_package,min_sdkversion,max_sdkversion,cpu_abi,filter_model,filter_screen,'" + now_time +
+	    		"' from t_hub_content where hub_id=" + hubHotContent.getHub_id() + " and series_id=0";
+	    getSession().createSQLQuery(sql).executeUpdate();
+	}
+	
+	public void updateHubHotContentShowOrder(HubHotContent hubHotContent,String idsStr) throws Exception{
+	    int show_order=0;
+	    if(null!=idsStr&&!"".equals(idsStr))
+        {
+            String queryString ="update HubHotContent set show_order=? where id=?";
+            Query queryObj=getSession().createQuery(queryString);
+  
+            String app_ids[]=idsStr.split(",");
+            for(int i=0; i<app_ids.length; i++)
+            {   
+                queryObj.setInteger(0, ++show_order);
+                queryObj.setInteger(1, Integer.parseInt(app_ids[i]));
+                queryObj.executeUpdate();  
+            }
+        }
+	}
+	
+	public void deleteHubHotContent(HubHotContent hubHotContent,String idsStr) throws Exception{
+	    if(null!=idsStr&&!"".equals(idsStr))
+        {
+	        String queryString ="delete HubHotContent where id=?";
+            Query queryObj=getSession().createQuery(queryString);
+  
+            String app_ids[]=idsStr.split(",");
+            for(int i=0; i<app_ids.length; i++)
+            {   
+                queryObj.setInteger(0, Integer.parseInt(app_ids[i]));
+                queryObj.executeUpdate();  
+            }
+        }
+	}
+	
+	public AppHubInfo findAppHubInfoByEnName(String enName) throws Exception{
+	    AppHubInfo appHubInfo = null;
+	    List<AppHubInfo> appHubInfoList = getHibernateTemplate().find("from AppHubInfo where en_name =?",enName);
+	    if(null!=appHubInfoList && appHubInfoList.size()>0)
+	    {
+	        appHubInfo = appHubInfoList.get(0);
+	    }
+	    return appHubInfo;
+	}
+	
+	@SuppressWarnings("unchecked")
+    public List<AppHubSet> getAppHubSetBySeriesId(Model model) throws Exception{
+	       Short seriesId = (short)0;
+           if (null != model) {
+               seriesId = model.getSeries_id();
+           }
+           return getHibernateTemplate().find("from AppHubSet where series_id =" + seriesId);
+	}
+	
+    public int countAppHubSetsWithFilterModel(final RequestParameter requestParameter, final Model model)
+            throws Exception {
+
+        Criteria criteria = getSession().createCriteria(AppHubSet.class);
+
+        criteria.add(Restrictions.eq("hub_id", requestParameter.getId()));
+        if (null != model) {
+            criteria.add(Restrictions.eq("series_id", model.getSeries_id()));
+        } else {
+            criteria.add(Restrictions.eq("series_id", (short) 0));
+        }
+
+        Criteria app_criteria = criteria.createCriteria("appInfo", Criteria.LEFT_JOIN);
+        if (null != model) {
+
+            app_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", model.getSdkVersion()),
+                    Restrictions.isNull("minSdkVersion")));
+
+            app_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", model.getSdkVersion()),
+                    Restrictions.isNull("maxSdkVersion")));
+
+            String CPU_ABI = model.getCPU_ABI();
+            if (CPU_ABI != null) {
+                String sql = "(CPU_ABI is null";
+                String cpuabis[] = CPU_ABI.split(",");
+                for (int i = 0; i < cpuabis.length; i++) {
+                    String cpuabi = cpuabis[i];
+                    sql = sql + " or CPU_ABI like '%," + cpuabi + ",%'";
+                }
+                sql = sql + ")";
+                app_criteria.add(Restrictions.sqlRestriction(sql));
+            }
+
+            app_criteria.add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%,"
+                    + model.getId() + ",%'))"));
+        } else {
+            app_criteria.add(Restrictions.eq("appStatus", (short) 0));
+        }
+
+        int totalRows = ((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult()).intValue(); // 是否为null
+        return totalRows;
+    }
+	
+    public List<AppHubSet> getAppHubSetsWithFilterModel(final RequestParameter requestParameter, final Model model)
+            throws Exception {
+        //Session session=getSession();
+        //session.clear();
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<AppHubSet> list = this.getHibernateTemplate().executeFind(new HibernateCallback() {
+            public Object doInHibernate(Session session) throws HibernateException {
+                Criteria criteria = session.createCriteria(AppHubSet.class);
+
+                criteria.add(Restrictions.eq("hub_id", requestParameter.getId()));
+                
+                if(null!=model)
+                {
+                	criteria.add(Restrictions.eq("series_id", model.getSeries_id()));
+                }
+                else
+                {
+                	criteria.add(Restrictions.eq("series_id", (short)0));
+                }
+
+                Criteria app_criteria = criteria.createCriteria("appInfo", Criteria.LEFT_JOIN);
+                if (null != model) {
+
+                    app_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", model.getSdkVersion()),
+                            Restrictions.isNull("minSdkVersion")));
+
+                    app_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", model.getSdkVersion()),
+                            Restrictions.isNull("maxSdkVersion")));
+
+                    String CPU_ABI=model.getCPU_ABI();
+                    if(CPU_ABI!=null){
+                        String sql="(CPU_ABI is null";
+                        String cpuabis[]=CPU_ABI.split(","); 
+                        for(int i=0; i<cpuabis.length; i++)
+                        {
+                            String cpuabi=cpuabis[i];
+                            sql=sql+" or CPU_ABI like '%,"+cpuabi+",%'";                          
+                        }
+                        sql=sql+")";
+                        app_criteria.add(Restrictions.sqlRestriction(sql)); 
+                    }
+
+                    app_criteria.add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + model.getId() + ",%'))"));
+                }
+                else{
+                    app_criteria.add(Restrictions.ne("appStatus", (short) 12));        
+                }
+                
+                switch (requestParameter.getOrder_type()) {
+                    case Constants.TYPE_ONSALEDATE_ASC:
+                        app_criteria.addOrder(Order.desc("onSaleDate"));
+                        break;
+                    case Constants.TYPE_ONSALEDATE_DESC:
+                        app_criteria.addOrder(Order.asc("onSaleDate"));
+                        break;
+                    case Constants.TYPE_DOWNLOADCOUNT_ASC:
+                        app_criteria.addOrder(Order.asc("downloadCount"));
+                        break;
+                    case Constants.TYPE_DOWNLOADCOUNT_DESC:
+                        app_criteria.addOrder(Order.desc("downloadCount"));
+                        break;
+                    case Constants.TYPE_AVGCOMMENT_ASC:
+                        app_criteria.addOrder(Order.asc("avgComment"));
+                        break;
+                    case Constants.TYPE_AVGCOMMENT_DESC:
+                        app_criteria.addOrder(Order.desc("avgComment"));
+                        break;
+                    default:
+                        break;
+                }
+
+                app_criteria.setFirstResult((requestParameter.getPage_index() - 1)
+                        * requestParameter.getApps_per_page());
+                app_criteria.setMaxResults(requestParameter.getApps_per_page() + 1);
+                List<AppHubSet> result = criteria.list();
+                return result;
+            }
+        });
+        if(null!=list && list.size()>0){
+            return list;
+        }else{
+            return null;
+        }   
+
+    }
+    
+    private boolean isExistHubHotcontentsForSeries(RequestParameter requestParameter,  Model model) throws Exception{
+        if(null!=model){
+            String sql = "select id from t_hub_content where hub_id="+ requestParameter.getId() +" and series_id="+model.getSeries_id()+" limit 1";
+            Integer id = (Integer) getSession().createSQLQuery(sql).addScalar("id",Hibernate.INTEGER).uniqueResult();
+            if(null==id){
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    public List<HubHotContent> getHubHotContentsWithFilterModel(final RequestParameter requestParameter, final Model model)
+            throws Exception {
+        Short series_id = 0;
+        if(null!=model){
+            if(isExistHubHotcontentsForSeries(requestParameter,model)){
+                series_id = model.getSeries_id();
+            }
+        }
+        final short seriesId=series_id;
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<HubHotContent> list = this.getHibernateTemplate().executeFind(new HibernateCallback() {
+            public Object doInHibernate(Session session) throws HibernateException {
+                Criteria criteria = session.createCriteria(HubHotContent.class);
+
+                criteria.add(Restrictions.eq("hub_id", requestParameter.getId()));
+                
+                if (null != model) {
+                    criteria.add(Restrictions.eq("series_id", seriesId));
+                } else {
+                    criteria.add(Restrictions.eq("series_id", (short) 0));
+                }
+
+                if (null != model) {
+
+//                    criteria.add(Restrictions.or(Restrictions.le("min_sdkversion", Short.parseShort(model.getSdkVersion().toString())),
+//                            Restrictions.isNull("min_sdkversion")));
+//
+//                    criteria.add(Restrictions.or(Restrictions.ge("max_sdkversion", Short.parseShort(model.getSdkVersion().toString())),
+//                            Restrictions.isNull("max_sdkversion")));
+//
+//                    String CPU_ABI=model.getCPU_ABI();
+//                    if(CPU_ABI!=null){
+//                        String sql="(CPU_ABI is null";
+//                        String cpuabis[]=CPU_ABI.split(","); 
+//                        for(int i=0; i<cpuabis.length; i++)
+//                        {
+//                            String cpuabi=cpuabis[i];
+//                            sql=sql+" or CPU_ABI like '%,"+cpuabi+",%'";                          
+//                        }
+//                        sql=sql+")";
+//                        criteria.add(Restrictions.sqlRestriction(sql)); 
+//                    } 
+                    
+                    //add appStatus
+                    criteria.add(Restrictions.sqlRestriction("(app_status=0 or (app_status=13 and filter_model not like '%," + model.getId() + ",%'))"));
+                } else{
+                    criteria.add(Restrictions.ne("appStatus", (short) 12));
+                }
+                String packagesSql = "(\'" + requestParameter.getPackages() + "\')";
+                packagesSql = packagesSql.replace(",", "\',\'");
+                // criteria.add(Restrictions.or(Restrictions.not(Restrictions.in("app_package",
+                // packagesSql)),
+                // Restrictions.isNull("app_package")));
+                criteria.add(Restrictions.sqlRestriction("(app_package is null or app_package not in " + packagesSql+")"));
+
+                criteria.addOrder(Order.asc("show_order"));
+
+                criteria.setFirstResult((requestParameter.getPage_index() - 1)
+                        * requestParameter.getApps_per_page());
+                criteria.setMaxResults(requestParameter.getApps_per_page() + 1);
+                List<HubHotContent> result = criteria.list();
+                return result;
+            }
+        });
+        if(null!=list && list.size()>0){
+            return list;
+        }else{
+            return null;
+        }   
+
+    }
+    
+    public int countHotAppHubSetsWithFilterModel(final short recommend, final RequestParameter requestParameter,
+            final Model model) throws Exception {
+
+        Criteria criteria = getSession().createCriteria(AppHubSet.class);
+
+        criteria.add(Restrictions.eq("hub_id", requestParameter.getId()));
+
+        Short seriesId = (short) 0;
+        if (null != model) {
+            seriesId = model.getSeries_id();
+        }
+        criteria.add(Restrictions.eq("series_id", seriesId));
+        criteria.add(Restrictions.eq("recommend", recommend));
+
+        Criteria app_criteria = criteria.createCriteria("appInfo", Criteria.LEFT_JOIN);
+        if (null != model) {
+
+            app_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", model.getSdkVersion()),
+                    Restrictions.isNull("minSdkVersion")));
+
+            app_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", model.getSdkVersion()),
+                    Restrictions.isNull("maxSdkVersion")));
+
+            String CPU_ABI = model.getCPU_ABI();
+            if (CPU_ABI != null) {
+                String sql = "(CPU_ABI is null";
+                String cpuabis[] = CPU_ABI.split(",");
+                for (int i = 0; i < cpuabis.length; i++) {
+                    String cpuabi = cpuabis[i];
+                    sql = sql + " or CPU_ABI like '%," + cpuabi + ",%'";
+                }
+                sql = sql + ")";
+                app_criteria.add(Restrictions.sqlRestriction(sql));
+            }
+
+            app_criteria.add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%,"
+                    + model.getId() + ",%'))"));
+        } else {
+            app_criteria.add(Restrictions.eq("appStatus", (short) 0));
+        }
+
+        int totalRows = ((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult()).intValue(); // 是否为null
+        return totalRows;
+
+    }
+
+    public List<AppHubSet> getHotAppHubSetsWithFilterModel(final short recommend, final RequestParameter requestParameter, final Model model)
+            throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        //Session session=getSession();
+        //session.clear();
+        List<AppHubSet> list = this.getHibernateTemplate().executeFind(new HibernateCallback() {
+            public Object doInHibernate(Session session) throws HibernateException {
+                Criteria criteria = session.createCriteria(AppHubSet.class);
+
+                criteria.add(Restrictions.eq("hub_id", requestParameter.getId()));
+                Short seriesId = (short)0;
+                if (null != model) {
+                    seriesId = model.getSeries_id();
+                }
+                criteria.add(Restrictions.eq("series_id", seriesId));
+                criteria.add(Restrictions.eq("recommend", recommend));
+
+                Criteria app_criteria = criteria.createCriteria("appInfo", Criteria.LEFT_JOIN);
+                if (null != model) {
+
+                    app_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", model.getSdkVersion()),
+                            Restrictions.isNull("minSdkVersion")));
+
+                    app_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", model.getSdkVersion()),
+                            Restrictions.isNull("maxSdkVersion")));
+
+                    String CPU_ABI=model.getCPU_ABI();
+                    if(CPU_ABI!=null){
+                        String sql="(CPU_ABI is null";
+                        String cpuabis[]=CPU_ABI.split(","); 
+                        for(int i=0; i<cpuabis.length; i++)
+                        {
+                            String cpuabi=cpuabis[i];
+                            sql=sql+" or CPU_ABI like '%,"+cpuabi+",%'";                          
+                        }
+                        sql=sql+")";
+                        app_criteria.add(Restrictions.sqlRestriction(sql)); 
+                    }
+
+                    app_criteria.add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + model.getId() + ",%'))"));
+                }
+                else{
+                    app_criteria.add(Restrictions.ne("appStatus", (short) 12));
+                }
+                               
+                List<AppHubSet> result = criteria.list();
+                return result;
+            }
+        });
+        if(null!=list && list.size()>0){
+            return list;
+        }else{
+            return null;
+        }   
+    }
+    
+    public int countHotHubApps(final short recommend, final RequestParameter requestParameter,
+            final Model model) throws Exception {
+
+        Criteria criteria = getSession().createCriteria(AppHubSet.class);
+
+        criteria.add(Restrictions.eq("hub_id", requestParameter.getId()));
+
+        Short seriesId = (short) 0;
+        if (null != model) {
+            seriesId = model.getSeries_id();
+        }
+        criteria.add(Restrictions.eq("series_id", seriesId));
+        criteria.add(Restrictions.eq("recommend", recommend));
+
+        Criteria app_criteria = criteria.createCriteria("appInfo", Criteria.LEFT_JOIN);
+        
+        if (null != model) {
+
+            app_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", model.getSdkVersion()),
+                    Restrictions.isNull("minSdkVersion")));
+
+            app_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", model.getSdkVersion()),
+                    Restrictions.isNull("maxSdkVersion")));
+
+            String CPU_ABI = model.getCPU_ABI();
+            if (CPU_ABI != null) {
+                String sql = "(CPU_ABI is null";
+                String cpuabis[] = CPU_ABI.split(",");
+                for (int i = 0; i < cpuabis.length; i++) {
+                    String cpuabi = cpuabis[i];
+                    sql = sql + " or CPU_ABI like '%," + cpuabi + ",%'";
+                }
+                sql = sql + ")";
+                app_criteria.add(Restrictions.sqlRestriction(sql));
+            }
+
+            app_criteria.add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%,"
+                    + model.getId() + ",%'))"));
+        } else {
+            app_criteria.add(Restrictions.eq("appStatus", (short) 0));
+        }
+        
+        String packagesSql = "(\'" + requestParameter.getPackages() + "\')";
+        packagesSql = packagesSql.replace(",", "\',\'");
+        app_criteria.add(Restrictions.sqlRestriction("appPackage not in "+packagesSql));
+
+        int totalRows = ((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult()).intValue(); // 是否为null
+        return totalRows;
+
+    }
+
+    public List<AppHubSet> getHotHubApps(final short recommend, final RequestParameter requestParameter, final Model model)
+            throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        //Session session=getSession();
+        //session.clear();
+        List<AppHubSet> list = this.getHibernateTemplate().executeFind(new HibernateCallback() {
+            public Object doInHibernate(Session session) throws HibernateException {
+                Criteria criteria = session.createCriteria(AppHubSet.class);
+
+                criteria.add(Restrictions.eq("hub_id", requestParameter.getId()));
+                Short seriesId = (short)0;
+                if (null != model) {
+                    seriesId = model.getSeries_id();
+                }
+                criteria.add(Restrictions.eq("series_id", seriesId));
+                criteria.add(Restrictions.eq("recommend", recommend));
+
+                Criteria app_criteria = criteria.createCriteria("appInfo", Criteria.LEFT_JOIN);
+                
+                //String packageStr = "(\'" + requestParameter.getPackages() + "\')";
+                //packageStr = packageStr.replace(",", "\",\"");
+                
+                //String[] packages = requestParameter.getPackages().split(",");
+                //app_criteria.add(Restrictions.not(Restrictions.in("appCnName", packages)));
+
+                if (null != model) {
+
+                    app_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", model.getSdkVersion()),
+                            Restrictions.isNull("minSdkVersion")));
+
+                    app_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", model.getSdkVersion()),
+                            Restrictions.isNull("maxSdkVersion")));
+
+                    String CPU_ABI=model.getCPU_ABI();
+                    if(CPU_ABI!=null){
+                        String sql="(CPU_ABI is null";
+                        String cpuabis[]=CPU_ABI.split(","); 
+                        for(int i=0; i<cpuabis.length; i++)
+                        {
+                            String cpuabi=cpuabis[i];
+                            sql = sql + " or CPU_ABI like '%," + cpuabi + ",%'";
+                        }
+                        sql = sql + ")";
+                        app_criteria.add(Restrictions.sqlRestriction(sql));
+                    }
+
+                    app_criteria.add(Restrictions
+                            .sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%,"
+                                    + model.getId() + ",%'))"));
+                } else {
+                    app_criteria.add(Restrictions.ne("appStatus", (short) 12));
+                }
+                
+                String packagesSql = "(\'" + requestParameter.getPackages() + "\')";
+                packagesSql = packagesSql.replace(",", "\',\'");
+                app_criteria.add(Restrictions.sqlRestriction("appPackage not in "+packagesSql));
+
+                if(requestParameter.getApps_per_page()!=0){
+                    app_criteria.setFirstResult(requestParameter.getPage_index());
+                    app_criteria.setMaxResults(requestParameter.getApps_per_page());
+                }
+                
+                List<AppHubSet> result = criteria.list();
+                return result;
+            }
+        });
+        if(null!=list && list.size()>0){
+            return list;
+        }else{
+            return null;
+        }   
+    }
+    
+    public int countSearchHubAppsWithFilterModel(final RequestParameter requestParameter, final Model model)
+            throws Exception {
+
+        Criteria criteria = getSession().createCriteria(AppHubSet.class);
+
+        criteria.add(Restrictions.eq("hub_id", requestParameter.getId()));
+        if (null != model) {
+            criteria.add(Restrictions.eq("series_id", model.getSeries_id()));
+        } else {
+            criteria.add(Restrictions.eq("series_id", (short) 0));
+        }
+
+        Criteria app_criteria = criteria.createCriteria("appInfo", Criteria.LEFT_JOIN);
+        
+        String word = requestParameter.getWord();
+        if (null != word && !"".equals(word)) { // 搜索
+            String key = word.trim().replaceAll(" ", "%");
+            app_criteria.add(Restrictions.like("appCnName", "%"
+                    + key + "%"));
+        }
+        
+        if (null != model) {
+
+            app_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", model.getSdkVersion()),
+                    Restrictions.isNull("minSdkVersion")));
+
+            app_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", model.getSdkVersion()),
+                    Restrictions.isNull("maxSdkVersion")));
+
+            String CPU_ABI = model.getCPU_ABI();
+            if (CPU_ABI != null) {
+                String sql = "(CPU_ABI is null";
+                String cpuabis[] = CPU_ABI.split(",");
+                for (int i = 0; i < cpuabis.length; i++) {
+                    String cpuabi = cpuabis[i];
+                    sql = sql + " or CPU_ABI like '%," + cpuabi + ",%'";
+                }
+                sql = sql + ")";
+                app_criteria.add(Restrictions.sqlRestriction(sql));
+            }
+
+            app_criteria.add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%,"
+                    + model.getId() + ",%'))"));
+        } else {
+            app_criteria.add(Restrictions.eq("appStatus", (short) 0));
+        }
+
+        int totalRows = ((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult()).intValue(); // 是否为null
+        return totalRows;
+    }
+    
+    public List<AppHubSet> getSearchHubAppsWithFilterModel(final RequestParameter requestParameter, final Model model)
+            throws Exception {
+        //Session session=getSession();
+        //session.clear();
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<AppHubSet> list = this.getHibernateTemplate().executeFind(new HibernateCallback() {
+            public Object doInHibernate(Session session) throws HibernateException {
+                Criteria criteria = session.createCriteria(AppHubSet.class);
+
+                criteria.add(Restrictions.eq("hub_id", requestParameter.getId()));
+                
+                if(null!=model)
+                {
+                    criteria.add(Restrictions.eq("series_id", model.getSeries_id()));
+                }
+                else
+                {
+                    criteria.add(Restrictions.eq("series_id", (short)0));
+                }
+
+                Criteria app_criteria = criteria.createCriteria("appInfo", Criteria.LEFT_JOIN);
+                
+                
+                String word = requestParameter.getWord();
+                if (null != word && !"".equals(word)) { // 搜索
+                    String key = word.trim().replaceAll(" ", "%");
+                    app_criteria.add(Restrictions.like("appCnName", "%"
+                            + key + "%"));
+                }else{
+                    app_criteria.addOrder(Order.desc("downloadCount"));
+                }
+                
+                
+                if (null != model) {
+
+                    app_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", model.getSdkVersion()),
+                            Restrictions.isNull("minSdkVersion")));
+
+                    app_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", model.getSdkVersion()),
+                            Restrictions.isNull("maxSdkVersion")));
+
+                    String CPU_ABI=model.getCPU_ABI();
+                    if(CPU_ABI!=null){
+                        String sql="(CPU_ABI is null";
+                        String cpuabis[]=CPU_ABI.split(","); 
+                        for(int i=0; i<cpuabis.length; i++)
+                        {
+                            String cpuabi=cpuabis[i];
+                            sql=sql+" or CPU_ABI like '%,"+cpuabi+",%'";                          
+                        }
+                        sql=sql+")";
+                        app_criteria.add(Restrictions.sqlRestriction(sql)); 
+                    }
+
+                    app_criteria.add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + model.getId() + ",%'))"));
+                }
+                else{
+                    app_criteria.add(Restrictions.ne("appStatus", (short) 12));
+                }
+
+                app_criteria.setFirstResult((requestParameter.getPage_index() - 1)
+                        * requestParameter.getApps_per_page());
+                app_criteria.setMaxResults(requestParameter.getApps_per_page());
+                List<AppHubSet> result = criteria.list();
+                return result;
+            }
+        });
+        if(null!=list && list.size()>0){
+            return list;
+        }else{
+            return null;
+        }   
+
+    }
+    
+    //end:汇手机接口@haiyan
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppHubInfo> getAllPhoneHub() throws Exception {
+		// TODO Auto-generated method stub
+		return getHibernateTemplate().find("from AppHubInfo");
+	}
+
+	@Override
+	public void savePhoneHub(AppHubInfo appHubInfo) throws Exception {
+		// TODO Auto-generated method stub
+		if(null!=appHubInfo.getHub_name()&&!"".equals(appHubInfo.getHub_name()))
+		{
+			appHubInfo.setAdd_time(new Date());
+			this.getHibernateTemplate().save(appHubInfo);
+		}
+	}
+
+	@Override
+	public AppHubInfo getAppHubById(Integer id) throws Exception {
+		// TODO Auto-generated method stub
+		return getHibernateTemplate().load(AppHubInfo.class, id);
+	}
+
+	@Override
+	public void updateAppHub(AppHubInfo appHubInfo) throws Exception {
+		// TODO Auto-generated method stub
+		AppHubInfo hub=getHibernateTemplate().load(AppHubInfo.class, appHubInfo.getId());
+		hub.setHub_name(appHubInfo.getHub_name());
+		hub.setEn_name(appHubInfo.getEn_name());
+		hub.setModify_time(new Date());
+		getHibernateTemplate().update(hub);
+	}
+
+	@Override
+	public void deletePhoneHubByID(int[] ids) throws Exception {
+		// TODO Auto-generated method stub
+		try{
+			String queryString1 ="delete from AppHubSet where hub_id=?";
+			String queryString2 ="delete from AppHubInfo where id=?";
+			Session session=getSession();
+			Query queryObj=null;
+			for(int id:ids){	
+			// 1. 删除t_hub_set表中对应的数据 2.删除t_hub_info对应的数据
+	        // 1.删除t_hub_set表中对应的数据
+			queryObj=session.createQuery(queryString1);
+			queryObj.setInteger(0, id);
+			queryObj.executeUpdate();
+			
+			//2.删除t_hub_info对应的数据
+			queryObj=session.createQuery(queryString2);
+			queryObj.setInteger(0, id);
+			queryObj.executeUpdate();
+			}
+		}catch(Exception e){
+			throw e;
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppHubSet> findAppByHubId(final Integer hub_id, final Short series_id, final String appSortWay) throws Exception {
+		// TODO Auto-generated method stub
+	//	List<AppInfo> appInfo_list=new ArrayList<AppInfo>();
+        List<AppHubSet> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                    	session.flush();
+                    	session.clear();
+                        Criteria criteria = session.createCriteria(AppHubSet.class);
+               //         Criteria app_criteria = criteria.createCriteria("appInfos", Criteria.LEFT_JOIN);
+                        Criteria app_criteria = criteria.createCriteria("appInfo", Criteria.LEFT_JOIN);
+//                        adApp_criteria.setFirstResult(0);
+//                        adApp_criteria.setMaxResults(2);
+                        criteria.add(Restrictions.eq("hub_id", hub_id));
+                        criteria.add(Restrictions.eq("series_id", series_id));
+             //           criteria.add(Restrictions.eq("type", (short)0));
+                        if(series_id==null || series_id.shortValue()==0)
+                        {
+                        	criteria.add(Restrictions.eq("type", (short)0));
+                        }
+                        else
+                        {
+                        	criteria.add(Restrictions.eq("type", (short)1));
+                        }
+                        if(null==appSortWay || "".equals(appSortWay))
+                        {
+                        	//默认按下载量降序排序
+                        	app_criteria.addOrder(Order.desc("downloadCount"));
+                        }
+                        else if("date_up".equals(appSortWay))
+                        {
+                        	app_criteria.addOrder(Order.asc("onSaleDate"));
+                        }
+                        else if("date_down".equals(appSortWay))
+                        {
+                        	app_criteria.addOrder(Order.desc("onSaleDate"));
+                        }
+                        else if("comment_up".equals(appSortWay))
+                        {
+                        	app_criteria.addOrder(Order.asc("avgComment"));
+                        }
+                        else if("comment_down".equals(appSortWay))
+                        {
+                        	app_criteria.addOrder(Order.desc("avgComment"));
+                        }
+                        else if("download_up".equals(appSortWay))
+                        {
+                        	app_criteria.addOrder(Order.asc("downloadCount"));
+                        }
+                        else if("download_down".equals(appSortWay))
+                        {
+                        	app_criteria.addOrder(Order.desc("downloadCount"));
+                        }
+                        else if("rocommend_main".equals(appSortWay))
+                        {
+                        	criteria.addOrder(Order.desc("recommend"));
+                        }
+                   
+                        List<AppHubSet> result=criteria.list();  
+                        return result;
+                    }
+                });
+             
+//        if(null!=list&&list.size()>0)
+//		{
+//			Iterator<AppInfo> it=list.get(0).getAppInfos().iterator();
+//			while(it.hasNext())
+//			{
+//				appInfo_list.add(it.next());
+//			}
+//			return appInfo_list ;
+//		}
+        return list;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public Integer countHubApp(final AppHubInfo appHubInfo, final AppInfo app)
+			throws Exception {
+		// TODO Auto-generated method stub
+		int count=0;
+		List<AppInfo> appInfo_list=new ArrayList<AppInfo>();
+        List<AppHubInfo> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                    	session.flush();
+                    	session.clear();
+                        Criteria criteria = session.createCriteria(AppHubInfo.class);
+                        criteria.add(Restrictions.eq("id", appHubInfo.getId()));
+             
+                        Criteria hubApp_criteria = criteria.createCriteria("appInfos", Criteria.LEFT_JOIN);
+                        if(null!=app&&app.getType()!=0)
+						{
+							app.getAppType().setId(app.getType());
+							hubApp_criteria.add(Restrictions.eq("appType", app.getAppType()));
+						}
+              
+                 //       adApp_criteria.addOrder(Order.asc("id"));                            							
+                        List<AppHubInfo> result=criteria.list();  
+                        return result;
+                    }
+                });
+        if(null!=list)
+		{
+			Iterator<AppInfo> it=list.get(0).getAppInfos().iterator();
+			while(it.hasNext())
+			{
+				appInfo_list.add(it.next());
+			}
+			count=appInfo_list.size() ;
+		}
+		return count;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppInfo> getHubByHub(final AppHubInfo appHubInfo, final AppInfo app,
+			final int startRecord) throws Exception {
+		// TODO Auto-generated method stub
+		List<AppInfo> appInfo_list=new ArrayList<AppInfo>();
+        List<AppHubInfo> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                    	session.flush();
+                    	session.clear();
+                        Criteria criteria = session.createCriteria(AppHubInfo.class);
+                        criteria.add(Restrictions.eq("id", appHubInfo.getId()));
+          //              Criteria adApp_criteria_mid=criteria.createCriteria("appInfos", Criteria.LEFT_JOIN);
+                        Criteria hubApp_criteria = criteria.createCriteria("appInfos", Criteria.LEFT_JOIN);
+                        
+                        if(null!=app&&app.getType()!=0)
+						{
+							app.getAppType().setId(app.getType());
+							hubApp_criteria.add(Restrictions.eq("appType", app.getAppType()));
+						}
+                  //      adApp_criteria.addOrder(Order.asc("id"));  
+                        hubApp_criteria.setFirstResult(startRecord);
+                        hubApp_criteria.setMaxResults(10);
+                       
+                        List<AppHubInfo> result=criteria.list();  
+                        return result;
+                    }
+                });
+        if(null!=list)
+		{
+			Iterator<AppInfo> it=list.get(0).getAppInfos().iterator();
+			while(it.hasNext())
+			{
+				appInfo_list.add(it.next());
+			}
+		}
+		return appInfo_list;
+	}
+
+	@Override
+	public AppHubInfo findHubById(Integer hub_id) throws Exception {
+		// TODO Auto-generated method stub
+	//	return getHibernateTemplate().load(AppHubInfo.class, hub_id);
+		
+		try{
+            return (AppHubInfo)getHibernateTemplate().find("from AppHubInfo where id=?",hub_id).get(0);
+        }catch(Exception e){
+            throw e;
+        }
+	}
+
+	@Override
+	public void addHubAppForSeries(Integer hubId, Short seriesId, Long[] app_ids,
+			short type, String adminName) throws Exception {
+		// TODO Auto-generated method stub
+		try{
+		    int order=findMaxOrderForSeries(hubId, seriesId);
+			for(Long app_id:app_ids)
+			{
+				if(!isExistSeriesHubSet(hubId,seriesId,app_id))
+				{
+					AppHubSet appHubSet=new AppHubSet();
+					AppInfo appInfo=getHibernateTemplate().load(AppInfo.class, app_id);
+					appHubSet.setHub_id(hubId);
+					appHubSet.setSeries_id(seriesId);
+					appHubSet.setAppInfo(appInfo);
+					appHubSet.setShow_order(++order);
+					appHubSet.setSet_date(new Date());
+					appHubSet.setRecommend('0');
+					appHubSet.setType(type);
+					appHubSet.setLevel((short)1);
+					appHubSet.setAdmin_name(adminName);
+					getHibernateTemplate().save(appHubSet);
+				}
+			}
+		
+		}catch(Exception e){
+			throw e;
+		}
+	}
+	
+	private Short findMaxShowOrderForHubHotContent(HubHotContent hubHotContent)
+    {
+	    Short result=null;
+        String sql="select max(show_order) from t_hub_content where hub_id="+hubHotContent.getHub_id()+" and series_id="+hubHotContent.getSeries_id() ;
+        result= (Short) getSession().createSQLQuery(sql).uniqueResult();     
+        return result;
+    }
+	
+	public void addHubHotContents(HubHotContent hubHotContent,Long ids[]) throws Exception{
+        try {
+            Short show_order;
+            show_order = findMaxShowOrderForHubHotContent(hubHotContent);
+            if(null==show_order){
+                show_order=0;
+            }
+            for (int i = 0; i < ids.length; i++) {
+                Character type = hubHotContent.getType();
+                HubHotContent hubHotContent2 = new HubHotContent();
+                hubHotContent2.setHub_id(hubHotContent.getHub_id());
+                hubHotContent2.setObject_id(ids[i].intValue());
+                hubHotContent2.setType(type);   
+                hubHotContent2.setSeries_id(hubHotContent.getSeries_id());
+                hubHotContent2.setShow_order(++show_order);
+
+                if(type.equals('1')){    //1-app 2-ad 3-topic
+                    AppInfo appInfo=getHibernateTemplate().load(AppInfo.class, ids[i]);
+                    hubHotContent2.setApp_package(appInfo.getAppPackage());
+                    if(null!=appInfo.getMinSdkVersion()){
+                        hubHotContent2.setMin_sdkversion(appInfo.getMinSdkVersion().shortValue());
+                    }
+                    if(null!=appInfo.getMaxSdkVersion()){
+                        hubHotContent2.setMax_sdkversion((Short)appInfo.getMaxSdkVersion().shortValue()); 
+                    }
+                    hubHotContent2.setFilter_screen(appInfo.getFilter_screen());
+                    hubHotContent2.setCpu_abi(appInfo.getCPU_ABI());
+                    hubHotContent2.setApp_status(appInfo.getAppStatus());
+                    hubHotContent2.setFilter_model(appInfo.getFilter_model());
+                }            
+
+                hubHotContent2.setSet_date(new Date());
+                getHibernateTemplate().save(hubHotContent2);
+            }
+        } catch (Exception e) {
+            throw e;
+        }
+	}
+
+	public int findMaxOrderForSeries(int hub_id, short series_id)
+	{
+		int result=0;
+		Session session =getSession();
+		Query query=null;
+		
+		String sql1="select * from t_hub_set where hub_id="+hub_id+" and series_id="+series_id;
+		query=session.createSQLQuery(sql1);
+		if(null!=query.list()&&query.list().size()>0)
+		{
+			String sql2="select max(show_order) from t_hub_set where hub_id="+hub_id+" and series_id="+series_id;
+			query=session.createSQLQuery(sql2);
+			result=(Integer)query.uniqueResult();
+		}
+		return result;
+	}
+	
+	public boolean isExistSeriesHubSet(Integer hub_id,Short series_id,Long app_id)
+	{
+		boolean b=false;
+		List list=getHibernateTemplate().find("from AppHubSet where hub_id=? and series_id=? and appInfo.id=?",hub_id,series_id,app_id);
+		if(null!=list&&list.size()==1)
+		{
+			b=true;
+		}
+		return b;
+	}
+	
+	@Override
+	public boolean isInitSeriesHubSet(Integer hub_id, Short series_id) throws Exception {
+		// TODO Auto-generated method stub
+		boolean b=false;
+		List list=getHibernateTemplate().find("from AppHubSet where hub_id=? and series_id=? and type=?",hub_id,series_id,(short)1);
+		if(null!=list&&list.size()>0)
+		{
+			b=true;
+		}
+		return b;
+	}
+
+	@Override
+	public List<AppHubSet> findHubSetByProperty(String property,
+			String property2, Integer hubId, short seriesId) {
+		// TODO Auto-genera
+		List list=getHibernateTemplate().find("from AppHubSet where "+property+"=?"+" and "+property2+"=?",hubId,seriesId);
+		return list;
+	}
+
+	@Override
+	public void saveHubSetForSeries(Integer hubId, Short seriesId,
+			List<AppHubSet> list) throws Exception {
+		// TODO Auto-generated method stub
+	//	deleteHubSetBySeries(hubId,seriesId);
+		
+		List has_list=getHibernateTemplate().find("from AppHubSet where hub_id=? and series_id=?",hubId,seriesId);
+		if(null!=has_list&&has_list.size()>0)
+		{
+			String queryString ="update AppHubSet set type=? where hub_id=? and series_id=?";
+            Session session=getSession();
+            Query queryObj=session.createQuery(queryString);
+            queryObj.setShort(0, (short)1);
+            queryObj.setInteger(1, hubId);
+            queryObj.setShort(2, seriesId);
+            queryObj.executeUpdate();
+		}
+		else
+		{
+			for(AppHubSet hub_set : list)
+			{
+				AppHubSet hub=new AppHubSet();
+				hub.setHub_id(hubId);
+				hub.setSeries_id(seriesId);
+				hub.setAppInfo(hub_set.getAppInfo());
+				hub.setSet_date(new Date());
+				hub.setShow_order(hub_set.getShow_order());
+				hub.setRecommend(hub_set.getRecommend());
+				hub.setLevel(hub_set.getLevel());
+				hub.setType((short)1);
+				hub.setAdmin_name(hub_set.getAdmin_name());
+				getHibernateTemplate().save(hub);
+			}
+		}		
+	}
+
+	
+	public void deleteHubSetBySeries(Integer hubId, Short seriesId)
+	{
+		Session session=getSession();
+		String sql="delete from AppHubSet where hub_id=? and series_id=?";
+		Query query=session.createQuery(sql);
+		query.setInteger(0, hubId);
+		query.setShort(1, seriesId);
+		query.executeUpdate();
+	}
+
+	@Override
+	public void deleteHubSetByAppId(Integer hubId, Short seriesId, Long[] app_ids)
+			throws Exception {
+		// TODO Auto-generated method stub
+try{
+	        Session session=getSession();
+	        Query queryObj=null;
+	        String queryString="";
+			if(seriesId==0)
+			{
+				queryString ="delete AppHubSet where hub_id=? and appInfo.id=?";
+				for(Long id:app_ids){
+				queryObj=session.createQuery(queryString);
+				queryObj.setInteger(0, hubId);
+				queryObj.setLong(1, id);
+				queryObj.executeUpdate();
+				}
+			}
+			else
+			{
+				queryString ="delete AppHubSet where hub_id=? and series_id=? and appInfo.id=?";
+		//		Session session=getSession();
+				for(Long id:app_ids){
+				queryObj=session.createQuery(queryString);
+				queryObj.setInteger(0, hubId);
+				queryObj.setShort(1, seriesId);
+				queryObj.setLong(2, id);
+				queryObj.executeUpdate();
+				}
+				queryString ="from AppHubSet where hub_id=? and series_id=?";
+				queryObj=session.createQuery(queryString);
+				queryObj.setInteger(0, hubId);
+				queryObj.setShort(1, seriesId);
+				if(null==queryObj.list() || queryObj.list().size()==0)
+				{
+					List<AppHubSet> commonList=null;
+					queryString ="from AppHubSet where hub_id=? and series_id=?";
+					queryObj=session.createQuery(queryString);
+					queryObj.setInteger(0, hubId);
+					queryObj.setShort(1, (short)0);
+					commonList=queryObj.list();
+					if(null!=commonList && commonList.size()>0)
+					{
+						for(AppHubSet hubSet : commonList)
+						{
+							AppHubSet seriesHubSet=new AppHubSet();
+							seriesHubSet.setAdmin_name(hubSet.getAdmin_name());
+							seriesHubSet.setAppInfo(hubSet.getAppInfo());
+							seriesHubSet.setHub_id(hubSet.getHub_id());
+							seriesHubSet.setLevel(hubSet.getLevel());
+							seriesHubSet.setRecommend(hubSet.getRecommend());
+							seriesHubSet.setSeries_id(seriesId);
+							seriesHubSet.setSet_date(new Date());
+							seriesHubSet.setShow_order(hubSet.getShow_order());
+							seriesHubSet.setType(hubSet.getType());
+							this.getHibernateTemplate().save(seriesHubSet);
+						}
+					}
+				}
+			}
+			
+		}catch(Exception e){
+			throw e;
+		}
+	}
+
+	@Override
+	public void updateHubSetOrderForSeries(String[] str) throws Exception {
+		// TODO Auto-generated method stub
+		Session session=getSession();
+		Query query=null;
+		AppHubSet appHubSet=null;
+		String sql="update AppHubSet set show_order=? where type=0 and appInfo.id=?";
+		String sql2="update AppHubSet set show_order=? where id=?";
+		
+		for(int i=0; i<str.length; i++)
+		{
+			if(null!=str[i]&&str[i].length()>0)
+			{
+				String order[]=str[i].split(",");
+				if(null!=order&&order.length==2)
+				{
+					appHubSet=this.getHibernateTemplate().load(AppHubSet.class, Long.parseLong(order[0]));
+					if(appHubSet.getSeries_id().shortValue()==0)
+					{
+						//如果是修改汇公共应用排序，则没有初始化的系列都会做修改
+						query=session.createQuery(sql);
+						query.setInteger(0, Integer.parseInt(order[1]));
+						query.setLong(1, appHubSet.getAppInfo().getId());
+						query.executeUpdate();
+					}
+					else
+					{
+						query=session.createQuery(sql2);
+						query.setInteger(0, Integer.parseInt(order[1]));
+						query.setLong(1, Long.parseLong(order[0]));
+						query.executeUpdate();
+					}
+					
+				}
+			}
+		}
+	}
+
+	@Override
+	public void updateRecommend(char recommend, Long[] ids) throws Exception {
+		// TODO Auto-generated method stub
+		Session session=getSession();
+		Query query=null;
+		AppHubSet appHubSet=null;
+		String sql="update AppHubSet set recommend=? where appInfo.id=? and hub_id=?";
+		String sql2="update AppHubSet set recommend=? where id=?";
+		for(int i=0; i<ids.length; i++)
+		{
+			if(null!=ids[i]&&ids[i]!=0)
+			{
+				appHubSet=this.getHibernateTemplate().load(AppHubSet.class, ids[i]);
+				if(null!=appHubSet)
+				{
+					if(appHubSet.getSeries_id().shortValue()==0)
+					{
+						//如果是修改公共的推荐，则所有系列都会做修改
+						query=session.createQuery(sql);
+						query.setCharacter(0, recommend);
+						query.setLong(1, appHubSet.getAppInfo().getId());
+						query.setInteger(2, appHubSet.getHub_id());
+						query.executeUpdate();
+					}
+					else
+					{
+						query=session.createQuery(sql2);
+						query.setCharacter(0, recommend);
+						query.setLong(1, ids[i]);
+						query.executeUpdate();
+					}					
+				}
+			}
+		}
+	}
+
+	@Override
+	public void addHubSetForNewSeries(Short id) throws Exception {
+		// TODO Auto-generated method stub
+		List<AppHubSet> common_list=getHibernateTemplate().find("from AppHubSet where series_id=?",(short)0);
+		if(null!=common_list&&common_list.size()>0)
+		{
+			for(AppHubSet hub_set : common_list)
+			{
+				AppHubSet hub=new AppHubSet();
+				hub.setHub_id(hub_set.getHub_id());
+				hub.setSeries_id(id);
+				hub.setAppInfo(hub_set.getAppInfo());
+				hub.setSet_date(new Date());
+				hub.setShow_order(hub_set.getShow_order());
+				hub.setRecommend(hub_set.getRecommend());
+				hub.setLevel(hub_set.getLevel());
+				hub.setType((short)0);
+				hub.setAdmin_name(hub_set.getAdmin_name());
+				getHibernateTemplate().save(hub);
+			}
+		}
+	}
+	
+	public boolean findTopicByAppInfoId(Long app_id, AppHubSet appHubSet) throws Exception{
+		List<AppHubSet> hub_list = getHibernateTemplate().find("from AppHubSet where app_id=? and  hub_id=? and series_id=?",app_id,appHubSet.getHub_id(),appHubSet.getSeries_id());
+		if(hub_list!=null&&hub_list.size()>0){
+			return true;
+		}
+		return false;
+	}
+	
+}

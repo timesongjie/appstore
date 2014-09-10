@@ -1,0 +1,1659 @@
+package com.bbkmobile.iqoo.console.dao.advertisement;
+
+import java.io.File;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+
+import org.hibernate.Criteria;
+import org.hibernate.Hibernate;
+import org.hibernate.HibernateException;
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Restrictions;
+import org.hibernate.transform.Transformers;
+import org.springframework.orm.hibernate3.HibernateCallback;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.console.constants.Constants;
+import com.bbkmobile.iqoo.console.constants.UtilTool;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+import com.bbkmobile.iqoo.console.dao.appinfo.RequestParameter;
+import com.bbkmobile.iqoo.console.dao.contentmanage.HubHotContent;
+import com.bbkmobile.iqoo.console.dao.keyword.CensorWord;
+import com.bbkmobile.iqoo.console.dao.modelmgr.ConsoleConstant;
+
+public class AdInfoDAOImpl extends HibernateDaoSupport implements AdInfoDAO {
+
+    private static final String ids = null;
+
+    //begin:手机接口@haiyan
+    
+    public List<ModelAdvertisement> getModelAdvertisementBySeriesId(Short series_id) throws Exception{
+        return getHibernateTemplate().find("from ModelAdvertisement where series_id =" + series_id+" order by show_order");
+    }
+    
+    //据系列获取手机广告
+    @SuppressWarnings("unchecked")
+    public List<Advertisement> getPhoneAdInfoBySeries(final Short series_id,final Short model_id) throws Exception{
+        
+        // return   (List<Advertisement>)getHibernateTemplate().find("from Advertisement where id in (select advertisement.id from ModelAdvertisement where series_id=? order by show_order)",series_id);
+        List<Advertisement> list = new ArrayList<Advertisement>();
+        List<ModelAdvertisement> modelAdList = getHibernateTemplate().find(
+                "from ModelAdvertisement where series_id=? order by show_order", series_id);
+        if (null != modelAdList && modelAdList.size() > 0) {
+            for (ModelAdvertisement md : modelAdList) {
+                list.add(md.getAdvertisement());
+            }
+        }
+        return list;
+    }
+    
+    public List<AdvertisementApp> getAllAdvertisementAppListByAd(final Advertisement advertisement, final Short model_id , final Integer sdkVersion, final String drawable_dpi, final String  CPU_ABI) throws Exception {
+        try{
+            @SuppressWarnings({ "unchecked", "rawtypes" })
+            List<AdvertisementApp> list = this.getHibernateTemplate().executeFind(
+                    new HibernateCallback() {
+                        public Object doInHibernate(Session session)
+                                throws HibernateException {
+                            Criteria criteria = session.createCriteria(AdvertisementApp.class);
+                            
+                            criteria.add(Restrictions.eq("advertisement", advertisement));
+                            
+                            Criteria adApp_criteria = criteria.createCriteria("appInfo", 
+                                    Criteria.LEFT_JOIN);
+                            
+                            if(null!=model_id){
+
+                                adApp_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", sdkVersion),
+                                        Restrictions.isNull("minSdkVersion")));
+            
+                                adApp_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", sdkVersion),
+                                        Restrictions.isNull("maxSdkVersion")));
+                                
+                                /*
+                                if(CPU_ABI!=null){
+                                    String sql="(CPU_ABI is null";
+                                    String cpuabis[]=CPU_ABI.split(","); 
+                                    for(int i=0; i<cpuabis.length; i++)
+                                    {
+                                        String cpuabi=cpuabis[i];
+                                        sql=sql+" or CPU_ABI like '%,"+cpuabi+",%'";                          
+                                    }
+                                    sql=sql+")";
+                                    adApp_criteria.add(Restrictions.sqlRestriction(sql)); 
+                                }
+                                */
+                                adApp_criteria.add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + model_id + ",%'))"));      
+                                
+                            }
+                            else{
+                                adApp_criteria.add(Restrictions.ne("appStatus", (short) 12));
+                            }
+                            criteria.addOrder(Order.asc("show_order"));
+                            List<AdvertisementApp> result=criteria.list(); 
+                            return result;
+                        }
+                    });
+            if(null!=list && list.size()>0){
+                return list;
+            }else{
+                return null;
+            }
+            
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    
+    //统计：根据id找到广告，广告中的app按机型过滤
+    public int CountPhoneAdAppsWithModelFilter(final Long id, final Short model_id, final Integer sdkVersion,
+            final String drawable_dpi, final String CPU_ABI) throws Exception {
+        try {
+            Criteria criteria = getSession().createCriteria(Advertisement.class);
+            criteria.add(Restrictions.eq("id", id));
+            Criteria adApp_criteria = criteria.createCriteria("appInfos", Criteria.LEFT_JOIN);
+            if (null != model_id) {
+                adApp_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", sdkVersion),
+                        Restrictions.isNull("minSdkVersion")));
+
+                adApp_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", sdkVersion),
+                        Restrictions.isNull("maxSdkVersion")));
+                /*
+                if (CPU_ABI != null) {
+                    String sql = "(CPU_ABI is null";
+                    String cpuabis[] = CPU_ABI.split(",");
+                    for (int i = 0; i < cpuabis.length; i++) {
+                        String cpuabi = cpuabis[i];
+                        sql = sql + " or CPU_ABI like '%," + cpuabi + ",%'";
+                    }
+                    sql = sql + ")";
+                    adApp_criteria.add(Restrictions.sqlRestriction(sql));
+                }
+                */
+                adApp_criteria.add(Restrictions
+                        .sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + model_id
+                                + ",%'))"));
+
+            } else {
+                adApp_criteria.add(Restrictions.eq("appStatus", (short) 0));
+            }
+
+            int totalRows = ((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult()).intValue(); // 是否为null
+            return totalRows;
+
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+    
+    //根据id找到广告，广告中的app按机型过滤
+    public Advertisement findPhoneAdByIdForFilterApps(final Long id, final int apps_per_page, final int page_index, final Short model_id , final Integer sdkVersion, final String drawable_dpi, final String  CPU_ABI) throws Exception {
+
+        // TODO Auto-generated method stub
+        try{
+            @SuppressWarnings({ "unchecked", "rawtypes" })
+            List<Advertisement> list = this.getHibernateTemplate().executeFind(
+                    new HibernateCallback() {
+                        public Object doInHibernate(Session session)
+                                throws HibernateException {
+                            Criteria criteria = session.createCriteria(Advertisement.class);
+                            
+                            criteria.add(Restrictions.eq("id", id));
+                            
+                            Criteria adApp_criteria = criteria.createCriteria("appInfos", 
+                                    Criteria.LEFT_JOIN);
+
+                            if (null != model_id) {
+                                adApp_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", sdkVersion),
+                                        Restrictions.isNull("minSdkVersion")));
+
+                                adApp_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", sdkVersion),
+                                        Restrictions.isNull("maxSdkVersion")));
+                                /*
+                                if (CPU_ABI != null) {
+                                    String sql = "(CPU_ABI is null";
+                                    String cpuabis[] = CPU_ABI.split(",");
+                                    for (int i = 0; i < cpuabis.length; i++) {
+                                        String cpuabi = cpuabis[i];
+                                        sql = sql + " or CPU_ABI like '%," + cpuabi + ",%'";
+                                    }
+                                    sql = sql + ")";
+                                    adApp_criteria.add(Restrictions.sqlRestriction(sql));
+                                }
+                                */
+                                adApp_criteria.add(Restrictions
+                                        .sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + model_id
+                                                + ",%'))"));
+
+                            } else {
+                                adApp_criteria.add(Restrictions.ne("appStatus", (short) 12));
+                            }
+                            
+                            adApp_criteria.setFirstResult((page_index-1)*apps_per_page);
+                            adApp_criteria.setMaxResults(apps_per_page+1);
+                            List<Advertisement> result=criteria.list(); 
+                            return result;
+                        }
+                    });
+            if(null!=list && list.size()>0){
+                return list.get(0);
+            }else{
+                return null;
+            }
+            
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    
+    public Advertisement getAdForAppsById(final Long id,final int apps_per_page, final int page_index, final Short model_id, final Integer sdkVersion, final String drawable_dpi, final String  CPU_ABI) throws Exception {
+        // TODO Auto-generated method stub
+        //Session session=getSession();
+        //session.clear();
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<Advertisement> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        
+                        Criteria criteria = session.createCriteria(Advertisement.class);
+                        
+                        criteria.add(Restrictions.eq("id", id));
+                        
+                        Criteria adApp_criteria = criteria.createCriteria("appInfos", 
+                                Criteria.LEFT_JOIN);
+                        
+                        adApp_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", sdkVersion),
+                                Restrictions.isNull("minSdkVersion")));
+                        
+                        if(null!=model_id){
+                           
+                            adApp_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", sdkVersion),
+                                    Restrictions.isNull("maxSdkVersion")));
+                            /*
+                            if(CPU_ABI!=null){
+                                String sql="(CPU_ABI is null";
+                                String cpuabis[]=CPU_ABI.split(","); 
+                                for(int i=0; i<cpuabis.length; i++)
+                                {
+                                    String cpuabi=cpuabis[i];
+                                    sql=sql+" or CPU_ABI like '%,"+cpuabi+",%'";                          
+                                }
+                                sql=sql+")";
+                                adApp_criteria.add(Restrictions.sqlRestriction(sql)); 
+                            }
+                            */
+                            adApp_criteria.add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + model_id + ",%'))"));
+                            
+                            //adApp_criteria.addOrder(Order.asc("id"));      
+                        }
+                        else{
+                            adApp_criteria.add(Restrictions.ne("appStatus", (short) 12));
+                        }
+                        
+                        if(0!=apps_per_page){
+                            adApp_criteria.setFirstResult((page_index-1)*apps_per_page);
+                            adApp_criteria.setMaxResults(apps_per_page);
+                        }
+                        List<Advertisement> result=criteria.list();   
+                        return result;
+                    }
+                });
+        
+        return list.get(0);
+    }
+    
+    /*
+    public List<Advertisement> getPhoneAdInfoBySeriesWithFilterModel(final Short series_id,final Short model_id, final Integer sdkVersion, final String drawable_dpi, final String  CPU_ABI) throws Exception{
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<Advertisement> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session.createCriteria(Advertisement.class);
+                        
+                       
+                        Criteria adApp_criteria = criteria.createCriteria("appInfos", 
+                                Criteria.LEFT_JOIN);
+
+                        adApp_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", sdkVersion),
+                                Restrictions.isNull("minSdkVersion")));
+    
+                        adApp_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", sdkVersion),
+                                Restrictions.isNull("maxSdkVersion")));
+  
+                        adApp_criteria.add(Restrictions.or(Restrictions.eq("CPU_ABI", CPU_ABI),
+                                Restrictions.isNull("CPU_ABI")));
+                        
+                        adApp_criteria.add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + model_id + ",%'))"));
+                        
+                        Criteria mdAd_criteria = criteria.createCriteria("modelAdvertisement", 
+                                Criteria.LEFT_JOIN);
+                        mdAd_criteria.add(Restrictions.eq("series_id", series_id));
+                        
+                        List<AppInfo> result=criteria.list();   
+                        return result;
+                    }
+                });
+        return list;
+    }
+    */
+
+    //@统计广告对应app的数量@haiyan
+    @Override
+    public int countAdvertisementApp(final Advertisement advertisement,final Short series,final Short model)
+            throws Exception {
+        // TODO Auto-generated method stub
+        int count=0;
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<Advertisement> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session.createCriteria(Advertisement.class);
+                        
+                        criteria.add(Restrictions.eq("id", advertisement.getId()));
+                        
+                        @SuppressWarnings("unused")
+                        Criteria appInfo_criteria = criteria.createCriteria("appInfos", 
+                                Criteria.LEFT_JOIN);
+        
+                        List<Advertisement> result=criteria.list(); 
+                        return result;
+                    }
+                });
+        if(null!=list)
+        {
+            count=list.size();
+        }
+        return count;
+      
+    }  
+    
+    public List<StartPage> getValidStartPages(RequestParameter requestParameter) throws Exception {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            Calendar calendar = Calendar.getInstance();
+            String today = sdf.format(calendar.getTime());
+            calendar.add(Calendar.DATE, 1);
+            String tomorrow = sdf.format(calendar.getTime());
+            calendar.add(Calendar.DATE, 1);
+            String dayAfterTomorrow = sdf.format(calendar.getTime());
+            String sql = "select id,image,valid_date,invalid_date,default_view from t_start_page where" 
+                    + " (valid_date<='" + today + "' and invalid_date>='" + today + "')"
+                    + " or "
+                    + " (valid_date<='" + tomorrow + "' and invalid_date>='" + tomorrow + "')"
+                    + " or "
+                    + " (valid_date<='" + dayAfterTomorrow + "' and invalid_date>='" + dayAfterTomorrow + "')"
+                    + " or "
+                    + " default_view = '1' order by default_view desc,valid_date asc";
+            @SuppressWarnings("unchecked")
+            List<StartPage> list = getSession().createSQLQuery(sql).addScalar("id", Hibernate.INTEGER)
+                    .addScalar("image", Hibernate.STRING).addScalar("valid_date", Hibernate.STRING)
+                    .addScalar("invalid_date", Hibernate.STRING).addScalar("default_view", Hibernate.CHARACTER)
+                    .setResultTransformer(Transformers.aliasToBean(StartPage.class)).list();
+
+            if (null != list && list.size() > 0) {
+                return list;
+            }
+            return null;
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+    //end:手机接口
+    
+    public Integer countStartPages(StartPage startPage) throws Exception{
+        try {
+            Criteria criteria = getSession().createCriteria(StartPage.class);
+            /*
+            if(null==startPage.getValid_date()){
+                criteria.add(Restrictions.between("valid_date", startPage.getFromDate(), startPage.getToDate()));
+            }else{
+                criteria.add(Restrictions.eq("valid_date", startPage.getValid_date()));
+            }
+            */
+            Integer totalRows = ((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult());
+            if(null==totalRows){
+                totalRows=0;
+            }
+            return totalRows;
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+    public List<StartPage> getStartPages(final StartPage startPage) throws Exception{
+        try {
+            @SuppressWarnings("unchecked")
+            List<StartPage> list = this.getHibernateTemplate().executeFind(new HibernateCallback() {
+                public Object doInHibernate(Session session) throws HibernateException {
+                    Criteria criteria = session.createCriteria(StartPage.class);
+                    /*
+                    if(null==startPage.getValid_date()){
+                        criteria.add(Restrictions.between("valid_date", startPage.getFromDate(), startPage.getToDate()));
+                    }else{
+                        criteria.add(Restrictions.eq("valid_date", startPage.getValid_date()));
+                    }
+                    */
+                    criteria.addOrder(Order.desc("valid_date"));
+                    criteria.setFirstResult(startPage.getStartPosition());
+                    criteria.setMaxResults(Constants.APPS_PER_MAX_PAGE);
+                    List<HubHotContent> result = criteria.list();
+                    return result;
+                }
+            });
+
+            if (null != list && list.size() > 0) {
+                return list;
+            } else {
+                return null;
+            }
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+    
+    public boolean deleteStartPages(StartPage startPage, String idsStr) throws Exception{
+        if(null!=idsStr&&!"".equals(idsStr))
+        {
+            String queryString ="delete StartPage where id=?";
+            Query queryObj=getSession().createQuery(queryString);
+  
+            String app_ids[]=idsStr.split(",");
+            for(int i=0; i<app_ids.length; i++)
+            {   
+                queryObj.setInteger(0, Integer.parseInt(app_ids[i]));
+                queryObj.executeUpdate();  
+            }
+        }
+        return true;
+    }
+    
+    public StartPage getStartPageByAttr(final StartPage startPage) throws Exception{
+        @SuppressWarnings("unchecked")
+        List<StartPage> list = this.getHibernateTemplate().executeFind(new HibernateCallback() {
+            public Object doInHibernate(Session session) throws HibernateException {
+                Criteria criteria = session.createCriteria(StartPage.class);
+                
+                criteria.add(Restrictions.eq("id", startPage.getId()));
+                
+                List<HubHotContent> result = criteria.list();
+                return result;
+            }
+        });
+        if (null != list && list.size() > 0) {
+            return list.get(0);
+        } else {
+            return null;
+        }
+    }
+    
+    public boolean updateDefaultStartPage(StartPage startPage, String ids) throws Exception{
+        Integer id = Integer.parseInt(ids);
+        String sql = "update t_start_page set default_view='1' where id="+id;
+        getSession().createSQLQuery(sql).executeUpdate();
+        
+        sql = "update t_start_page set default_view='0' where id!="+id;
+        getSession().createSQLQuery(sql).executeUpdate();
+        return true;
+    }
+
+    public boolean addStartPage(StartPage startPage) throws Exception {
+        startPage.setDefault_view('0');
+        startPage.setAdd_date(new Date());
+        startPage.setModify_date(new Date());
+        getHibernateTemplate().save(startPage);
+        return true;
+    }
+    
+    public boolean saveStartPage(StartPage startPage) throws Exception {
+        startPage.setModify_date(new Date());
+        getHibernateTemplate().update(startPage);
+        return true;
+    }
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<Advertisement> getPhoneAdInfo() throws Exception {
+		// TODO Auto-generated method stub
+		
+		List<ConsoleConstant>  constantList=getHibernateTemplate().find("from ConsoleConstant where value=? and type=1","phone");
+		short phone=0;
+		if(null!=constantList && constantList.size()==1)
+		{
+			phone=constantList.get(0).getId();
+		}
+		List<Advertisement> adList=getHibernateTemplate().find("from Advertisement where ad_type=1");
+		if(null!=adList && adList.size()>0)
+		{
+			for(Advertisement ad : adList)
+			{
+				List<AdvertisementIcon> icon=getHibernateTemplate().find("from AdvertisementIcon where advertisement.id=? and modelScreen.id=?",ad.getId(),phone);
+				if(null!=icon && icon.size()==1)
+				{
+					ad.setAd_icon(icon.get(0).getIcon_url());
+				}
+			}
+		}
+		 return adList;
+	}
+
+	/*
+	 * 根据条件查找广告：zhangyi
+	 */
+	@Override
+	public List<Advertisement> search(PageVO page,final Advertisement advertisement,final String advSortWayy,Short series_id) throws Exception{
+		final Integer startRecord = page.getCurrentPageNum() * page.getNumPerPage() - page.getNumPerPage() ;
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		List<Advertisement> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session.createCriteria(Advertisement.class);
+						 if (null != advertisement.getId()) {
+					            criteria.add(Restrictions.eq("id", advertisement.getId()));
+					        }
+					     if (!UtilTool.checkStringNull(advertisement.getAd_name())) {
+					            criteria.add(Restrictions.like("ad_name", "%"
+					                    + advertisement.getAd_name() + "%"));
+					        }
+					    criteria.addOrder(Order.desc("id"));
+						criteria.setFirstResult(startRecord);
+						criteria.setMaxResults(Constants.APPS_PER_PAGE);
+						List<Advertisement> result = criteria.list();
+						return result;
+					}
+				});
+		List<ConsoleConstant>  constantList=getHibernateTemplate().find("from ConsoleConstant where value=? and type=1","phone");
+		short phone=0;
+		if(null!=constantList && constantList.size()==1)
+		{
+			phone=constantList.get(0).getId();
+		}
+		if(null!=list && list.size()>0)
+		{
+			for(Advertisement ad : list)
+			{
+				List<AdvertisementIcon> icon=getHibernateTemplate().find("from AdvertisementIcon where advertisement.id=? and modelScreen.id=?",ad.getId(),phone);
+				if(null!=icon && icon.size()==1)
+				{
+					ad.setAd_icon(icon.get(0).getIcon_url());
+				}
+			}
+		}
+	//	ramarkTag(list,series_id);
+		return list;
+	}
+	
+	public void updateRamarkTag( List<Advertisement> list_adv, Short series_id) throws Exception{   //判断哪些广告已经被添加了
+		if(null!=list_adv&&list_adv.size()>0){
+			for(int i=0;i<list_adv.size();i++){
+				List<ModelAdvertisement> list_model = getHibernateTemplate().find("from ModelAdvertisement where series_id=? and  ad_id=?",series_id,list_adv.get(i).getId());
+				if(list_model!=null&&list_model.size()>0){
+					list_adv.get(i).setTag("1");
+				}
+			}
+		}
+		
+	}
+	
+	@Override
+	public boolean addPhoneAd(Advertisement advertisement) throws Exception {
+		// TODO Auto-generated method stub
+		boolean result=false;
+		if(null!=advertisement)
+		{
+			advertisement.setAd_type('1');
+			advertisement.setAdd_date(new Date());
+			advertisement.setShow_order(0);
+			advertisement.setApp_count(0);
+			getHibernateTemplate().save(advertisement);
+			getSession().evict(advertisement);
+			result=true;
+		}
+		return result;
+	}
+	
+	/**
+	 * 保存广告图片到设定的目录下
+	 */
+	@Override
+    public boolean saveAdImages(File file, String file_name, String dir) throws Exception {
+        // TODO Auto-generated method stub
+        try {
+            // File oldFile=new File(dir);
+
+            deleteDirFilesLikeName(dir, file_name.substring(0, file_name.lastIndexOf("_")));
+
+            java.io.InputStream input = new java.io.FileInputStream(file);
+            java.io.OutputStream output = new java.io.FileOutputStream(dir + file_name);
+            byte buffer[] = new byte[8192];
+            int count = 0;
+            while ((count = input.read(buffer)) > 0) {
+                output.write(buffer, 0, count);
+            }
+            input.close();
+            output.close();
+        } catch (Exception e) {
+            // TODO: handle exception
+            throw e;
+        }
+        return true;
+    }
+
+	//删除文件名包含指定字符的文件
+	public void deleteFilesLikeName(File file, String likeName)
+	{
+		if(file.isFile()){
+			//是文件
+			String temp="";
+			if(file.getName().contains("."))
+			{
+				temp= file.getName().substring(0,file.getName().lastIndexOf("."));
+			}
+			else
+			{
+				temp=file.getName();
+			}
+			if(temp.indexOf(likeName) != -1){
+				file.delete();
+			}
+		} else {
+			//是目录
+//			File[] files = file.listFiles();
+//			for(int i = 0; i < files.length; i++){
+//				deleteFilesLikeName(files[i], likeName);
+//			}
+		}
+
+	}
+	//删除某目录下文件名字包含指定字符的文件
+	public void deleteDirFilesLikeName(String dir, String likeName){
+		File file = new File(dir);
+		if(file.exists()){
+			if(file.isDirectory())
+			{
+				File[] files = file.listFiles();
+				for(int i = 0; i < files.length; i++){
+					deleteFilesLikeName(files[i], likeName);
+				}
+			}
+		//	deleteFilesLikeName(file, likeName);
+		} else {
+		}
+	}
+
+	
+	
+	@Override
+	public boolean updateAdImages(File file, String path) throws Exception {
+		// TODO Auto-generated method stub
+		try{
+			 java.io.InputStream input = new java.io.FileInputStream(file); 
+			  java.io.OutputStream output = new java.io.FileOutputStream(path); 
+			 byte buffer[] = new byte[8192]; 
+			 int count = 0; 
+			 while((count = input.read(buffer)) > 0) 
+			 {
+			  output.write(buffer, 0, count); 
+			 } 
+			  input.close(); 
+			  output.close();
+		}catch (Exception e) {
+			// TODO: handle exception
+			throw e;
+		}
+		return true;
+	}
+	@Override
+	public Advertisement findPhoneAdById(Long id) throws Exception {
+		// TODO Auto-generated method stub
+		try{
+			return (Advertisement)getHibernateTemplate().find("from Advertisement where id=?",id).get(0);
+		}catch(Exception e){
+			throw e;
+		}
+	}
+
+	@Override
+	public boolean updatePhoneAd(Advertisement advertisement) throws Exception{
+		// TODO Auto-generated method stub
+		try{
+		//	advertisement.setAd_type('1');
+		//	advertisement.setModify_date(new Date());
+			String queryString ="update Advertisement set ad_name=?,modify_date=? where id=?";
+			Session session=getSession();
+			Query queryObject=session.createQuery(queryString);
+			queryObject.setString(0, advertisement.getAd_name());
+			queryObject.setTimestamp(1, new Date());
+		//	queryObject.setInteger(2, advertisement.getShow_order());
+			queryObject.setLong(2, advertisement.getId());
+			queryObject.executeUpdate();
+			
+			updateFocusPic(advertisement);
+			
+			return true;
+		}catch(Exception e){
+			throw e;
+		}
+	}
+	
+	private void updateFocusPic(Advertisement advertisement) throws Exception{ //更新“焦点图”中广告的信息
+		String screenName = "phone2";
+		String img="";
+		List<AdvertisementIcon> adImg=getHibernateTemplate().find("from AdvertisementIcon where advertisement.id=? and modelScreen.type=1 and modelScreen.value=?",advertisement.getId(),screenName);
+	    if(null!=adImg && adImg.size()==1)
+		{
+	    	img = adImg.get(0).getIcon_url();
+		}
+		
+		String queryString ="update FocusPic set name=?,img=?  where object_id=? and type=?";  
+        Session session=getSession();
+        Query queryObject=session.createQuery(queryString);
+        queryObject.setString(0, advertisement.getAd_name());
+        queryObject.setString(1, img);
+        queryObject.setLong(2, advertisement.getId());
+        queryObject.setShort(3, (short) 2);
+        queryObject.executeUpdate();
+	}
+
+	@Override
+	public boolean deletePhoneAdByID(Long[] ids) throws Exception {
+		// TODO Auto-generated method stub
+		try{
+			List<AdvertisementIcon> iconList=null;
+			String queryString1 ="from AdvertisementIcon where advertisement.id=?";
+			String queryString2 ="delete AdvertisementIcon where advertisement.id=?";
+			String queryString3 ="delete AdvertisementApp where advertisement.id=?";
+			String queryString4 ="delete ModelAdvertisement where advertisement.id=?";
+			String queryString5 ="delete from Advertisement where id=?";
+			String queryString7 ="delete FocusPic where object_id=? and type=?"; 
+			String queryString8="delete FocusRank where object_id=? and type=?";
+			String queryString9="delete RankSetup where object_id=? and type=?";
+			Session session=getSession();
+			Query queryObj=null;
+			for(Long id:ids){
+				iconList=this.getHibernateTemplate().find(queryString1,id);
+	        	 if(null!=iconList && iconList.size()>0)
+	        	 {
+	        		 //1.先删除图片文件 2.再删除数据库t_ad_icon广告图片表中相应的数据 3. 删除t_ad_app表中对应的数据 4.删除t_model_ad对应的数据
+	        		// 5.删除广告信息t_ad_info
+	        		 //1.删除图片文件
+	        		 for(AdvertisementIcon icon : iconList)
+	        		 {
+	        			 String iconURL=icon.getIcon_url();
+	        			 deleteDirFilesLikeName(UtilTool.getDownloadPath(iconURL.substring(0,iconURL.lastIndexOf("/"))),iconURL.substring(iconURL.lastIndexOf("/")+1,iconURL.lastIndexOf(".")));
+	        		 }
+	        		// 2.删除数据库t_ad_icon广告图片表中相应的数据
+	        		 queryObj=session.createQuery(queryString2);
+	        		 queryObj.setLong(0, id);
+	                 queryObj.executeUpdate();
+	        	 }
+	        	
+	        	 //3.删除t_ad_app表中对应的数据
+	        	 queryObj=session.createQuery(queryString3);
+		         queryObj.setLong(0, id);
+		         queryObj.executeUpdate();
+		            
+		       //4.删除t_model_ad对应的数据
+	            queryObj=session.createQuery(queryString4);
+	            queryObj.setLong(0, id);
+	            queryObj.executeUpdate();	
+	            
+                
+              //6.删除汇热门推荐中对应的广告
+                String queryString6 ="delete HubHotContent where object_id=? and type=?";     
+                queryObj=session.createQuery(queryString6);
+                queryObj.setLong(0, id);
+                queryObj.setCharacter(1, '2');
+                queryObj.executeUpdate();
+                
+	          //5.删除广告信息t_ad_info
+	            queryObj=session.createQuery(queryString5);
+	            queryObj.setLong(0, id);
+	            queryObj.executeUpdate();	
+	            
+	            
+	          //7 删除“焦点图”
+                queryObj=session.createQuery(queryString7);
+                queryObj.setLong(0, id);
+                queryObj.setShort(1, (short) 2);
+                queryObj.executeUpdate();
+                
+              //7 删除“焦点图排期”
+                queryObj=session.createQuery(queryString8);
+                queryObj.setLong(0, id);
+                queryObj.setShort(1, (short) 2);
+                queryObj.executeUpdate();
+                
+              //7 删除“广告排期”
+                queryObj=session.createQuery(queryString9);
+                queryObj.setLong(0, id);
+                queryObj.setShort(1, (short) 8);
+                queryObj.executeUpdate();
+			}
+			return true;
+		}catch(Exception e){
+			throw e;
+		}		
+	}
+
+	@Override
+	public boolean updateShowOrder(Long id, int order) throws Exception {
+		// TODO Auto-generated method stub
+		try{
+			String queryString ="update Advertisement set show_order=? where id=?";
+			Session session=getSession();
+			Query queryObj=session.createQuery(queryString);
+			queryObj.setInteger(0, order);
+			queryObj.setLong(1, id);
+			queryObj.executeUpdate();
+			return true;
+		}catch(Exception e){
+			throw e;
+		}
+	}
+
+	/**
+	 * 根据广告找到相应的所有应用
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public int countAdvertisementApp(final Advertisement advertisement, final AppInfo app)
+			throws Exception {
+		// TODO Auto-generated method stub
+		int count=0;
+//		List<AppInfo> list = this.getHibernateTemplate().executeFind(
+//				new HibernateCallback() {
+//					public Object doInHibernate(Session session)
+//							throws HibernateException {
+////						Criteria criteria = session
+////								.createCriteria(AdvertisementApp.class);
+//						Criteria criteria = session
+//						.createCriteria(AppInfo.class);
+//
+//						if (null!=(advertisement.getId())) {
+//							Criteria ad_criteria = criteria.createCriteria("advertisementApp", 
+//									Criteria.LEFT_JOIN).createCriteria("advertisement", Criteria.LEFT_JOIN);
+//							ad_criteria.add(Restrictions.eq("id", advertisement.getId()));
+//						}
+//						if(null!=app&&app.getType()!=0)
+//						{
+//							app.getAppType().setId(app.getType());
+//							criteria.add(Restrictions.eq("appType", app.getAppType()));
+//						}
+//							List<AppInfo> result=criteria.list();
+//							
+//						return result;
+//					}
+//				});
+//		if(null!=list)
+//		{
+//			count=list.size();
+//		}
+		
+		List<AppInfo> appInfo_list=new ArrayList<AppInfo>();
+        List<Advertisement> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                    	session.flush();
+                    	session.clear();
+                        Criteria criteria = session.createCriteria(Advertisement.class);
+                        criteria.add(Restrictions.eq("id", advertisement.getId()));
+             
+                        Criteria adApp_criteria = criteria.createCriteria("appInfos", Criteria.LEFT_JOIN);
+                        if(null!=app&&app.getType()!=0)
+						{
+							app.getAppType().setId(app.getType());
+							adApp_criteria.add(Restrictions.eq("appType", app.getAppType()));
+						}
+              
+                 //       adApp_criteria.addOrder(Order.asc("id"));                            							
+                        List<Advertisement> result=criteria.list();  
+                        return result;
+                    }
+                });
+        if(null!=list)
+		{
+			Iterator<AppInfo> it=list.get(0).getAppInfos().iterator();
+			while(it.hasNext())
+			{
+				appInfo_list.add(it.next());
+			}
+			count=appInfo_list.size() ;
+		}
+		return count;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppInfo> getAdvertisementByAd(final Advertisement advertisement, final AppInfo app, final int startPage) {
+		// TODO Auto-generated method stub
+//		List<AppInfo> list = this.getHibernateTemplate().executeFind(
+//				new HibernateCallback() {
+//					public Object doInHibernate(Session session)
+//							throws HibernateException {
+//						Criteria criteria = session
+//						.createCriteria(AppInfo.class);
+//
+//						if (null!=(advertisement.getId())) {
+//							Criteria ad_criteria = criteria.createCriteria("advertisementApp", 
+//									Criteria.LEFT_JOIN).createCriteria("advertisement", Criteria.LEFT_JOIN);
+////							Criteria ad_criteria = criteria.createCriteria(
+////									"advertisement", Criteria.LEFT_JOIN);
+//							ad_criteria.add(Restrictions.eq("id", advertisement.getId()));
+//						}
+//						if(null!=app&&app.getType()!=0)
+//						{
+//							app.getAppType().setId(app.getType());
+//							criteria.add(Restrictions.eq("appType", app.getAppType()));
+//						}
+//							criteria.addOrder(Order.asc("id"));
+//							criteria.setFirstResult(startPage);
+//							criteria.setMaxResults(10);
+//							List<AppInfo> result=criteria.list();
+//						return result;
+//					}
+//				});
+		
+		List<AppInfo> appInfo_list=new ArrayList<AppInfo>();
+        List<Advertisement> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                    	session.flush();
+                    	session.clear();
+                        Criteria criteria = session.createCriteria(Advertisement.class);
+                        criteria.add(Restrictions.eq("id", advertisement.getId()));
+          //              Criteria adApp_criteria_mid=criteria.createCriteria("appInfos", Criteria.LEFT_JOIN);
+                        Criteria adApp_criteria = criteria.createCriteria("appInfos", Criteria.LEFT_JOIN);
+                        
+                        if(null!=app&&app.getType()!=0)
+						{
+							app.getAppType().setId(app.getType());
+							adApp_criteria.add(Restrictions.eq("appType", app.getAppType()));
+						}
+                  //      adApp_criteria.addOrder(Order.asc("id"));  
+                        adApp_criteria.setFirstResult(startPage);
+                        adApp_criteria.setMaxResults(10);
+                       
+                        List<Advertisement> result=criteria.list();  
+                        return result;
+                    }
+                });
+        if(null!=list)
+		{
+			Iterator<AppInfo> it=list.get(0).getAppInfos().iterator();
+			while(it.hasNext())
+			{
+				appInfo_list.add(it.next());
+			}
+		}
+		return appInfo_list;
+	}
+
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppInfo> findAppByAd(final Long id) throws Exception {
+		
+		
+		// TODO Auto-generated method stub
+		List<AppInfo> appInfo_list=new ArrayList<AppInfo>();
+        List<Advertisement> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                    	session.flush();
+                    	session.clear();
+                        Criteria criteria = session.createCriteria(Advertisement.class);
+//                        Criteria adApp_criteria = criteria.createCriteria("appInfos", Criteria.LEFT_JOIN);
+//                        adApp_criteria.setFirstResult(0);
+//                        adApp_criteria.setMaxResults(2);
+                        criteria.add(Restrictions.eq("id", id));
+                        List<Advertisement> result=criteria.list();  
+                        return result;
+                    }
+                });
+        
+        //return list.get(0);
+        
+        
+        if(null!=list&&list.size()>0)
+		{
+			Iterator<AppInfo> it=list.get(0).getAppInfos().iterator();
+			while(it.hasNext())
+			{
+				appInfo_list.add(it.next());
+			}
+			return appInfo_list ;
+		}
+		 return null;
+		/*
+		List<AppInfo> appInfo_list=new ArrayList<AppInfo>();
+		List<Advertisement> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+						.createCriteria(Advertisement.class);
+						
+						
+							criteria.add(Restrictions.eq("id", id));
+						//	Criteria adApp_criteria = criteria.createCriteria("appInfos", 
+	                    //            Criteria.LEFT_JOIN);
+						//	adApp_criteria.addOrder(Order.asc("id"));
+//							Criteria ad_criteria = criteria.createCriteria(
+//									"advertisement", Criteria.LEFT_JOIN);
+						
+						//	criteria.addOrder(Order.asc("id"));
+							List<Advertisement> result=criteria.list();
+						return result;
+					}
+				});
+		
+		if(null!=list)
+		{
+			Iterator<AppInfo> it=list.get(0).getAppInfos().iterator();
+			for(; it.hasNext(); )
+			{
+				appInfo_list.add(it.next());
+			}
+			return appInfo_list ;
+		}
+		
+		 return null;
+		 */
+	}
+	
+	@Override
+	public boolean deleteAdvertisementApp(Long adId, Long appId)
+			throws Exception {
+		// TODO Auto-generated method stub
+		try{
+			String queryString ="delete AdvertisementApp where ad_id=? and app_id=?";
+			Session session=getSession();
+			Query queryObj=session.createQuery(queryString);
+			queryObj.setLong(0, adId);
+			queryObj.setLong(1, appId);
+			queryObj.executeUpdate();
+			updateAdAppsCount(adId); //更新数据库t_ad_info的app_count和app_id
+			return true;
+		}catch(Exception e){
+			throw e;
+		}
+	}
+
+	@Override
+	public boolean deleteMoreSoftSetByID(Long[] app_ids, Long ad_id)
+			throws Exception {
+		// TODO Auto-generated method stub
+		try{
+			String queryString ="delete AdvertisementApp where ad_id=? and app_id=?";
+			Session session=getSession();
+			for(Long id:app_ids)
+			{
+				Query queryObj=session.createQuery(queryString);
+				queryObj.setLong(0, ad_id);
+				queryObj.setLong(1, id);
+				queryObj.executeUpdate();
+			}
+			updateAdAppsCount(ad_id); //更新数据库t_ad_info的app_count和app_id
+			return true;
+		}catch(Exception e){
+			throw e;
+		}
+	}
+
+	public int findMaxOrderForAdApp(Long ad_id)
+	{
+		int result=0;
+		Session session =getSession();
+		Query query=null;
+		
+		String sql1="select * from t_ad_app where ad_id="+ad_id;
+		query=session.createSQLQuery(sql1);
+		if(null!=query.list()&&query.list().size()>0)
+		{
+			String sql2="select max(show_order) from t_ad_app where ad_id="+ad_id;
+			query=session.createSQLQuery(sql2);
+			result=(Integer)query.uniqueResult();
+		}
+		return result;
+	}
+	
+	
+	@Override
+	public boolean addAppForAd(Long ad_id, Long app_ids[]) throws Exception {
+		// TODO Auto-generated method stub
+		try{
+		//	String queryString ="insert into AdvertisementApp(ad_id,app_id) values(?,?)";
+		//	Session session=getSession();
+			int order=findMaxOrderForAdApp(ad_id);  
+			for(Long app_id:app_ids)
+			{
+				AdvertisementApp adApp=new AdvertisementApp();
+			//	Query queryObj=session.createQuery(queryString);
+				Advertisement advertisement=getHibernateTemplate().load(Advertisement.class, ad_id);
+				AppInfo appInfo=getHibernateTemplate().load(AppInfo.class, app_id);
+				adApp.setAdvertisement(advertisement);
+				adApp.setAppInfo(appInfo);
+				adApp.setShow_order(++order);
+		//		adApp.setAd_id(ad_id);
+		//		adApp.setApp_id(app_id);
+				getHibernateTemplate().save(adApp);
+			}
+			updateAdAppsCount(ad_id);//跟新数据库t_ad_info的app_count和app_id
+//			AdvertisementApp advertisementApp=new AdvertisementApp();
+			return true;
+		}catch(Exception e){
+			throw e;
+		}
+	}
+
+	//advertisement表字段appCount和app_id的更新:zhangyi
+	private void updateAdAppsCount(Long ad_id) throws Exception{
+		List<AdvertisementApp> apps = getHibernateTemplate().find("from AdvertisementApp where ad_id=?",ad_id);
+		Long app_id;
+		if(null!=apps){
+			Integer app_count = apps.size();
+			if(1==app_count){
+				app_id = apps.get(0).getAppInfo().getId();
+			}else{
+				app_id =null;
+			}					
+			String queryString ="update Advertisement set app_id=?,app_count=? where id=?";  
+			String queryString1="update FocusPic set app_id=?,app_count=? where object_id=? and type=?"; //更新“焦点图”的广告信息
+            Session session=getSession();
+            Query queryObject=session.createQuery(queryString);
+            Query queryObject1=session.createQuery(queryString1);
+            if(null==app_id){
+            	queryObject.setString(0, null);
+            	queryObject1.setString(0, null);
+            }else{
+            	queryObject.setLong(0,app_id);
+            	queryObject1.setLong(0,app_id);
+            }
+            queryObject.setInteger(1, app_count);
+            queryObject.setLong(2, ad_id);
+            queryObject.executeUpdate();		
+            
+            queryObject1.setInteger(1, app_count);
+            queryObject1.setLong(2, ad_id);
+            queryObject1.setShort(3, (short) 2);
+            queryObject1.executeUpdate();
+		}
+	}
+	
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppInfo> getAppByType(final List<AppInfo> appInfo, final int startRecord)
+			throws Exception {
+		// TODO Auto-generated method stub
+		List<AppInfo> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+						.createCriteria(AppInfo.class);
+						criteria.setFirstResult(startRecord);
+						criteria.setMaxResults(10);
+							criteria.addOrder(Order.asc("id"));
+							criteria.list().clear();
+						//	List<AppInfo> result=criteria.list();
+							if(null!=appInfo&&appInfo.size()>0)
+							{
+								for(AppInfo app : appInfo)
+								{
+									criteria.list().add(app);
+								}
+							}
+							
+						return criteria.list();
+					}
+				});
+		return list;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public Integer countApp(final List<AppInfo> appInfo) throws Exception {
+		// TODO Auto-generated method stub
+		List<AppInfo> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+						.createCriteria(AppInfo.class);
+							criteria.addOrder(Order.asc("id"));
+							criteria.list().clear();
+						//	List<AppInfo> result=criteria.list();
+							if(null!=appInfo&&appInfo.size()>0)
+							{
+								for(AppInfo app : appInfo)
+								{
+									criteria.list().add(app);
+								}
+							}
+							
+						return criteria.list();
+					}
+				});
+		return null!=list&&list.size()>0?list.size():0;
+	}
+
+	@Override
+	public List<ModelAdvertisement> getModelAdBySeriesId(Short seriesId, int type)
+			throws Exception {
+		// TODO Auto-generated method stub
+		try{
+			return getHibernateTemplate().find("from ModelAdvertisement where series_id=? and type=? order by show_order",seriesId,type);
+		}catch(Exception e){
+			throw e;
+		}
+	}
+
+	public boolean isExistSeriesAdSet(Short series_id,Long ad_id)
+	{
+		boolean b=false;
+		List list=getHibernateTemplate().find("from ModelAdvertisement where series_id=? and advertisement.id=?",series_id,ad_id);
+		if(null!=list&&list.size()==1)
+		{
+			b=true;
+		}
+		return b;
+	}
+	
+	//判断系列广告是否已初始化
+	@Override
+	public boolean isInitSeriesAdSet(Short series_id)
+	{
+		boolean b=false;
+		List list=getHibernateTemplate().find("from ModelAdvertisement where series_id=? and type=?",series_id,(int)Constants.SERIES_TYPE);
+		if(null!=list&&list.size()>0)
+		{
+			b=true;
+		}
+		return b;
+	}
+	
+	public int findMaxOrderForSeries(int seriesId)
+	{
+		int result=0;
+		Session session =getSession();
+		Query query=null;
+		
+		String sql1="select * from t_model_ad where series_id="+seriesId;
+		query=session.createSQLQuery(sql1);
+		if(null!=query.list()&&query.list().size()>0)
+		{
+			String sql2="select max(show_order) from t_model_ad where series_id="+seriesId;
+			query=session.createSQLQuery(sql2);
+			result=(Integer)query.uniqueResult();
+		}
+		return result;
+	}
+	@Override
+	public void addAdForSeries(Short seriesId, Long[] ad_ids, int type) throws Exception {
+		// TODO Auto-generated method stub
+		try{
+			    int order=findMaxOrderForSeries(seriesId);
+				for(Long ad_id:ad_ids)
+				{
+					if(!isExistSeriesAdSet(seriesId,ad_id))
+					{
+						ModelAdvertisement seriesAd=new ModelAdvertisement();
+						Advertisement advertisement=getHibernateTemplate().load(Advertisement.class, ad_id);
+						seriesAd.setAdvertisement(advertisement);
+						seriesAd.setSeries_id(seriesId);
+						seriesAd.setType(type);
+						seriesAd.setSet_time(new Date());
+						seriesAd.setShow_order(++order);
+						getHibernateTemplate().save(seriesAd);
+					}
+				}
+			
+			}catch(Exception e){
+				throw e;
+			}
+	}
+
+	@Override
+	public void deleteAdSetByAdId(Short series_id, Long[] ad_ids) throws Exception {
+		// TODO Auto-generated method stub
+		try{
+			Session session=getSession();
+			Query queryObj=null;
+			if(series_id==0)
+			{
+				String queryString ="delete ModelAdvertisement where advertisement.id=?";
+				
+				for(Long id:ad_ids){
+				queryObj=session.createQuery(queryString);
+				queryObj.setLong(0, id);
+				queryObj.executeUpdate();
+				}
+			}
+			else
+			{
+				String queryString ="delete ModelAdvertisement where advertisement.id=? and series_id=?";
+
+				for(Long id:ad_ids){
+				queryObj=session.createQuery(queryString);
+				queryObj.setLong(0, id);
+				queryObj.setInteger(1, series_id);
+				queryObj.executeUpdate();
+				}
+				
+				//如果取消了系列的所有设置，则添加公共的设置
+				queryString ="from ModelAdvertisement where series_id=?";
+				queryObj=session.createQuery(queryString);
+				queryObj.setShort(0, series_id);
+				if(null==queryObj.list() || queryObj.list().size()==0)
+				{
+					List<ModelAdvertisement> commonList=null;
+					queryString ="from ModelAdvertisement where series_id=?";
+					queryObj=session.createQuery(queryString);
+					queryObj.setShort(0, (short)0);
+					commonList=queryObj.list();
+					if(null!=commonList && commonList.size()>0)
+					{
+						for(ModelAdvertisement modelAd : commonList)
+						{
+							ModelAdvertisement seriesAd=new ModelAdvertisement();
+							seriesAd.setAdvertisement(modelAd.getAdvertisement());
+							seriesAd.setSeries_id(series_id);
+							seriesAd.setShow_order(modelAd.getShow_order());
+							seriesAd.setSet_time(new Date());
+							seriesAd.setType(modelAd.getType());
+							this.getHibernateTemplate().save(seriesAd);
+						}
+					}
+				}
+			}
+			
+		}catch(Exception e){
+			throw e;
+		}
+	}
+
+	@Override
+	public void updateAdOrderForSeries(String[] str) throws Exception {
+		// TODO Auto-generated method stub
+		Session session=getSession();
+		Query query=null;
+		ModelAdvertisement modelAd=null;
+		
+		String sql="update ModelAdvertisement set show_order=? where type=0 and advertisement.id=?";
+		String sql2="update ModelAdvertisement set show_order=? where id=?";
+		for(int i=0; i<str.length; i++)
+		{
+			if(null!=str[i]&&str[i].length()>0)
+			{
+				String order[]=str[i].split(",");
+				if(null!=order&&order.length==2)
+				{
+					modelAd=this.getHibernateTemplate().load(ModelAdvertisement.class, Long.parseLong(order[0]));
+					if(modelAd.getSeries_id().shortValue()==0)
+					{
+						query=session.createQuery(sql);
+						query.setInteger(0, Integer.parseInt(order[1]));
+						query.setLong(1, modelAd.getAdvertisement().getId());
+						query.executeUpdate();
+					}
+					else
+					{
+						query=session.createQuery(sql2);
+						query.setInteger(0, Integer.parseInt(order[1]));
+						query.setLong(1, Long.parseLong(order[0]));
+						query.executeUpdate();
+					}
+				}
+			}
+		}
+		session.clear();
+	}
+
+	//根据属性名称查找相应的广告设置
+	public List<ModelAdvertisement> findAdSetByProperty(String property,Object value)
+	{
+		List list=getHibernateTemplate().find("from ModelAdvertisement where "+property+"=?",value);
+		return list;
+	}
+	
+	@Override
+	public void saveAdSetForSeries(Short seriesId, List<ModelAdvertisement> list) throws Exception {
+		// TODO Auto-generated method stub
+	//	deleteAdSetBySeries(seriesId);
+		List has_list=getHibernateTemplate().find("from ModelAdvertisement where series_id=?",seriesId);
+		if(null!=has_list&&has_list.size()>0)
+		{
+			String queryString ="update ModelAdvertisement set type=? where series_id=?";
+            Session session=getSession();
+            Query queryObj=session.createQuery(queryString);
+            queryObj.setInteger(0, 1);
+            queryObj.setShort(1, seriesId);
+            queryObj.executeUpdate();
+		}
+		else
+		{
+			for(ModelAdvertisement ad : list)
+			{
+				ModelAdvertisement series_ad=new ModelAdvertisement();
+				series_ad.setAdvertisement(ad.getAdvertisement());
+				series_ad.setSeries_id(seriesId);
+				series_ad.setSet_time(new Date());
+				series_ad.setType(Constants.SERIES_TYPE);
+				series_ad.setShow_order(ad.getShow_order());
+				getHibernateTemplate().save(series_ad);
+			}
+		}
+	}
+	
+	@Override
+	public void deleteAdSetBySeries(Short seriesId)
+	{
+		Session session=getSession();
+		String sql="delete from ModelAdvertisement where series_id=?";
+		Query query=session.createQuery(sql);
+		query.setInteger(0, seriesId);
+		query.executeUpdate();
+	}
+
+	@Override
+	public void saveImgForAd(Long ad_id, String filePath, String screen) throws Exception {
+		// TODO Auto-generated method stub
+		String fileName=Constants.PH_ICON+"_"+Constants.ADVERTISEMENT_ICON+"_"+ad_id.toString()+"_"+screen;
+		String sql="delete from AdvertisementIcon where ad_id=? and icon_url like '%"+fileName+"%'";
+		Session session=getSession();
+		Query query=session.createQuery(sql);
+		query.setLong(0, ad_id);
+		query.executeUpdate();
+		AdvertisementIcon ad_icon=new AdvertisementIcon();
+		ad_icon.setAdvertisement(this.getHibernateTemplate().load(Advertisement.class, ad_id));
+		ad_icon.setIcon_url(filePath);
+		ad_icon.setModelScreen(this.getHibernateTemplate().load(ConsoleConstant.class, Short.parseShort(screen)));
+		ad_icon.setSet_time(new Date());
+		getHibernateTemplate().save(ad_icon);
+	}
+
+	@Override
+	public Advertisement getAdvertisementById(Long id) throws Exception {
+		// TODO Auto-generated method stub
+	//	return this.getHibernateTemplate().load(Advertisement.class, id);
+		try{
+		    List<ConsoleConstant>  constantList=getHibernateTemplate().find("from ConsoleConstant where value=? and type=1","phone");
+	        short phone=0;
+	        if(null!=constantList && constantList.size()==1)
+	        {
+	            phone=constantList.get(0).getId();
+	        }
+	        
+	        Advertisement ad =(Advertisement)getHibernateTemplate().find("from Advertisement where id=?",id).get(0);
+            
+            List<AdvertisementIcon> icon=getHibernateTemplate().find("from AdvertisementIcon where advertisement.id=? and modelScreen.id=?",ad.getId(),phone);
+            if(null!=icon && icon.size()==1)
+            {
+                ad.setAd_icon(icon.get(0).getIcon_url());
+            }
+            return ad;
+        }catch(Exception e){
+            throw e;
+        }
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AdvertisementIcon> getAdImgByAdId(Long id) throws Exception {
+		// TODO Auto-generated method stub
+		Session session=getSession();
+		String sql="from AdvertisementIcon where advertisement.id=? order by modelScreen.id";
+		Query query=session.createQuery(sql);
+		query.setLong(0, id);
+		return query.list();
+	}
+
+	@Override
+	public void addCensorWord(String[] aa) throws Exception {
+		// TODO Auto-generated method stub
+		 if(aa.length==3)
+		 {
+			 Session session=getSession();
+			 String sql="from CensorWord where word=?";
+			 Query query=session.createQuery(sql);
+			 query.setString(0, aa[1]);
+			 if(null==query.list() || query.list().size()==0)
+			 {
+				 CensorWord cw=new CensorWord();
+				 cw.setType(Integer.parseInt(aa[0]));
+				 cw.setWord(aa[1]);
+				 cw.setGrade(Integer.parseInt(aa[2]));
+				 cw.setAdd_date(new Date());
+				 this.getHibernateTemplate().save(cw);
+				 
+			 }
+		 }
+	}
+
+	@Override
+	public void addAdForNewSeries(Short id) throws Exception {
+		// TODO Auto-generated method stub
+		try{
+			 List<ModelAdvertisement> commonList=getHibernateTemplate().find("from ModelAdvertisement where series_id=? and type=?",(short)0,0);
+			 
+			 if(null!=commonList && commonList.size()>0)
+			 {
+				 for(ModelAdvertisement modelAd : commonList )
+				 {
+					 ModelAdvertisement m = new ModelAdvertisement();
+					 m.setAdvertisement(modelAd.getAdvertisement());
+					 m.setSeries_id(id);
+					 m.setSet_time(new Date());
+					 m.setShow_order(modelAd.getShow_order());
+					 m.setType(0);
+					 this.getHibernateTemplate().save(m);
+				 }
+			 }
+			 
+		}catch(Exception e){
+			throw e;
+		}
+	}
+
+	@Override
+	public Advertisement getPhoneAdByName(String adName) {
+		// TODO Auto-generated method stub
+		Session session=getSession();
+		String sql="from Advertisement where ad_name=?";
+		Query query=session.createQuery(sql);
+		query.setString(0, adName);
+		if(null!=query.list()&&query.list().size()==1)
+		{
+			return (Advertisement)query.list().get(0);
+		}
+		return null;
+	}
+
+	@Override
+	public String getAdImgUrlByAd(Long adId, String cs,Float version) throws Exception {
+		// TODO Auto-generated method stub
+		String screenName="phone";
+		if("1".equals(cs))
+		{
+			screenName="pc";
+		}else{
+		    if(null!=version && version>=500){
+		        screenName="phone2";
+		    }
+		}
+	    List<AdvertisementIcon> adImg=getHibernateTemplate().find("from AdvertisementIcon where advertisement.id=? and modelScreen.type=1 and modelScreen.value=?",adId,screenName);
+	    if(null!=adImg && adImg.size()==1)
+		{
+			return adImg.get(0).getIcon_url();
+		}
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public Integer countAdAppByAdId(final Long ad_id) throws Exception {
+		// TODO Auto-generated method stub
+		List<AdvertisementApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                    	session.flush();
+                    	session.clear();
+                        Criteria criteria = session.createCriteria(AdvertisementApp.class);
+                        Criteria adApp_criteria = criteria.createCriteria("advertisement", Criteria.LEFT_JOIN);
+//                        adApp_criteria.setFirstResult(0);
+//                        adApp_criteria.setMaxResults(2);
+ 						adApp_criteria.add(Restrictions.eq("id", ad_id));
+                        List<AdvertisementApp> result=criteria.list();  
+                        return result;
+                    }
+                });
+ 
+		 return list==null?0 : list.size();
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AdvertisementApp> findAdAppByAdId(final int start, final Long ad_id)
+			throws Exception {
+		// TODO Auto-generated method stub
+		List<AdvertisementApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                    	session.flush();
+                    	session.clear();
+                        Criteria criteria = session.createCriteria(AdvertisementApp.class);
+                        Criteria adApp_criteria = criteria.createCriteria("advertisement", Criteria.LEFT_JOIN);              
+ 						adApp_criteria.add(Restrictions.eq("id", ad_id));
+ 						criteria.setFirstResult(start);
+                        criteria.setMaxResults(Constants.APPS_PER_MAX_PAGE);
+                        criteria.addOrder(Order.asc("show_order"));
+                        List<AdvertisementApp> result=criteria.list();  
+                        return result;
+                    }
+                });
+ 
+		 return list;
+	}
+
+	@Override
+	public void updateAppOrderForAd(String[] str) throws Exception {
+		// TODO Auto-generated method stub
+		Session session=getSession();
+		String sql="update AdvertisementApp set show_order=? where id=?";
+		for(int i=0; i<str.length; i++)
+		{
+			if(null!=str[i]&&str[i].length()>0)
+			{
+				String order[]=str[i].split(",");
+				if(null!=order&&order.length==2)
+				{
+					Query query=session.createQuery(sql);
+					query.setInteger(0, Integer.parseInt(order[1]));
+					query.setLong(1, Long.parseLong(order[0]));
+					query.executeUpdate();
+				}
+			}
+		}
+	}
+	
+	public boolean findTopicByAppInfoId(Long app_id,Advertisement advertisement) throws Exception{
+		List<AdvertisementApp> ad_list = getHibernateTemplate().find("from AdvertisementApp where app_id=? and  ad_id=?",app_id,advertisement.getId());
+		if(ad_list!=null&&ad_list.size()>0){
+			return true;
+		}
+		return false;
+	}
+	@Override
+	public int countAdvertisement(Advertisement adv) throws Exception{
+	    
+	    Criteria criteria = getSession()
+                .createCriteria(Advertisement.class);
+        if (adv.getId() != null) {
+            criteria.add(Restrictions.eq("id", adv.getId()));
+        }
+        if (!UtilTool.checkStringNull(adv.getAd_name())) {
+            criteria.add(Restrictions.like("ad_name", "%"
+                    +adv.getAd_name() + "%"));
+        }       
+        int totalRows =((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult()).intValue();  //是否为null
+        return totalRows;
+	}
+
+}

@@ -1,0 +1,335 @@
+/**
+ * ReviewDAOImpl.java
+ * com.bbkmobile.iqoo.console.dao.review
+ *
+ * Function： TODO 
+ *
+ *   ver     date      		author
+ * ──────────────────────────────────
+ *   		 2012-1-5 		dengkehai
+ *
+ * Copyright (c) 2012, TNT All Rights Reserved.
+ */
+
+package com.bbkmobile.iqoo.console.dao.review;
+
+import java.sql.SQLException;
+import java.util.Date;
+import java.util.List;
+
+import org.hibernate.Criteria;
+import org.hibernate.HibernateException;
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Restrictions;
+import org.springframework.orm.hibernate3.HibernateCallback;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.console.constants.UtilTool;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+import com.bbkmobile.iqoo.console.dao.login.BbkAdminUser;
+
+/**
+ * ClassName:ReviewDAOImpl Function: TODO ADD FUNCTION
+ * 
+ * @author dengkehai
+ * @version
+ * @since Ver 1.1
+ * @Date 2012-1-5 下午6:01:15
+ * 
+ */
+public class ReviewDAOImpl extends HibernateDaoSupport implements ReviewDAO {
+
+	/**
+	 * 查询应用，获取符合条件的记录的总数，为分页服务
+	 * 
+	 * (non-Javadoc)
+	 * 
+	 * @see com.bbkmobile.iqoo.console.dao.review.ReviewDAO#countAllRecords(com.bbkmobile.iqoo.console.dao.appinfo.AppInfo)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public int countAllRecords(final AppInfo appInfo) throws Exception {
+		int result = 0;
+	
+		List<AppInfo> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(AppInfo.class);
+						if (null != appInfo.getAppType()
+								&& null != appInfo.getAppType().getId() 
+								&& -1 != appInfo.getAppType().getId().intValue()
+								&& 0 != appInfo.getAppType().getId().intValue()) {
+							criteria.add(Restrictions.eq("appType",
+									appInfo.getAppType()));
+						}
+						if (null != appInfo.getId()) {
+							criteria.add(Restrictions.eq("id", appInfo.getId()));
+						}
+						if (!UtilTool.checkStringNull(appInfo.getAppCnName())) {
+							criteria.add(Restrictions.like("appCnName", "%"
+									+ appInfo.getAppCnName() + "%"));
+						}
+						if (!UtilTool.checkStringNull(appInfo.getAppAuthor())) {
+							criteria.add(Restrictions.like("appAuthor", "%"
+									+ appInfo.getAppAuthor() + "%"));
+						}
+
+						if (!UtilTool.checkStringNull(appInfo.getDeveloper()
+								.getName())) {
+							Criteria dev_criteria = criteria.createCriteria(
+									"developer", Criteria.LEFT_JOIN);
+							dev_criteria.add(Restrictions.like("name", "%"
+									+ appInfo.getDeveloper().getName() + "%"));
+						}
+						if (appInfo.getType() != 0&&appInfo.getType() != -1) {
+							appInfo.getAppType().setId(appInfo.getType());
+							criteria.add(Restrictions.eq("appType",
+									appInfo.getAppType()));
+						}
+						if (null != appInfo.getFrom_date()) {
+							criteria.add(Restrictions.between("updateDate",
+									appInfo.getFrom_date(),
+									appInfo.getTo_date()));
+						}
+						if (null != appInfo.getSellType()) {
+							criteria.add(Restrictions.eq("sellType",
+									appInfo.getSellType()));
+						}
+						if (null != appInfo.getStatus_select()
+								&&appInfo.getStatus_select().intValue()!=0&&appInfo.getStatus_select().intValue()!=-1) {
+							appInfo.setAppStatus(appInfo.getStatus_select());
+							criteria.add(Restrictions.eq("appStatus",
+									appInfo.getStatus_select()));
+						}
+						if (null != appInfo.getAppStatus()) {
+
+							criteria.add(Restrictions.eq("appStatus",
+									appInfo.getAppStatus()));
+						} else {
+							criteria.add(Restrictions.or(Restrictions.eq(
+									"appStatus", (short) 2), Restrictions.or(
+									Restrictions.eq("appStatus", (short) 4),Restrictions.eq(
+											"appStatus", (short) 5))));
+						}
+
+						List<AppInfo> result = criteria.list();
+						return result;
+					}
+				});
+		if (null != list) {
+			result = list.size();
+		}
+		return result;
+
+	}
+
+	/**
+	 * 根据用户输入动态组织查询查询条件，查询符合条件的审核列表信息
+	 * 
+	 * (non-Javadoc)
+	 * 
+	 * @see com.bbkmobile.iqoo.console.dao.review.ReviewDAO#findByProperty(int,
+	 *      com.bbkmobile.iqoo.console.dao.appinfo.AppInfo)
+	 */
+	@Override
+	public List<AppInfo> findByProperty(final int start, final AppInfo appInfo)
+			throws Exception {
+
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		List<AppInfo> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(AppInfo.class);
+
+						if (null != appInfo.getAppType()
+								&& null != appInfo.getAppType().getId() 
+								&& -1 != appInfo.getAppType().getId().intValue()
+								&& 0 != appInfo.getAppType().getId().intValue()) {
+							criteria.add(Restrictions.eq("appType",
+									appInfo.getAppType()));
+						}
+						if (null != appInfo.getId()) {
+							criteria.add(Restrictions.eq("id", appInfo.getId()));
+						}
+						if (!UtilTool.checkStringNull(appInfo.getAppCnName())) {
+							criteria.add(Restrictions.like("appCnName", "%"
+									+ appInfo.getAppCnName() + "%"));
+						}
+						if (!UtilTool.checkStringNull(appInfo.getAppAuthor())) {
+							criteria.add(Restrictions.like("appAuthor", "%"
+									+ appInfo.getAppAuthor() + "%"));
+						}
+
+						if (!UtilTool.checkStringNull(appInfo.getDeveloper()
+								.getName())) {
+							Criteria dev_criteria = criteria.createCriteria(
+									"developer", Criteria.LEFT_JOIN);
+							dev_criteria.add(Restrictions.like("name", "%"
+									+ appInfo.getDeveloper().getName() + "%"));
+						}
+						if (appInfo.getType() != 0&&appInfo.getType() != -1) {
+							appInfo.getAppType().setId(appInfo.getType());
+							criteria.add(Restrictions.eq("appType",
+									appInfo.getAppType()));
+//							criteria.add(Restrictions.eq("appType.id",
+//									appInfo.getType()));
+						}
+						if (null != appInfo.getStatus_select()
+								&&appInfo.getStatus_select().intValue()!=0&&appInfo.getStatus_select().intValue()!=-1) {
+							appInfo.setAppStatus(appInfo.getStatus_select());
+							criteria.add(Restrictions.eq("appStatus",
+									appInfo.getAppStatus()));
+//							criteria.add(Restrictions.eq("appStatus",
+//									appInfo.getStatus_select()));
+						}
+						if (null != appInfo.getFrom_date()) {
+							criteria.add(Restrictions.between("updateDate",
+									appInfo.getFrom_date(),
+									appInfo.getTo_date()));
+						}
+						if (null != appInfo.getSellType()) {
+							criteria.add(Restrictions.eq("sellType",
+									appInfo.getSellType()));
+						}
+						if (null != appInfo.getAppStatus()) {
+							criteria.add(Restrictions.eq("appStatus",
+									appInfo.getAppStatus()));
+						} else {
+							criteria.add(Restrictions.or(Restrictions.eq(
+									"appStatus", (short) 2), Restrictions.or(
+									Restrictions.eq("appStatus", (short) 4),Restrictions.eq(
+											"appStatus", (short) 5))));
+						}
+						criteria.addOrder(Order.asc("id"));
+						criteria.setFirstResult(start);
+						criteria.setMaxResults(10);
+						List<AppInfo> result = criteria.list();
+						return result;
+					}
+				});
+		return list;
+	}
+	
+	
+	/**
+	 * 查询应用的所有审核记录
+	 * 
+	 * (non-Javadoc)
+	 * 
+	 * @see com.bbkmobile.iqoo.console.dao.review.ReviewDAO#findReviewRecord(com.bbkmobile.iqoo.console.dao.appinfo.AppInfo)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ReviewRecords> findReviewRecord(AppInfo appInfo)
+			throws Exception {
+
+		return getHibernateTemplate().find(
+				"from ReviewRecords where appInfo=?", appInfo);
+
+	}
+
+	/**
+	 * 开始审核，修改"待审核"状态的应用为"审核中"
+	 * 
+	 * (non-Javadoc)
+	 * 
+	 * @see com.bbkmobile.iqoo.console.dao.review.ReviewDAO#updateForInitReview(java.lang.Long)
+	 */
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@Override
+	public boolean updateForInitReview(final Long app_id) throws Exception {
+		Boolean result = false;
+		result = (Boolean) getHibernateTemplate().execute(new HibernateCallback() {
+			@Override
+			public Object doInHibernate(Session session)
+					throws HibernateException, SQLException {
+				Query query = session
+						.createQuery("update AppInfo set appStatus=3 where id=? and appStatus=?");
+				query.setLong(0, app_id);
+				query.setShort(1, (short) 2);
+				query.executeUpdate();
+				return true;
+			}
+		});
+		return result;
+	}
+
+	/**
+	 * 根据id查询应用信息
+	 * 
+	 * (non-Javadoc)
+	 * 
+	 * @see com.bbkmobile.iqoo.console.dao.review.ReviewDAO#findAppById(java.lang.Long)
+	 */
+	@Override
+	public AppInfo findAppById(Long app_id) throws Exception {
+
+		return getHibernateTemplate().load(AppInfo.class, app_id);
+
+	}
+
+	/**
+	 * 根据审核结果修改应用信息，保存审核记录
+	 * 
+	 * (non-Javadoc)
+	 * 
+	 * @see com.bbkmobile.iqoo.console.dao.review.ReviewDAO#updateForReview(com.bbkmobile.iqoo.console.dao.review.ReviewRecords)
+	 */
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@Override
+	public boolean updateForReview(final ReviewRecords review, final Integer userId) throws Exception {
+		boolean result = false;
+
+		AppInfo appInfo = findAppById(review.getAppInfo().getId());
+
+		if (null != appInfo) {
+			short appStatus = 1;
+			if (review.getReviewStatus() == '1') {
+				appStatus = 5;
+			} else {
+				appStatus = 4;
+			}
+			appInfo.setAppStatus(appStatus);
+			review.setAppInfo(appInfo);
+
+			BbkAdminUser reviewUser = getHibernateTemplate().load(
+					BbkAdminUser.class, userId);
+			review.setReviewUser(reviewUser);
+
+			review.setReviewDate(new Date());
+			getHibernateTemplate().save(review);
+			result = true;
+		}
+
+		return result;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppInfo> findAllReviewAppType() throws Exception {
+		// TODO Auto-generated method stub
+		List<AppInfo> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(AppInfo.class);
+
+							criteria.add(Restrictions.or(Restrictions.eq(
+									"appStatus", (short) 2), Restrictions.or(
+									Restrictions.eq("appStatus", (short) 4),Restrictions.eq(
+											"appStatus", (short) 5))));
+						
+						List<AppInfo> result = criteria.list();
+						return result;
+					}
+				});
+		return list;
+	}
+}

@@ -1,0 +1,71 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping>
+    <class name="com.bbkmobile.iqoo.console.dao.recommendation.CellphoneRecommendApp" table="t_cellphone_recommend" >
+        <id name="id" type="java.lang.Long">
+            <column name="id" />
+            <generator class="identity" />
+        </id>
+        
+  		<property name="order_type" type="java.lang.Character">
+            <column name="order_type" length="1" >
+            </column>
+        </property> 
+  		
+        <property name="show_order" type="java.lang.Integer">
+            <column name="show_order" >
+            </column>
+        </property>
+		        
+        <many-to-one name="appInfo"
+			class="com.bbkmobile.iqoo.console.dao.appinfo.AppInfo" column="app_id"
+			unique="true" outer-join="true" fetch="select" lazy="false" not-null="true" />
+		<!-- 
+	    <many-to-one name="series"
+			class="com.bbkmobile.iqoo.console.dao.modelmgr.Series" column="series_id"
+		    fetch="select" lazy="false"/>  
+	     -->
+	     
+        <property name="series_id" type="java.lang.Short">
+            <column name="series_id" >
+            </column>
+        </property>
+        
+	     <many-to-one name="model"
+			class="com.bbkmobile.iqoo.console.dao.modelmgr.Model" column="model_id"
+			fetch="select" />
+			    
+        <property name="add_date" type="timestamp">
+            <column name="add_date" length="19" not-null="true">
+            </column>
+        </property>
+              <!--  
+       
+    
+        <many-to-one name="appInfo"
+			class="com.bbkmobile.iqoo.console.dao.appinfo.AppInfo" column="app_id"
+			outer-join="true" fetch="select" lazy="false" not-null="true" />
+	   
+        <many-to-one name="model"
+			class="com.bbkmobile.iqoo.console.dao.modelmgr.Model" column="model_id"
+			outer-join="true" fetch="select" lazy="false"   />
+			
+        <many-to-one name="series"
+			class="com.bbkmobile.iqoo.console.dao.modelmgr.Series" column="series_id"
+			outer-join="true" fetch="select" lazy="false"   />
+		
+        
+ 
+        <property name="show_order" type="java.lang.Integer">
+            <column name="show_order" >
+            </column>
+        </property>
+		 <property name="add_date" type="timestamp">
+            <column name="add_date" length="19" not-null="true">
+            </column>
+        </property>      
+    -->
+
+    </class>
+</hibernate-mapping>

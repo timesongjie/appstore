@@ -1,0 +1,328 @@
+package com.bbkmobile.iqoo.console.dao.recommendation;
+
+import java.util.List;
+
+import org.apache.commons.lang.StringUtils;
+import org.hibernate.Criteria;
+import org.hibernate.Query;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Restrictions;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+
+public class RecommendSoftDaoImpl extends HibernateDaoSupport implements RecommendSoftDao {
+
+	@Override
+	public int countRecommendAppRecords(RecommendApp recommendApp)
+			throws Exception {
+		Criteria criteria = getSession().createCriteria(RecommendApp.class,"recommendApp");
+		if(recommendApp != null ){
+			AppInfo info = recommendApp.getAppInfo();
+			if(info != null){
+				filter(info,criteria);
+			}
+		}
+		return ((Integer)(criteria.setProjection(Projections.rowCount()).uniqueResult())).intValue();
+	}
+	////////统计时统一过滤////////
+	private void filter(AppInfo info,Criteria criteria) {
+		Criteria app_criteria = criteria.createCriteria("appInfo", "appInfo");
+		if (StringUtils.isNotBlank(info.getFilter_model())) {
+			if(info.getMinSdkVersion() != null){
+				app_criteria.add(Restrictions.or(Restrictions.le(
+						"minSdkVersion", info.getMinSdkVersion()), Restrictions
+						.isNull("minSdkVersion")));
+			}
+			if(info.getMaxSdkVersion() != null){
+				app_criteria.add(Restrictions.or(Restrictions.ge(
+						"maxSdkVersion", info.getMaxSdkVersion()), Restrictions
+						.isNull("maxSdkVersion")));
+			}
+			if(StringUtils.isNotBlank(info.getCPU_ABI())){
+                String sql="(CPU_ABI is null";
+                String cpuabis[]=info.getCPU_ABI().split(","); 
+                for(int i=0; i<cpuabis.length; i++)
+                {
+                    String cpuabi=cpuabis[i];
+                    sql=sql+" or CPU_ABI like '%,"+cpuabi+",%'";                          
+                }
+                sql=sql+")";
+                app_criteria.add(Restrictions.sqlRestriction(sql)); 
+            }
+			app_criteria.add(Restrictions
+					.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + info.getFilter_model() + ",%'))"));
+		}
+		else{
+			app_criteria.add(Restrictions.ne("appStatus", (short) 12));
+        }
+//		ProjectionList pList = Projections.projectionList();
+//
+//		pList.add(Projections.property("id").as("id")).add(Projections.property("appCnName").as("appCnName"));
+//		app_criteria.setProjection(pList);
+//		app_criteria.setResultTransformer(Transformers.aliasToBean(AppInfo.class));
+
+	}
+
+	@Override
+	public List<RecommendApp> getRecommendAppList(PageVO page,
+			RecommendApp recommendApp) throws Exception {
+		Criteria criteria = getSession().createCriteria(RecommendApp.class);
+		if(recommendApp != null ){
+			AppInfo info = recommendApp.getAppInfo();
+			if(info != null){
+				filter(info,criteria);
+			}
+		}
+		criteria.setFirstResult((page.getCurrentPageNum() - 1) * page.getNumPerPage());//Constants.APPS_PER_MAX_PAGE
+		criteria.setMaxResults(page.getNumPerPage());
+		criteria.addOrder(Order.asc("show_order"));
+		return criteria.list();
+	}
+
+	@Override
+	public List<RecommendApp> getAllRecommendAppList(RecommendApp recommendApp)
+			throws Exception {
+		Criteria criteria = getSession().createCriteria(RecommendApp.class);
+		criteria.addOrder(Order.asc("show_order"));
+		return criteria.list();
+	}
+
+	@Override
+	public boolean deleteRecommendAppByID(Long[] ids) throws Exception {
+		String sql = "delete from t_app_recommend where id = ?";
+		for(Long id : ids){
+			getSession().createSQLQuery(sql).setLong(0, id).executeUpdate();
+		}
+		return true;
+	}
+
+	@Override
+	public boolean addRecommendApp(RecommendApp recommendApp) throws Exception {
+		getSession().save(recommendApp);
+		return false;
+	}
+
+	@Override
+	public boolean updateRecommendAppShowOrder(RecommendApp recommendApp)
+			throws Exception {
+		Query query = getSession().createQuery("update RecommendApp t set t.show_order = ? where id = ?");  
+		query.setInteger(0, recommendApp.getShow_order());
+		query.setLong(1, recommendApp.getId());
+		query.executeUpdate();
+		return true;
+	}
+	@Override
+	public boolean updateRecommendAppShowOrder(List<RecommendApp> recommendApp)
+			throws Exception {
+		for(RecommendApp app : recommendApp){
+			updateRecommendAppShowOrder(app);
+		}
+		return true;
+	}
+
+	///////////////////Game///////////////////
+	@Override
+	public int countRecommendGameRecords(RecommendGame recommendGame)
+			throws Exception {
+		Criteria criteria = getSession().createCriteria(RecommendGame.class);
+		if(recommendGame != null ){
+			AppInfo info = recommendGame.getAppInfo();
+			if(info != null){
+				filter(info,criteria);
+			}
+		}
+		return ((Integer)(criteria.setProjection(Projections.rowCount()).uniqueResult())).intValue();
+	}
+
+	@Override
+	public List<RecommendGame> getRecommendGameList(PageVO page,
+			RecommendGame recommendGame) throws Exception {
+		Criteria criteria = getSession().createCriteria(RecommendGame.class);
+		if(recommendGame != null ){
+			AppInfo info = recommendGame.getAppInfo();
+			if(info != null){
+				filter(info, criteria);
+			}
+		}
+		criteria.setFirstResult((page.getCurrentPageNum() - 1) * page.getNumPerPage());//Constants.APPS_PER_MAX_PAGE
+		criteria.setMaxResults(page.getNumPerPage());
+		criteria.addOrder(Order.asc("show_order"));
+		return criteria.list();
+	}
+
+	@Override
+	public List<RecommendGame> getAllRecommendGameList(
+			RecommendGame recommendGame) throws Exception {
+		Criteria criteria = getSession().createCriteria(RecommendGame.class);
+		criteria.addOrder(Order.asc("show_order"));
+		return criteria.list();
+	}
+
+	@Override
+	public boolean deleteRecommendGameByID(Long[] ids) throws Exception {
+		String sql = "delete from t_game_recommend where id = ?";
+		for(Long id : ids){
+			getSession().createSQLQuery(sql).setLong(0, id).executeUpdate();
+		}
+		return true;
+	}
+
+	@Override
+	public boolean addRecommendGame(RecommendGame recommendGame)
+			throws Exception {
+		getSession().save(recommendGame);
+		return false;
+	}
+
+	@Override
+	public boolean updateRecommendGameShowOrder(RecommendGame recommendGame)
+			throws Exception {
+		Query query = getSession().createQuery("update RecommendGame t set t.show_order = ? where id = ?");  
+		query.setInteger(0, recommendGame.getShow_order());
+		query.setLong(1, recommendGame.getId());
+		query.executeUpdate();
+		return true;
+	}
+
+	
+	@Override
+	public boolean updateRecommendGameShowOrder(
+			List<RecommendGame> recommendGame) throws Exception {
+		for(RecommendGame app : recommendGame){
+			updateRecommendGameShowOrder(app);
+		}
+		return true;
+	}
+//	@Override
+//	@Deprecated
+//	public List getRecommendAppListForInterface(PageVO page,
+//			RecommendApp recommendApp) throws Exception {
+//		/*Criteria criteria = getSession().createCriteria(RecommendApp.class);
+//		if(recommendApp != null ){
+//			AppInfo info = recommendApp.getAppInfo();
+//			if(info != null){
+//				filter(info,criteria);
+//			}
+//		}
+//		criteria.setFirstResult((page.getCurrentPageNum() - 1) * page.getNumPerPage());//Constants.APPS_PER_MAX_PAGE
+//		criteria.setMaxResults(page.getNumPerPage());
+//		criteria.addOrder(Order.asc("show_order"));
+//		return criteria.list();*/
+////		AppInfo appInfo = null;
+////		if(recommendApp != null){
+////			appInfo = recommendApp.getAppInfo();
+////		}
+////		Session session = getSession();
+////		return new AppInfoFilter(session){
+////			@Override
+////			public String preSql() {
+////				return "select this_.show_order as sortOrder,";
+////			}
+////			@Override
+////			public String postSql() {
+////				return " from t_app_recommend this_ ,t_app_info appinfo1_ where this_.app_id=appinfo1_.id ";
+////			}
+////			@Override
+////			public String orderSq() {
+////				return " order by this_.show_order asc ";
+////			}
+////			@Override
+////			public void queryAssign() {
+////				this.getQuery().addScalar("sortOrder",Hibernate.INTEGER);
+////			}
+////		}.execute(page, appInfo);
+//		return null;
+//	}
+//	@Override
+//	@Deprecated
+//	public List<CommonResultAppInfo> getRecommendGameListForInterface(PageVO page,
+//			RecommendGame recommendGame) throws Exception {
+//		/**/
+////		AppInfo appInfo = null;
+////		if(recommendGame != null){
+////			appInfo = recommendGame.getAppInfo();
+////		}
+////		Session session = getSession();
+////		return new AppInfoFilter(session){
+////			@Override
+////			public String preSql() {
+////				return "select this_.show_order as sortOrder,";
+////			}
+////			@Override
+////			public String postSql() {
+////				return " from t_game_recommend this_ ,t_app_info appinfo1_ where this_.app_id=appinfo1_.id ";
+////			}
+////			@Override
+////			public String orderSq() {
+////				return " order by this_.show_order asc ";
+////			}
+////			
+////		}.execute(page, appInfo);
+//		return null;
+//	}
+	//appInfo按需查询
+//	private final String appInfoSql = "  appinfo1_.appAuthor as developer, "
+//			+ " appinfo1_.downloadCount as download_count, appinfo1_.appApk as download_url, appinfo1_.appIcon as icon_url, "
+//			+ " appinfo1_.id as id, appinfo1_.official as offical, appinfo1_.appPackage as package_name, "
+//			+ " appinfo1_.patchs as patchs, appinfo1_.commentCount as raters_count, appinfo1_.avgComment as score,"
+//			+ " appinfo1_.apkSize as size, appinfo1_.tag as tag, appinfo1_.appCnName as title_zh,"
+//			+ " appinfo1_.appEnName as title_en, appinfo1_.appVersion as version_name, appinfo1_.appVersionCode as version_code ";
+//	
+//	private StringBuffer sqlFilter(StringBuffer sql,AppInfo info){
+//			if (StringUtils.isNotBlank(info.getFilter_model())) {
+//				if(info.getMinSdkVersion() != null){
+//					sql.append(" and (appinfo1_.minSdkVersion<= :minSdkVersion or appinfo1_.minSdkVersion is null) ");
+//				}
+//				if(info.getMaxSdkVersion() != null){
+//					sql.append(" and (appinfo1_.maxSdkVersion>= :maxSdkVersion or appinfo1_.maxSdkVersion is null)");
+//				}
+//				if(StringUtils.isNotBlank(info.getCPU_ABI())){
+//					sql.append(" and (CPU_ABI is null or CPU_ABI like :CPU_ABI)");
+//	            }
+//				sql.append(" and (appStatus=0 or (appStatus=13 and filter_model not like :filter_model)) ");
+//			}
+//			else{
+//				sql.append(" and (appStatus != 12");
+//	        }
+//		return sql;
+//	}
+//	private void queryAssign(SQLQuery query,AppInfo info){
+//		if (StringUtils.isNotBlank(info.getFilter_model())) {
+//			if(info.getMinSdkVersion() != null){
+//				query.setInteger("minSdkVersion", info.getMinSdkVersion());
+//			}
+//			if(info.getMaxSdkVersion() != null){
+//				query.setInteger("maxSdkVersion", info.getMaxSdkVersion());
+//			}
+//			if(StringUtils.isNotBlank(info.getCPU_ABI())){
+//				query.setString("CPU_ABI", transLike(info.getCPU_ABI()));
+//            }
+//			query.setString("filter_model", transLike(info.getFilter_model()));
+//		}
+//	}
+//	private void queryAddScalar(SQLQuery query){
+//		query.addScalar("sortOrder",Hibernate.INTEGER)
+//			.addScalar("developer", Hibernate.STRING)
+//			.addScalar("download_count", Hibernate.LONG)
+//	        .addScalar("download_url", Hibernate.STRING)
+//	        .addScalar("icon_url", Hibernate.STRING)
+//	        .addScalar("id", Hibernate.LONG)
+//	        .addScalar("offical", Hibernate.CHARACTER)
+//	        .addScalar("package_name", Hibernate.STRING)
+//	        .addScalar("patchs", Hibernate.STRING)
+//	        .addScalar("raters_count", Hibernate.INTEGER)
+//	        .addScalar("score", Hibernate.FLOAT)
+//	        .addScalar("size", Hibernate.INTEGER)
+//	        .addScalar("tag", Hibernate.SHORT)
+//	        .addScalar("title_zh", Hibernate.STRING)                                            
+//	        .addScalar("title_en", Hibernate.STRING)
+//	        .addScalar("version_name", Hibernate.STRING)                                            
+//	        .addScalar("version_code", Hibernate.STRING);
+//	}
+//	private String transLike(String paramter){
+//		return "%,"+paramter+",%";
+//	}
+}

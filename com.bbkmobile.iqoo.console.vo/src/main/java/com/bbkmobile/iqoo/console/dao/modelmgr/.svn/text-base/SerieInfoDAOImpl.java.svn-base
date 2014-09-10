@@ -1,0 +1,158 @@
+package com.bbkmobile.iqoo.console.dao.modelmgr;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+public class SerieInfoDAOImpl extends HibernateDaoSupport implements SerieInfoDAO {
+	
+	@SuppressWarnings("unchecked")
+    public List<Series> getSerieInfo() throws Exception {
+		return getHibernateTemplate().find("from Series order by order ASC");
+	}
+
+	//添加系列
+	public boolean addSerie(Series serie) throws Exception {
+		boolean result=false;
+		if(null != serie)
+		{
+			serie.setAdd_date(new Date());
+			getHibernateTemplate().save(serie);
+			result=true;
+		}
+		return result;
+	}
+	
+//	public boolean saveSeriesImage(File file) throws Exception {
+//		try{
+//		    //fileName = UtilTool.changeFileName(fileName);
+//		    java.io.InputStream input = new java.io.FileInputStream(file); 
+//			java.io.OutputStream output = new java.io.FileOutputStream(path); 
+//			byte buffer[] = new byte[8192]; 
+//			int count = 0; 
+//			while((count = input.read(buffer)) > 0) 
+//			{
+//			    output.write(buffer, 0, count); 
+//			} 
+//			input.close();
+//			output.close();
+//		}catch (Exception e) {
+//			// TODO: handle exception
+//			throw e;
+//		}
+//		return true;
+//	}
+
+	public Series findSerieById(Short id) throws Exception {
+		// TODO Auto-generated method stub
+		try{
+			return (Series)getHibernateTemplate().find("from Series where id=?",id).get(0);
+		}catch(Exception e){
+			throw e;
+		}
+	}
+	
+	//修改系列
+	public boolean updateSerie(Series serie) throws Exception{
+		try{
+//		    serie.setModify_date(new Date());
+			String queryString ="update Series set series=?,serie_desc=?,modify_date=? where id=?";
+			Session session=getSession();
+			Query queryObject=session.createQuery(queryString);
+			queryObject.setString(0, serie.getSeries());
+			queryObject.setString(1, serie.getDescribe());
+	//		queryObject.setInteger(2, serie.getOrder());
+			queryObject.setTimestamp(2,new Date());
+			queryObject.setLong(3, serie.getId());
+			queryObject.executeUpdate();
+			return true;
+		}catch(Exception e){
+			throw e;
+		}
+	}
+
+//	public boolean deleteSerieImage(String path) throws Exception{
+//	    try{
+//	        File file = new File(path);
+//	        file.delete();         
+//        }catch (Exception e) {
+//            // TODO: handle exception
+//            throw e;
+//        }
+//        return true;
+//	}
+	
+	public boolean deleteSerieByID(Short[] ids) throws Exception {
+		// TODO Auto-generated method stub
+		try{
+			String queryString ="delete Series where id=?";
+			Session session=getSession();
+			for(Short id:ids){
+			    Query queryObj=session.createQuery(queryString);
+			    queryObj.setLong(0, id);
+			    queryObj.executeUpdate();			    
+			}
+			return true;
+		}catch(Exception e){
+			throw e;
+		}
+		
+	}
+
+	public boolean updateShowOrder(Short id, int order) throws Exception {
+		// TODO Auto-generated method stub
+		try{
+			String queryString ="update Series set show_order=? where id=?";
+			Session session=getSession();
+			Query queryObj=session.createQuery(queryString);
+			queryObj.setInteger(0, order);
+			queryObj.setLong(1, id);
+			queryObj.executeUpdate();
+			return true;
+		}catch(Exception e){
+			throw e;
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+    public List<Series> getSerieList() throws Exception{
+       try{
+            return getHibernateTemplate().find("from Series");
+        }catch(Exception e){
+            throw e;
+        }
+	}
+	
+	public Series findSeriesByMdName(String md_name) throws Exception{
+	    try{
+            return (Series)getHibernateTemplate().find("from Series where md_name =?",md_name).get(0);
+        }catch(Exception e){
+            throw e;
+        }
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ModelScreen> getAllModelScreen() throws Exception {
+		// TODO Auto-generated method stub
+		try{
+            return getHibernateTemplate().find("from ModelScreen");
+        }catch(Exception e){
+            throw e;
+        }
+	}
+
+	@Override
+	public Series getSeriesByName(String series) throws Exception {
+		// TODO Auto-generated method stub
+		try{
+            return (Series)getHibernateTemplate().find("from Series where series=?",series).get(0);
+        }catch(Exception e){
+            throw e;
+        }
+	}
+}

@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping>
+    <class name="com.bbkmobile.iqoo.console.dao.score.VCoinSetting" table="t_v_coin_setting" >
+        <id name="id" type="java.lang.Long">
+            <column name="id" />
+            <generator class="identity" />
+        </id>
+        
+         <property name="base_point" type="java.lang.Integer">
+            <column name="base_point"  not-null="true">
+            </column>
+        </property>
+        
+        <property name="specific_indicator" type="java.lang.Integer">
+            <column name="specific_indicator"  not-null="true">
+            </column>
+        </property>
+        
+        <property name="indicator_paramenter" type="java.lang.Integer">
+            <column name="indicator_paramenter" >
+            </column>
+        </property>
+        
+        <property name="score" type="java.lang.Integer">
+            <column name="score"  not-null="true">
+            </column>
+        </property>
+        
+  		<property name="user" type="string">
+            <column name="user" length="20" not-null="true">
+            </column>
+        </property>
+        
+        <property name="modify_date" type="timestamp">
+            <column name="modify_date" length="19" >
+            </column>
+        </property>
+    
+    </class>
+</hibernate-mapping>

@@ -1,0 +1,154 @@
+package com.bbkmobile.iqoo.console.dao.login;
+
+import java.util.List;
+
+import org.hibernate.Criteria;
+import org.hibernate.HibernateException;
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Restrictions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.orm.hibernate3.HibernateCallback;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.common.logging.Lg;
+import com.bbkmobile.iqoo.console.constants.LgType;
+import com.bbkmobile.iqoo.console.constants.UtilTool;
+
+import java.sql.Timestamp;
+import java.util.Calendar;
+/**
+ */
+
+public class BbkAdminLogDAOImpl extends HibernateDaoSupport implements BbkAdminLogDAO {
+
+	public void save(Integer userid, String logIP,
+			String consoleUserLogin) throws Exception{
+		try {
+			Session session = getSession();
+			BbkAdminLog admLog = new BbkAdminLog();
+			BbkAdminUser bbkAdminUser=this.getHibernateTemplate().load(BbkAdminUser.class, userid);
+			admLog.setBbkAdminUser(bbkAdminUser);
+			admLog.setLogIp(logIP);
+			admLog.setLogContent(consoleUserLogin);
+			admLog.setLogtime(new Timestamp(Calendar.getInstance().getTimeInMillis()));
+			
+	//		Transaction tran = session.beginTransaction();
+			session.save(admLog);
+	//		tran.commit();
+			
+			Lg.info(LgType.CONSOLE_USER_LOG, "用户日志保存成功。");
+		} catch (Exception e) {
+			Lg.info(LgType.CONSOLE_USER_LOG, "用户日志保存失败。", e);
+			throw e;
+		}
+	}
+	
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public Integer countAllLogs(final BbkAdminLog bbkAdminLog) throws Exception {
+		// TODO Auto-generated method stub
+		int result = 0;
+		List<BbkAdminLog> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(BbkAdminLog.class);
+
+						if(null!=bbkAdminLog.getBbkAdminUser()&&
+								!UtilTool.checkStringNull(bbkAdminLog.getBbkAdminUser().getAdmUserName()))
+						{
+							Criteria admin_criteria = criteria.createCriteria(
+									"bbkAdminUser", Criteria.LEFT_JOIN);
+							admin_criteria.add(Restrictions.like("admUserName", "%"
+									+ bbkAdminLog.getBbkAdminUser().getAdmUserName() + "%"));
+						}
+						if (null != bbkAdminLog.getFrom_date()) {
+							criteria.add(Restrictions.between("logtime",
+									bbkAdminLog.getFrom_date(),
+									bbkAdminLog.getTo_date()));
+						}
+						if (!UtilTool.checkStringNull(bbkAdminLog.getLogIp())) {
+							criteria.add(Restrictions.eq("logIp",
+									bbkAdminLog.getLogIp()));
+						}
+						List<BbkAdminLog> result = criteria.list();
+						return result;
+					}
+				});
+		if (null != list) {
+			result = list.size();
+		}
+		return result;
+	}
+
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<BbkAdminLog> findLogsByProperty(final Integer startRecord,
+			final BbkAdminLog bbkAdminLog) throws Exception {
+		// TODO Auto-generated method stub
+		List<BbkAdminLog> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(BbkAdminLog.class);
+						if(null!=bbkAdminLog.getBbkAdminUser()&&
+								!UtilTool.checkStringNull(bbkAdminLog.getBbkAdminUser().getAdmUserName()))
+						{
+							Criteria admin_criteria = criteria.createCriteria(
+									"bbkAdminUser", Criteria.LEFT_JOIN);
+							admin_criteria.add(Restrictions.like("admUserName", "%"
+									+ bbkAdminLog.getBbkAdminUser().getAdmUserName() + "%"));
+						}
+						if (null != bbkAdminLog.getFrom_date()) {
+							criteria.add(Restrictions.between("logtime",
+									bbkAdminLog.getFrom_date(),
+									bbkAdminLog.getTo_date()));
+						}
+						if (!UtilTool.checkStringNull(bbkAdminLog.getLogIp())) {
+							criteria.add(Restrictions.eq("logIp",
+									bbkAdminLog.getLogIp()));
+						}
+						criteria.addOrder(Order.asc("logId"));
+						criteria.setFirstResult(startRecord);
+						criteria.setMaxResults(10);
+						List<BbkAdminLog> result = criteria.list();
+						return result;
+					}
+				});
+
+		return list;
+	}
+
+
+	@Override
+	public boolean deleteOneOrMoreLogs(int[] ids) throws Exception {
+		// TODO Auto-generated method stub
+		BbkAdminLog bbkAdminLog=null;
+		for(int i=0; i<ids.length; i++)
+		{
+			bbkAdminLog=this.getHibernateTemplate().load(BbkAdminLog.class, ids[i]);
+			this.getHibernateTemplate().delete(bbkAdminLog);
+		}
+		return true;
+	}
+
+
+	@Override
+	public boolean deleteAllLogs() throws Exception {
+		// TODO Auto-generated method stub
+		String sql="delete from BbkAdminLog";
+		Session session=getSession();
+		Query query=session.createQuery(sql);
+		query.executeUpdate();
+		return true;
+	}
+	
+}

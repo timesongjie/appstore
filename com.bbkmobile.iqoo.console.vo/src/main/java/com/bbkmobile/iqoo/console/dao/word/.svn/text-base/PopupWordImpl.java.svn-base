@@ -1,0 +1,44 @@
+package com.bbkmobile.iqoo.console.dao.word;
+
+import java.util.List;
+
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+public class PopupWordImpl extends HibernateDaoSupport implements PopupWordDao{
+
+	@Override
+	public int addOne(PopupWord word) throws Exception {
+		if(word != null){
+			 getHibernateTemplate().save(word);
+		}
+		return 0;
+	}
+
+	@Override
+	public int deleteOne(Long id) throws Exception {
+		return getSession().createSQLQuery("delete from t_word_popup where id = ?").setLong(0, id).executeUpdate();
+	}
+
+	@Override
+	public int deleteAll(List<Long> ids) throws Exception {
+		if(ids != null ){
+			for(Long id : ids){
+				deleteOne(id);
+			}
+		}
+		return 0;
+	}
+	
+	@Override
+	public List<PopupWord> list() throws Exception {
+		return getHibernateTemplate().find(" from PopupWord ");
+	}
+
+	@Override
+	public List<PopupWord> list(Character type) throws Exception {
+		if(type == null){
+			return list();
+		}
+		return getHibernateTemplate().find(" from PopupWord where type = ?",type);
+	}
+}

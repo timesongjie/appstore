@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 128
+/repositories/IqooSourceCode/!svn/ver/2283/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/sysmanage
+END
+PrivilegeVO.java
+K 25
+svn:wc:ra_dav:version-url
+V 145
+/repositories/IqooSourceCode/!svn/ver/1431/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/sysmanage/PrivilegeVO.java
+END
+SystemAdminDAO.java
+K 25
+svn:wc:ra_dav:version-url
+V 148
+/repositories/IqooSourceCode/!svn/ver/1473/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/sysmanage/SystemAdminDAO.java
+END
+SystemAdminVO.java
+K 25
+svn:wc:ra_dav:version-url
+V 147
+/repositories/IqooSourceCode/!svn/ver/1431/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/sysmanage/SystemAdminVO.java
+END
+SystemAdminDAOImpl.java
+K 25
+svn:wc:ra_dav:version-url
+V 152
+/repositories/IqooSourceCode/!svn/ver/2283/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/sysmanage/SystemAdminDAOImpl.java
+END

@@ -1,0 +1,278 @@
+package com.bbkmobile.iqoo.common.util;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.commons.lang.ObjectUtils;
+import org.apache.commons.lang.math.NumberUtils;
+
+import com.bbkmobile.iqoo.common.logging.Lg;
+
+/**
+ * 反射工具类，方法持续更新。。。
+ * 
+ * @author wwf
+ * 
+ */
+public class ReflectUtil {
+
+    /**
+     * 获取对象属性值
+     * 
+     * @param obj
+     * @param propertyName
+     * @return
+     */
+    public static Object getObjectPropertyValue(Object obj, String propertyName) {
+        Field field = getObjectField(obj, propertyName);
+        return getObjectFieldValue(obj, field);
+    }
+
+    /**
+     * 获取类的属性值
+     * 
+     * @param clazz
+     * @param propertyName
+     * @return
+     */
+    public static Object getClassPropertyValue(Class<? extends Object> clazz,
+            String propertyName) {
+        Field field = getClassField(clazz, propertyName);
+        return getObjectFieldValue(null, field);
+    }
+
+    /**
+     * 设置对象属性值
+     * 
+     * @param obj
+     * @param propertyName
+     * @param value
+     * @return
+     */
+    public static Boolean setObjectPropertyValue(Object obj,
+            String propertyName, Object value) {
+        Field field = getObjectField(obj, propertyName);
+        return setObjectFieldValue(obj, field, value);
+    }
+
+    /**
+     * 设置对象属性值
+     * 
+     * @param obj
+     * @param values
+     */
+    public static <T> void setObjectPropertyValues(Object obj,
+            Map<String, T> values) {
+        if (obj == null || values == null) {
+            return;
+        }
+        Map<String, Field> fields = getObjectFields(obj);
+        for (Map.Entry<String, T> map : values.entrySet()) {
+            String propertyName = map.getKey();
+            T value = map.getValue();
+            if (fields.containsKey(propertyName)) {
+                Field field = fields.get(propertyName);
+                setObjectFieldValue(obj, field, value);
+            }
+        }
+    }
+
+    /**
+     * 设置类属性值
+     * 
+     * @param clazz
+     * @param propertyName
+     * @param value
+     * @return
+     */
+    public static Boolean setClassPropertyValue(Class<? extends Object> clazz,
+            String propertyName, Object value) {
+        Field field = getClassField(clazz, propertyName);
+        return setObjectFieldValue(null, field, value);
+    }
+
+    /**
+     * 获取对象属性对应的Field
+     * 
+     * @param obj
+     * @param propertyName
+     * @return
+     */
+    public static Field getObjectField(Object obj, String propertyName) {
+        Map<String, Field> fields = getObjectFields(obj);
+        return fields.get(propertyName);
+    }
+
+    /**
+     * 获取类属性对应的Field
+     * 
+     * @param clazz
+     * @param propertyName
+     * @return
+     */
+    public static Field getClassField(Class<? extends Object> clazz,
+            String propertyName) {
+        Map<String, Field> fields = getClassFields(clazz);
+        return fields.get(propertyName);
+    }
+
+    /**
+     * 将第一个对象中不为null的属性值复制到第二个对象中(只获取Long,String,Integer,Data,Boolean等基本数据类型)
+     * 
+     * @param from
+     * @param to
+     */
+    public static void mappingNotNullPropertyValuesByAnnotation(Object from,
+            Object to, Class<? extends Annotation> aclazz) {
+        if (from == null || to == null) {
+            return;
+        }
+        Map<String, Field> fromFields = getClassFields(from.getClass(), aclazz);
+        Map<String, Field> toFields = getObjectFields(to);
+        for (Map.Entry<String, Field> map : fromFields.entrySet()) {
+            String key = map.getKey();
+            Field field = map.getValue();
+            if (!toFields.containsKey(key)) {
+                continue;
+            }
+            Object value = getObjectFieldValue(from, field);
+            if (value == null) {
+                continue;
+            }
+            Field toField = toFields.get(key);
+            setObjectFieldValue(to, toField, value);
+        }
+    }
+
+    /**
+     * 设置属性值
+     * 
+     * @param obj
+     * @param field
+     * @param value
+     */
+    public static Boolean setObjectFieldValue(Object obj, Field field,
+            Object value) {
+        if (field == null) {
+            return false;
+        }
+        field.setAccessible(true);
+        try {
+            if (value != null) {
+                Class<?> typeClazz = field.getType();
+                Class<?> valueClazz = value.getClass();
+                if (!typeClazz.isAssignableFrom(valueClazz)) {
+                    if (String.class.equals(typeClazz)) {
+                        value = ObjectUtils.toString(value);
+                    } else if (String.class.equals(valueClazz)) {
+                        String myValue = ObjectUtils.toString(value);
+                        if (!NumberUtils.isNumber(myValue)) {
+                            return false;
+                        }
+                        String typeName = typeClazz.getName();
+                        if (Integer.class.equals(typeClazz)
+                                || "int".equals(typeName)) {
+                            value = NumberUtils.toInt(myValue, 0);
+                        } else if (Short.class.equals(typeClazz)
+                                || "short".equals(typeName)) {
+                            value = Short.valueOf(myValue);
+                        } else if (Long.class.equals(typeClazz)
+                                || "long".equals(typeName)) {
+                            value = NumberUtils.toLong(myValue, 0);
+                        } else if (Float.class.equals(typeClazz)
+                                || "float".equals(typeName)) {
+                            value = NumberUtils.toFloat(myValue, 0);
+                        } else if (Double.class.equals(typeClazz)
+                                || "double".equals(typeName)) {
+                            value = NumberUtils.toDouble(myValue, 0);
+                        } else {
+                            return false;
+                        }
+                    } else {
+                        return false;
+                    }
+                }
+            }
+            field.set(obj, value);
+            return true;
+        } catch (IllegalArgumentException e) {
+            Lg.error(ReflectUtil.class, e.getLocalizedMessage(), e);
+        } catch (IllegalAccessException e) {
+            Lg.error(ReflectUtil.class, e.getLocalizedMessage(), e);
+        }
+        return false;
+    }
+
+    /**
+     * 获取属性值
+     * 
+     * @param obj
+     * @param field
+     * @return
+     */
+    public static Object getObjectFieldValue(Object obj, Field field) {
+        if (field == null) {
+            return null;
+        }
+        field.setAccessible(true);
+        Object value = null;
+        try {
+            value = field.get(obj);
+        } catch (IllegalArgumentException e) {
+            Lg.error(ReflectUtil.class, e.getLocalizedMessage(), e);
+        } catch (IllegalAccessException e) {
+            Lg.error(ReflectUtil.class, e.getLocalizedMessage(), e);
+        }
+        return value;
+    }
+
+    /**
+     * 获取对象所有属性map其中key为属性名
+     * 
+     * @param obj
+     * @return
+     */
+    public static Map<String, Field> getObjectFields(Object obj) {
+        if (obj == null) {
+            return new HashMap<String, Field>();
+        }
+        Class<? extends Object> clazz = obj.getClass();
+        return getClassFields(clazz);
+    }
+
+    /**
+     * 获取class所有属性map其中key为属性名
+     * 
+     * @param clazz
+     * @return
+     */
+    public static Map<String, Field> getClassFields(
+            Class<? extends Object> clazz) {
+        return getClassFields(clazz, null);
+    }
+
+    /**
+     * 按注解过滤Field
+     * 
+     * @param clazz
+     * @param aclazz
+     * @return
+     */
+    public static Map<String, Field> getClassFields(
+            Class<? extends Object> clazz, Class<? extends Annotation> aclazz) {
+        Map<String, Field> fields = new HashMap<String, Field>();
+        Field[] myFields = clazz.getDeclaredFields();
+        for (Field field : myFields) {
+            if (aclazz != null) {
+                Annotation a = field.getAnnotation(aclazz);
+                if (a == null) {
+                    continue;
+                }
+            }
+            fields.put(field.getName(), field);
+        }
+        return fields;
+    }
+}

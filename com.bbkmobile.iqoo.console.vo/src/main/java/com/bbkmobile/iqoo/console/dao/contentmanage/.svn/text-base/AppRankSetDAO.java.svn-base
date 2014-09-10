@@ -1,0 +1,98 @@
+package com.bbkmobile.iqoo.console.dao.contentmanage;
+
+import java.util.List;
+
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.console.dao.advertisement.Advertisement;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+import com.bbkmobile.iqoo.console.dao.appinfo.SearchHotWord;
+import com.bbkmobile.iqoo.console.dao.apptype.AppType;
+import com.bbkmobile.iqoo.console.dao.modelmgr.Series;
+import com.bbkmobile.iqoo.console.top.dao.TopBase;
+
+public interface AppRankSetDAO {
+    boolean updateAppDownloadWeekRank() throws Exception;
+    boolean updateAppOnsaleDateTopWithDate() throws Exception;
+    boolean updateAppOnsaleDateTopWithDownload() throws Exception;
+    boolean deleteAppDownloadWeekRank() throws Exception;
+    boolean deleteInexistenceAppDownloadWeekRank() throws Exception;
+    boolean deleteAppOnsaleDateTop() throws Exception;
+    boolean updateMapAppDownloadWeekRank() throws Exception;
+    
+    boolean updateAppDownloadMonthRank() throws Exception;
+    boolean deleteAppDownloadMonthRank() throws Exception;
+    boolean deleteInexistenceAppDownloadMonthRank() throws Exception;
+    boolean updateMapAppDownloadMonthRank() throws Exception;
+    boolean updateAppDownloadCount() throws Exception;
+    boolean updateAppRiskRank() throws Exception;
+    boolean updateAppDownloadRankWithDays(int days, int addDays, String tableName) throws Exception;
+
+    boolean updateApplicationRank() throws Exception;
+    boolean updateGameRank() throws Exception;
+    
+    boolean deleteAppDownloadMonthTop() throws Exception;
+    boolean updateAppDownloadTop() throws Exception;
+    
+    String getAppDownloadMonthTopWithType(int appTypeId) throws Exception;
+    String getAppDownloadMonthTopWithTypes(String appTypeIds) throws Exception;
+    
+    boolean updateSearchWordTop() throws Exception;       //更新搜索词top100排行榜
+    boolean updateSearchHotWord() throws Exception;        //更新搜索热词表
+    
+    Integer countRankSetups(RankSetup rankSetup) throws Exception;    
+    List<RankSetup> getRankSetups(RankSetup rankSetup) throws Exception;
+    List<RankSetup> getAdRankSetups(PageVO page,RankSetup rankSetup,Advertisement advertisement) throws Exception;
+    Integer countAdRankSetup(RankSetup rankSetup,Advertisement advertisement) throws Exception;
+    boolean isExistRankSetup(RankSetup rankSetup) throws Exception;
+    boolean addRankSetup(RankSetup rankSetup,Long[] ids) throws Exception;
+    boolean addAdRankSetup(RankSetup rankSetup,Long[] ids) throws Exception;
+    boolean deleteRankSetups(RankSetup rankSetup, String ids) throws Exception;
+    boolean updateRankSetups(RankSetup rankSetup, String ids) throws Exception;
+    boolean addSearchHotWordSetup(RankSetup rankSetup, SearchHotWord searchHotWord) throws Exception;
+    SearchHotWord getSearchHotWord(Integer id) throws Exception;
+    boolean updateRankWithSetup(String sourceTable, String descTable, RankSetup rankSetup) throws Exception;
+    boolean updateHotWordWithSetup(String sourceTable, String descTable, RankSetup rankSetup) throws Exception;
+    boolean deleteYesterDayRankSetups(String setupTable, String descTable,  RankSetup rankSetup) throws Exception;
+    boolean updateRecommendWithSetup(String sourceTable, String descTable, RankSetup rankSetup) throws Exception;
+    boolean updateBakTable(String descTable, String bakTable) throws Exception;
+    boolean updateShowOrderForRank(String tableName) throws Exception;
+    
+    List<AppDownloadTop> getDownloadTopApps(int order_type_int, int apps_per_page_int, int page_index_int, Short model_id,
+            Integer sdkVersion, String drawable_dpi, String CPU_ABI) throws Exception;
+    List<AppInfo> getScoreTopApps(int order_type_int, int apps_per_page_int, int page_index_int, Short model_id,
+            Integer sdkVersion, String drawable_dpi, String CPU_ABI) throws Exception;
+    List<AppOnsaleDateTop> getOnsaleDateTopApps(int order_type_int, int apps_per_page_int, int page_index_int, Short model_id,
+            Integer sdkVersion, String drawable_dpi, String CPU_ABI) throws Exception;
+    List<ApplicationTop> getApplicationTops(int order_type_int, int apps_per_page_int, int page_index_int, Short model_id,
+            Integer sdkVersion, String drawable_dpi, String CPU_ABI) throws Exception;
+    List<GameTop> getGameTops(int order_type_int, int apps_per_page_int, int page_index_int, Short model_id,
+            Integer sdkVersion, String drawable_dpi, String CPU_ABI) throws Exception;
+
+	List<AppRankSet> findRankSetByType(Integer appType, int startRecord, char sellType) throws Exception;
+
+	boolean addRankSetForFreeApp(Long[] ids, Integer appType, String admin_name) throws Exception;
+
+	List<AppRankSet> findAllRankSetByType(List<AppType> listType) throws Exception;
+
+	int countRankSetByType(Integer appType, char sellType) throws Exception;
+
+	List<AppRankSet> findAllRankSetByType(Integer appType, char sellType) throws Exception;
+
+	boolean deleteRankSetByAppid(Long[] ids) throws Exception;
+
+	boolean updateShowOrderForRankSet(String[] str) throws Exception;
+	
+	List<RankSetup> getRankSetupsForSetup(final RankSetup rankSetup) throws Exception;
+	
+	void updateGameHubWithSetup(RankSetup rankSetup,Integer hub_id,List<Series> phoneSeriesList) throws Exception;
+	
+	void updateAdvertisementWithSetup(RankSetup rankSetup,List<Series> phoneSeriesList) throws Exception;
+	
+	List<AppHubSet> findHubSetByAppInfoId(Long app_id,Integer hub_id) throws Exception;
+	
+	boolean deleteYesterDayGameHubSetups(RankSetup rankSetup,Integer hub_id) throws Exception;
+	
+	public List<TopBase> getRankTops(final int order_type_int,final int apps_per_page_int,final int page_index_int,
+            final Short model_id,final Integer sdkVersion,final String drawable_dpi,final String CPU_ABI,String tableName) throws Exception;
+
+}

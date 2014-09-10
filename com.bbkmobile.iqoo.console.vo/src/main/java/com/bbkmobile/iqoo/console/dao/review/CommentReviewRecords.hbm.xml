@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping>
+	<class name="com.bbkmobile.iqoo.console.dao.review.CommentReviewRecords"
+		table="t_comment_review">
+		<id name="id" type="java.lang.Long">
+			<column name="id" />
+			<generator class="identity" />
+		</id>
+
+		<many-to-one name="bbkAdminUser"
+			class="com.bbkmobile.iqoo.console.dao.login.BbkAdminUser" column="review_user"
+			cascade="save-update" outer-join="true" fetch="select" lazy="false"
+			not-null="true" />
+
+		<many-to-one name="appComment"
+			class="com.bbkmobile.iqoo.console.dao.appinfo.AppComment" column="comment_id"
+			cascade="save-update" outer-join="true" fetch="select" lazy="false"
+			not-null="true" />
+
+		<property name="reviewStatus" type="char">
+			<column name="review_status" length="1" not-null="true">
+			</column>
+		</property>
+
+		<property name="reviewOpinion" type="string">
+			<column name="review_opinion" length="200">
+			</column>
+		</property>
+
+		<property name="reviewDate" type="timestamp">
+			<column name="review_date" length="19" not-null="true">
+			</column>
+		</property>
+	</class>
+</hibernate-mapping>

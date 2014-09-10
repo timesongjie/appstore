@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 2012-1-3 14:53:46 by Hibernate Tools 3.4.0.CR1 -->
+<hibernate-mapping>
+	<class name="com.bbkmobile.iqoo.console.dao.userfeedback.UserFeedback"
+		table="t_user_feedback" dynamic-insert="true" dynamic-update="true">
+
+		<id name="id" type="java.lang.Long">
+			<column name="id" />
+			<generator class="identity" />
+		</id>
+
+		<property name="user" type="string">
+			<column name="user" length="60">
+			</column>
+		</property>
+		<property name="user_contact" type="string">
+			<column name="user_contact" length="30">
+			</column>
+		</property>
+		<property name="content_type" type="java.lang.Character">
+			<column name="content_type">
+			</column>
+		</property>
+		<property name="content" type="string">
+			<column name="content" length="250">
+			</column>
+		</property>
+		<property name="post_date" type="timestamp">
+			<column name="post_date" length="19">
+			</column>
+		</property>
+		<property name="imei" type="string">
+			<column name="imei" length="20">
+			</column>
+		</property>
+		<property name="model" type="string">
+			<column name="model" length="50">
+			</column>
+		</property>
+		<property name="cs" type="string">
+			<column name="cs" length="5">
+			</column>
+		</property>
+		<property name="user_ip" type="string">
+			<column name="user_ip" length="30">
+			</column>
+		</property>
+		<property name="elapsedtime" type="java.lang.Long">
+			<column name="elapsedtime" length="30">
+			</column>
+		</property>
+		<property name="app_version" type="string">
+			<column name="app_version" length="5">
+			</column>
+		</property>
+	</class>
+</hibernate-mapping>

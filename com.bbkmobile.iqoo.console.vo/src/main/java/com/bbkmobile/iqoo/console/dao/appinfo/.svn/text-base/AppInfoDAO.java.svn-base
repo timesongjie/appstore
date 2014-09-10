@@ -1,0 +1,247 @@
+/**
+ * AppInfoDAO.java
+ * com.bbkmobile.iqoo.console.dao.appinfo
+ *
+ * Function： TODO 
+ *
+ *   ver     date      		author
+ * ──────────────────────────────────
+ *   		 2012-1-3 		dengkehai
+ *
+ * Copyright (c) 2012, TNT All Rights Reserved.
+ */
+
+package com.bbkmobile.iqoo.console.dao.appinfo;
+
+import java.util.Date;
+import java.util.List;
+
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.console.action.search.SearchResultForm;
+import com.bbkmobile.iqoo.console.dao.advertisement.StartPage;
+import com.bbkmobile.iqoo.console.dao.apptype.AppType;
+import com.bbkmobile.iqoo.console.dao.contentmanage.RankSetup;
+import com.bbkmobile.iqoo.console.dao.errorreport.ErrorReport;
+import com.bbkmobile.iqoo.console.dao.login.UserInfo;
+import com.bbkmobile.iqoo.console.dao.modelmgr.ConsoleConstant;
+import com.bbkmobile.iqoo.console.dao.modelmgr.Model;
+/**
+ * ClassName:AppInfoDAO Function: TODO ADD FUNCTION
+ * 
+ * @author dengkehai
+ * @version
+ * @since Ver 1.1
+ * @Date 2012-1-3 下午3:24:59
+ * 
+ */
+public interface AppInfoDAO {
+
+	int countAllRecords(AppInfo appInfo) throws Exception;
+
+	List<AppInfo> findByProperty(int start, AppInfo appInfo, String appSortWay) throws Exception;
+
+	AppInfo findAppById(Long app_id) throws Exception;
+	AppInfo getAppInfoById(Long app_id) throws Exception;
+	AppInfo getAppInfoByPackageName(SearchResultForm requestParas) throws Exception;
+	
+	AppInfo getAppInfoForListById(Long app_id) throws Exception;
+	
+	String getRemarkByAppId(Long id) throws Exception ;
+	
+	AppInfo findValidAppById(Long app_id) throws Exception;
+	
+    boolean AppIsValidForModel(Long app_id, Model model) throws Exception;
+
+	List<AppInfo> fndAllAppInfo() throws Exception;
+	
+	List<AppInfo> findAllStatus() throws Exception;		//add by 吴勇
+	
+	public Long saveAppInfo(AppInfo appInfo) throws Exception;		//add by 吴勇
+	public void updateApkInfo(String property, String value, Long id) throws Exception;	//add by 吴勇
+	public void updateWithOldApk(AppInfo appInfo) throws Exception;// add by 吴勇
+	public void updateWithNewApk(AppInfo appInfo) throws Exception;// add by 吴勇
+	
+	void saveBaiduAppInfo(BaiduAppInfo baiduAppInfo);
+	
+	public Long saveBaiduAppInfo(BaiduAppInfo baiduAppInfo,BaiduAppInfo OldBaiduAppInfo) throws Exception;
+	public Long countBaiduAppInfos(BaiduAppInfo baiduAppInfo) throws Exception;
+	public BaiduAppInfo getBaiduAppInfo(BaiduAppInfo baiduAppInfo) throws Exception ;
+	
+    boolean updateOldAppInfoByUpload(AppInfo appInfo, AppInfo apkInfo, int switchCode)throws Exception;
+	
+	//zuoshengdong添加 start
+	int countOnSaleRecords(AppInfo appInfo) throws Exception;
+
+	List<AppInfo> findOnSaleRecordsByProperty(int start,AppInfo appInfo) throws Exception;
+
+	boolean updateAppStatus(Long ids[], short temp) throws Exception;
+	
+	boolean addQuartzTask(Date onsaleTime, String cronExpression, Long ids[], short appStatus) throws Exception;
+	
+	boolean updateQuartzTask( Long ids[]) throws Exception;
+	
+	List<AppComment> findCommentByApp(AppInfo appInfo) throws Exception;
+	
+    List<AppComment> findUserCommentByApp(AppInfo appInfo,int start, char comment_type) throws Exception;
+    List<ErrorReport> findErrorReportByApp(AppInfo appInfo,int start, char error_type) throws Exception;
+    Integer countErrorReport(AppInfo appInfo, int start, char error_type) throws Exception;
+	
+	List<AppClick> findClickForApp(AppInfo appInfo) throws Exception;
+	
+	List<AppDownload> findDownloadForApp(AppInfo appInfo) throws Exception;
+	
+	AppOrderSet findSetValue(AppInfo appInfo) throws Exception;
+	
+	boolean addOrderSetForApp(AppOrderSet appOrderSet, AppInfo app,
+			String adminName) throws Exception;
+
+	List<AppInfo> findAppByType(List<AppType> listType, char sellType) throws Exception;
+
+	List<AppInfo> finAppByProperty(List<AppType> listType, int startRecord) throws Exception;
+
+	//zuoshengdong添加 end
+	
+    //liuhaiyan@20120405@获取所有已经上架的app应用
+    List<AppInfo> findAllToSelllAppInfo() throws Exception;
+    
+    List<AppInfo> getAppsBySearchKey(String searchKey) throws Exception;
+    
+    //liuhaiyan@20120517@获取应用截图
+    List<TAppScreenshot> findAppScreenshot(AppInfo appInfo) throws Exception;
+    
+    AndroidPermission findAndroidPermission(Long permission_id) throws Exception;
+
+	List<AppInfo> findAllOnsaleApp() throws Exception;
+
+    Integer countUserComment(AppInfo appInfo, int start, char comment_type) throws Exception;
+   
+    //liuhaiyan@20120519@获取对应类型的app列表
+    List<AppInfo> findAppInfoList(String name_key, AppType appType, int apps_per_page, int page_index, int order_type) throws Exception; 
+    
+    int getModuleDBVersion(String module, int module_id) throws Exception;
+    boolean updateModuleDBVersion(String module, int module_id) throws Exception;
+   
+    //liuhaiyan@20120526@根据包名获取app列表
+    List<AppInfo> getAppInfoListForUpdate(String packages, Model model) throws Exception; 
+    
+    AppInfo getAppInfoForUpdate(String app_package, Model model) throws Exception;
+
+    void updateDownloadCount(Long id) throws Exception;
+    
+    public void updateDownloadCountForAppInfo(AppInfo appInfo) throws Exception;
+    
+    //liuhaiyan@保存手机评论后，相应更改app的总分数、平均分和总评级数
+    boolean saveAppInfoForSaveComment(AppInfo appInfo, Float score) throws Exception; 
+    
+    //liuhaiyan@手机评论删除或审核不通过后，相应更改app的总分数、平均分和总评级数
+    boolean updateAppInfoForDeleteComment(AppInfo appInfo, Float score) throws Exception;
+    
+    //liuhaiyan@获取排行榜的app列表并按机型过滤
+    List<AppInfo> getTopAppsWithFilterModel(int order_type, int apps_per_page,int page_index, Short model_id, Integer sdkVersion, 
+            String drawable_dpi, String CPU_ABI) throws Exception;
+    
+    //liuhaiyan@按父类型id获取所有子类型app列表并按机型过滤  
+    List<AppInfo> getAppsByParentTypeIdWithFilterModel(List<AppType> appTypesList,  int apps_per_page,  int page_index, 
+             int order_type,  Short model_id, Integer sdkVersion, String drawable_dpi, String CPU_ABI) throws Exception;
+    
+    int CountAppsByParentTypeIdWithFilterModel(List<AppType> appTypesList,  int apps_per_page,  int page_index, 
+            int order_type,  Short model_id, Integer sdkVersion, String drawable_dpi, String CPU_ABI) throws Exception;
+    
+    //liuhaiyan@按父类型id获取所有子类型app列表并按机型过滤
+    List<AppInfo> getAppsByLeafTypeIdWithFilterModel(AppType appType,  int apps_per_page,  int page_index, 
+             int order_type,  Short model_id, Integer sdkVersion, String drawable_dpi, String CPU_ABI) throws Exception;
+    // liuhaiyan@按叶子类型id获取所有app列表并按机型过滤
+    List<AppInfo> getAppsByLeafType(AppType appType, int start_position, int length,  Short model_id,
+            Integer sdkVersion,  String drawable_dpi,String CPU_ABI) throws Exception;  
+             
+    int CountAppsByLeafTypeIdWithFilterModel(AppType appType,  int apps_per_page,  int page_index, 
+            int order_type,  Short model_id, Integer sdkVersion, String drawable_dpi, String CPU_ABI) throws Exception;
+    
+    //liuhaiyan@按搜索关键词获取某类型中所有app列表并按机型过滤
+    //List<AppInfo> getAppsByKeyNameWithFilterModel(final SearchKey searchKey, final Model modelClass) throws Exception;
+    List<AppInfo> getAppsByKeyNameForModel(final SearchKey searchKey, final Model modelClass) throws Exception;
+    int countAppsByKeyNameForModel(final SearchKey searchKey, final Model modelClass) throws Exception ;
+    
+    String getXmlForAppInfo(AppInfo appInfo,String appVersion) throws Exception;
+    String getXmlForAppInfos(List<AppInfo> appInfos,String appVersion) throws Exception;
+    String getXmlForAppInfoWithShotscreen(AppInfo appInfo,String appVersion) throws Exception;
+    List<AppInfo> getJoinApps(final String className, final RequestParameter requestParameter, final Model model) throws Exception;
+
+	void updateAppOffSaleModel(Long[] ids, String model, int modelCount, String screen) throws Exception;
+
+	void updateAppOnSaleForModel(Long[] ids, String model ,List<Model> allModel, String screen, List<ConsoleConstant> allScreen) throws Exception;
+	
+	boolean saveBrowseLog(RequestParameter requestParameter) throws Exception;
+	
+	boolean saveDownloadAppLog(RequestParameter requestParameter) throws Exception;
+	boolean saveDownloadBaiduAppLog(RequestParameter requestParameter) throws Exception;
+	
+	boolean savePcDownloadAppLog(RequestParameter requestParameter) throws Exception;
+    
+    boolean savePackagesUpdateLog(RequestParameter requestParameter) throws Exception;
+    
+    //boolean saveSeachKeyLog(SearchResultForm searchResultForm ) throws Exception;
+    boolean saveSeachWordLog(RequestParameter requestParameter ) throws Exception;
+    
+    List<String> getSearchHotWord(String model) throws Exception;
+    
+    boolean saveBrowseAppLog(RequestParameter requestParameter) throws Exception;
+    boolean saveBrowseBaiduAppLog(RequestParameter requestParameter) throws Exception;
+    boolean saveBrowseAppPackageLog(RequestParameter requestParameter) throws Exception;
+    
+    boolean timeDeleteAllLog() throws Exception;
+    boolean addLogTables() throws Exception;
+    boolean deleteLogTables() throws Exception;
+    
+    boolean packageIsExist(String appPackage) throws Exception;
+    AppInfo getApppInfoWithPackage(String appPackage) throws Exception;
+    
+    boolean isSystemPackage(String appPackage) throws Exception;
+
+	void updateFilterModelByScreen(short modelId, int screenId) throws Exception;
+	
+    BaiduAppId saveBaiduAppId(BaiduAppId baiduAppId) throws Exception;
+    
+    BaiduAppId getLocalBaiduAppId(BaiduAppId baiduAppId) throws Exception;
+   
+    BaiduAppId  getLocalBaiduAppIdById(Long id) throws Exception;
+
+    AppInfo findAppByPackage(String appPackage ) throws Exception;
+    
+    List<AppInfo> findAppsByPackage(String appPackage ) throws Exception;		//add by 吴勇 2012-12-03
+    
+    AppInfo findOnSaleAppByPackage(String appPackage) throws Exception;
+    
+    boolean saveBaiduAppUrl(Long id, String url) throws Exception ;
+    
+    void deleteOffSaleApp(Long[] ids) throws Exception;
+    
+    public AppHistoryInfo findAppHistoryInfo(AppInfo appInfo) throws Exception;
+    
+    boolean updateAppInfoFromBaidu(AppInfo appInfo, AppInfo apkInfo) throws Exception;
+    
+    public boolean saveUserOperation(UserInfo userInfo) throws Exception;
+    
+    public boolean  saveAppBaiduType(long app_id,int app_type,int baidu_type) throws Exception;
+    
+    boolean updateAppBaiduId(Long app_id, String baidu_id) throws Exception;
+    
+    public void addAppInfoDelete(AppInfo appInfo) throws Exception;
+    
+    public BaiduAppInfo findBaiduAppByPackage(String appPackage) throws Exception ;
+    
+    public List<AppHistoryInfo> getAppHistoryByAppPackage(AppInfo appInfo) throws Exception;
+    
+    public AppHistoryInfo getAppHistoryDetail(AppHistoryInfo appHistory) throws Exception;
+    
+    boolean addScreenshotToHistory(AppInfo appInfo) throws Exception;
+    
+    public boolean saveLogs(List<String> logs) throws Exception;
+
+	void updateAppType(String []ids, String to_type)throws Exception;
+
+	List<AppInfo> getAppsBySearchKey(String key, PageVO page) throws Exception;
+
+	int counterAppsBySearchKey(String key) throws Exception;
+    
+}

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<taglib xmlns="http://java.sun.com/xml/ns/j2ee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.0" xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-jsptaglibrary_2_0.xsd">
+  <description></description>
+  <display-name>"common Tags"</display-name>
+  <tlib-version>2.2</tlib-version>
+  <short-name>s</short-name>
+  <uri>/common-tags</uri>
+  <tag>
+    <description><![CDATA[Execute an action from within a view]]></description>
+    <name>page</name>
+    <tag-class>com.bbkmobile.iqoo.common.page.PageTag</tag-class>
+    <body-content>JSP</body-content>
+    <attribute>
+      <description><![CDATA[name]]></description>
+      <name>name</name>
+      <required>true</required>
+      <rtexprvalue>false</rtexprvalue>
+    </attribute>
+    <attribute>
+      <description><![CDATA[name]]></description>
+      <name>formID</name>
+      <required>true</required>
+      <rtexprvalue>true</rtexprvalue>
+    </attribute>
+    <dynamic-attributes>false</dynamic-attributes>
+  </tag> 
+</taglib>

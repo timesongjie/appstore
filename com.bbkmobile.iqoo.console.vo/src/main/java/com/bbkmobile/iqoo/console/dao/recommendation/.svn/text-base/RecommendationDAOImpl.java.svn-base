@@ -1,0 +1,1530 @@
+package com.bbkmobile.iqoo.console.dao.recommendation;
+
+import java.math.BigInteger;
+import java.util.Date;
+import java.util.List;
+
+import org.hibernate.Criteria;
+import org.hibernate.HibernateException;
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Restrictions;
+import org.springframework.orm.hibernate3.HibernateCallback;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.console.constants.Constants;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+import com.bbkmobile.iqoo.console.dao.appinfo.RequestParameter;
+import com.bbkmobile.iqoo.console.dao.modelmgr.Model;
+import com.bbkmobile.iqoo.console.dao.modelmgr.ModelInfoDAO;
+import com.bbkmobile.iqoo.console.dao.modelmgr.Series;
+
+public class RecommendationDAOImpl extends HibernateDaoSupport implements RecommendationDAO {
+    private ModelInfoDAO modelInfoDAO;
+    
+    //begin:手机接口
+    public int countAllCellphoneRecommendAppsWithFilterModel(final Short series_id, final Short model_id,
+            final Integer sdkVersion, final String drawable_dpi, final String CPU_ABI) {
+
+        Criteria criteria = getSession().createCriteria(CellphoneRecommendApp.class);
+
+        criteria.add(Restrictions.eq("series_id", series_id));
+
+        Criteria adApp_criteria = criteria.createCriteria("appInfo", Criteria.LEFT_JOIN);
+
+        if (null != model_id) {
+
+            adApp_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", sdkVersion),
+                    Restrictions.isNull("minSdkVersion")));
+
+            adApp_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", sdkVersion),
+                    Restrictions.isNull("maxSdkVersion")));
+            /*
+            if (CPU_ABI != null) {
+                String sql = "(CPU_ABI is null";
+                String cpuabis[] = CPU_ABI.split(",");
+                for (int i = 0; i < cpuabis.length; i++) {
+                    String cpuabi = cpuabis[i];
+                    sql = sql + " or CPU_ABI like '%," + cpuabi + ",%'";
+                }
+                sql = sql + ")";
+                adApp_criteria.add(Restrictions.sqlRestriction(sql));
+            }
+            */
+            adApp_criteria
+                    .add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%,"
+                            + model_id + ",%'))"));
+
+        } else {
+            adApp_criteria.add(Restrictions.eq("appStatus", (short) 0));
+        }
+
+        int totalRows = ((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult()).intValue(); // 是否为null
+        return totalRows;
+
+    }
+    public List<CellphoneRecommendApp> getCellphoneRecommendAppsWithFilterModel(final int apps_per_page,final int page_index,final Short series_id,final Short model_id,final Integer sdkVersion,final String drawable_dpi,final String CPU_ABI) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<CellphoneRecommendApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(CellphoneRecommendApp.class); 
+   
+                        criteria.add(Restrictions.eq("series_id", series_id));
+                      
+
+                        Criteria adApp_criteria = criteria.createCriteria("appInfo", 
+                                Criteria.LEFT_JOIN);
+                        if(null!=model_id){
+
+                            adApp_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", sdkVersion),
+                                    Restrictions.isNull("minSdkVersion")));
+        
+                            adApp_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", sdkVersion),
+                                    Restrictions.isNull("maxSdkVersion")));
+                            
+                            /*
+                            if(CPU_ABI!=null){
+                                String sql="(CPU_ABI is null";
+                                String cpuabis[]=CPU_ABI.split(","); 
+                                for(int i=0; i<cpuabis.length; i++)
+                                {
+                                    String cpuabi=cpuabis[i];
+                                    sql=sql+" or CPU_ABI like '%,"+cpuabi+",%'";                        
+                                }
+                                sql=sql+")";
+                                adApp_criteria.add(Restrictions.sqlRestriction(sql)); 
+                            }
+                            */
+                            adApp_criteria.add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + model_id + ",%'))"));      
+                        }
+                        else{
+                            //Restrictions.eq("appStatus", (short)0)
+                            adApp_criteria.add(Restrictions.ne("appStatus", (short) 12));
+                            
+                        }
+        
+                        criteria.addOrder(Order.asc("show_order"));
+                        criteria.setFirstResult((page_index-1)*apps_per_page);
+                        criteria.setMaxResults(apps_per_page + 1);
+        
+                        List<CellphoneRecommendApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        if(null!=list && list.size()>0){
+            return list;
+        }else{
+            return null;
+        }      
+    }
+
+    public int countNewApps(final RequestParameter requestParameter, final Model model) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        Criteria criteria = getSession().createCriteria(NewApp.class);
+
+        Criteria app_criteria = criteria.createCriteria("appInfo", Criteria.LEFT_JOIN);
+
+        if (null != model) {
+            app_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", model.getSdkVersion()),
+                    Restrictions.isNull("minSdkVersion")));
+
+            app_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", model.getSdkVersion()),
+                    Restrictions.isNull("maxSdkVersion")));
+            /*
+            String CPU_ABI = model.getCPU_ABI();
+            
+            if (CPU_ABI != null) {
+                String sql = "(CPU_ABI is null";
+                String cpuabis[] = CPU_ABI.split(",");
+                for (int i = 0; i < cpuabis.length; i++) {
+                    String cpuabi = cpuabis[i];
+                    sql = sql + " or CPU_ABI like '%," + cpuabi + ",%'";
+                }
+                sql = sql + ")";
+                app_criteria.add(Restrictions.sqlRestriction(sql));
+            }
+            */
+            app_criteria.add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%,"
+                    + model.getId() + ",%'))"));
+        } else {
+            app_criteria.add(Restrictions.eq("appStatus", (short) 0));
+        }
+        int totalRows = ((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult()).intValue(); // 是否为null
+        return totalRows;
+    }
+
+    public List<NewApp> getNewApps(final RequestParameter requestParameter, final Model model) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<NewApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(NewApp.class); 
+
+                        Criteria app_criteria = criteria.createCriteria("appInfo", 
+                                Criteria.LEFT_JOIN);
+                        
+                        if (null != model) {
+                            app_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", model.getSdkVersion()),
+                                    Restrictions.isNull("minSdkVersion")));
+
+                            app_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", model.getSdkVersion()),
+                                    Restrictions.isNull("maxSdkVersion")));
+                            /*
+                            String CPU_ABI=model.getCPU_ABI();
+                            
+                            if(CPU_ABI!=null){
+                                String sql="(CPU_ABI is null";
+                                String cpuabis[]=CPU_ABI.split(","); 
+                                for(int i=0; i<cpuabis.length; i++)
+                                {
+                                    String cpuabi=cpuabis[i];
+                                    sql=sql+" or CPU_ABI like '%,"+cpuabi+",%'";                          
+                                }
+                                sql=sql+")";
+                                app_criteria.add(Restrictions.sqlRestriction(sql)); 
+                            }
+                            */
+                            app_criteria.add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + model.getId() + ",%'))"));
+                        }
+                        else{
+                            app_criteria.add(Restrictions.ne("appStatus", (short) 12));
+                        }
+                        app_criteria.addOrder(Order.desc("updateDate"));
+                        //criteria.addOrder(Order.asc("show_order"));
+                        criteria.setFirstResult((requestParameter.getPage_index() - 1)
+                                * requestParameter.getApps_per_page());
+                        criteria.setMaxResults(requestParameter.getApps_per_page() + 1);
+                        List<NewApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        if(null!=list && list.size()>0){
+            return list;
+        }else{
+            return null;
+        }      
+    }
+    
+    public int countEditorRecommendApps(final RequestParameter requestParameter, final Model model) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        Criteria criteria = getSession().createCriteria(EditorRecommendApp.class);
+
+        Criteria app_criteria = criteria.createCriteria("appInfo", Criteria.LEFT_JOIN);
+
+        if (null != model) {
+            app_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", model.getSdkVersion()),
+                    Restrictions.isNull("minSdkVersion")));
+
+            app_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", model.getSdkVersion()),
+                    Restrictions.isNull("maxSdkVersion")));
+            
+            /*
+            String CPU_ABI = model.getCPU_ABI();
+            if (CPU_ABI != null) {
+                String sql = "(CPU_ABI is null";
+                String cpuabis[] = CPU_ABI.split(",");
+                for (int i = 0; i < cpuabis.length; i++) {
+                    String cpuabi = cpuabis[i];
+                    sql = sql + " or CPU_ABI like '%," + cpuabi + ",%'";
+                }
+                sql = sql + ")";
+                app_criteria.add(Restrictions.sqlRestriction(sql));
+            }
+            */
+            app_criteria.add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%,"
+                    + model.getId() + ",%'))"));
+        } 
+        int totalRows = ((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult()).intValue(); // 是否为null
+        return totalRows;
+    }
+
+    public List<EditorRecommendApp> getEditorRecommendApps(final RequestParameter requestParameter, final Model model) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<EditorRecommendApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(EditorRecommendApp.class); 
+
+                        Criteria app_criteria = criteria.createCriteria("appInfo", 
+                                Criteria.LEFT_JOIN);
+                        
+                        if (null != model) {
+                            app_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", model.getSdkVersion()),
+                                    Restrictions.isNull("minSdkVersion")));
+
+                            app_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", model.getSdkVersion()),
+                                    Restrictions.isNull("maxSdkVersion")));
+
+                            app_criteria.add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + model.getId() + ",%'))"));
+                        } else{
+                            app_criteria.add(Restrictions.ne("appStatus", (short) 12)); 
+                        }
+                        
+                        criteria.addOrder(Order.asc("show_order"));
+                      
+                        List<EditorRecommendApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        if(null!=list && list.size()>0){
+            return list;
+        }else{
+            return null;
+        }  
+    }
+    /*
+    public List<CellphoneRecommendApp> getCellphoneRecommendAppsWithFilterModel(final int apps_per_page,final int page_index,final Short series_id,final Short model_id,final Integer sdkVersion,final String drawable_dpi,final String CPU_ABI) throws Exception {
+        Session session=getSession();
+        session.clear();
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<CellphoneRecommendApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(CellphoneRecommendApp.class); 
+   
+                        criteria.add(Restrictions.eq("series_id", series_id));
+                        // if(0!=series_id){ //如果不为公共系列，还需要增加order_type条件
+                        // criteria.add(Restrictions.eq("order_type", '1'));
+                        // //order_type 为1：系列推荐
+                        // }
+                        if(null!=model_id){
+
+                            Criteria adApp_criteria = criteria.createCriteria("appInfo", 
+                                    Criteria.LEFT_JOIN);
+
+                            adApp_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", sdkVersion),
+                                    Restrictions.isNull("minSdkVersion")));
+        
+                            adApp_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", sdkVersion),
+                                    Restrictions.isNull("maxSdkVersion")));
+                            if(CPU_ABI!=null){
+                                String sql="(CPU_ABI is null";
+                                String cpuabis[]=CPU_ABI.split(","); 
+                                for(int i=0; i<cpuabis.length; i++)
+                                {
+                                    String cpuabi=cpuabis[i];
+                                    sql=sql+" or CPU_ABI like '%,"+cpuabi+",%'";                        
+                                }
+                                sql=sql+")";
+                                adApp_criteria.add(Restrictions.sqlRestriction(sql)); 
+                            }
+                            
+                            adApp_criteria.add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + model_id + ",%'))"));      
+                        }
+        
+                        criteria.addOrder(Order.asc("show_order"));
+                        criteria.setFirstResult((page_index-1)*apps_per_page);
+                        criteria.setMaxResults(apps_per_page);
+        
+                        List<CellphoneRecommendApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        return list;
+        
+    }
+  
+    */
+    //begin:手机推荐
+    public int countCellphoneRecommendAppRecords(final CellphoneRecommendApp cellphoneRecommendApp, final Short series,final Short model) throws Exception {
+        int result = 0;
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<CellphoneRecommendApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(CellphoneRecommendApp.class);             
+                        
+                        if ((cellphoneRecommendApp.getAppInfo().getType() != 0)) {
+                            Criteria app_criteria = criteria.createCriteria(
+                                    "appInfo", Criteria.LEFT_JOIN);
+                            cellphoneRecommendApp.getAppInfo().getAppType().setId(cellphoneRecommendApp.getAppInfo().getType());
+                            app_criteria.add(Restrictions.eq("appType", cellphoneRecommendApp.getAppInfo()
+                                    .getAppType()));
+                        }
+                        
+                        if(null!=series && !"".equals(series)){     
+                            criteria.add(Restrictions.eq("series_id", series));
+                            if(0!=series){                                        //如果不为公共系列，还需要增加order_type条件
+                                criteria.add(Restrictions.eq("order_type", '1'));   //order_type 为1：系列推荐
+                            }
+                        }                    
+                     
+                        List<CellphoneRecommendApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        if (null != list) {
+            result = list.size();
+        }
+        return result;
+    }
+    
+    public List<CellphoneRecommendApp> getCellphoneRecommendAppList(final int start, final CellphoneRecommendApp cellphoneRecommendApp, final Short series,final Short model) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<CellphoneRecommendApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(CellphoneRecommendApp.class); 
+                        
+                        if ((cellphoneRecommendApp.getAppInfo().getType() != 0)) {
+                            Criteria app_criteria = criteria.createCriteria(
+                                    "appInfo", Criteria.LEFT_JOIN);
+                            cellphoneRecommendApp.getAppInfo().getAppType().setId(cellphoneRecommendApp.getAppInfo().getType());
+                            app_criteria.add(Restrictions.eq("appType", cellphoneRecommendApp.getAppInfo()
+                                    .getAppType()));
+                        }
+                        
+                        if(null!=series && !"".equals(series)){
+                            criteria.add(Restrictions.eq("series_id", series));
+                            if(0!=series){                                        //如果不为公共系列，还需要增加order_type条件
+                                criteria.add(Restrictions.eq("order_type", '1'));   //order_type 为1：系列推荐
+                            }
+                        }
+                        
+                        criteria.addOrder(Order.asc("show_order"));
+                        criteria.setFirstResult(start);
+                        criteria.setMaxResults(Constants.APPS_PER_MAX_PAGE);
+                        List<CellphoneRecommendApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        return list;
+    }
+    
+    public List<CellphoneRecommendApp> getAllCellphoneRecommendAppList(final CellphoneRecommendApp cellphoneRecommendApp, final Short series,final Short model) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<CellphoneRecommendApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(CellphoneRecommendApp.class); 
+                        if(null!=series && !"".equals(series)){
+                            criteria.add(Restrictions.eq("series_id", series));
+                            if(0!=series){                                        //如果不为公共系列，还需要增加order_type条件
+                                criteria.add(Restrictions.eq("order_type", '1'));   //order_type 为1：系列推荐
+                            }
+                        }
+                        
+                        List<CellphoneRecommendApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        return list;
+        
+    }
+    
+    public CellphoneRecommendApp findCellphoneRecommendAppById(Long id) throws Exception {
+
+        return getHibernateTemplate().load(CellphoneRecommendApp.class, id);
+
+    }
+    
+   
+    public boolean deleteCellphoneRecommendAppByID(Long[] ids) throws Exception {
+        try{
+            String queryString ="delete CellphoneRecommendApp where id=?";
+            Session session=getSession();
+            for(Long id:ids){
+                Query queryObj=session.createQuery(queryString);
+                queryObj.setLong(0, id);
+                queryObj.executeUpdate();               
+            }
+            return true;
+        }catch(Exception e){
+          throw e;
+        }
+    }
+    
+    //如果在公共推荐里进行取消操作，则同步要取消系列里面的推荐
+    public boolean deleteCellphoneRecommendAppByAppID(Long[] ids) throws Exception {
+        try{
+            String queryString ="delete CellphoneRecommendApp where app_id=?";
+            Session session=getSession();
+            for(Long id:ids){
+                CellphoneRecommendApp cellphoneRecommendApp=findCellphoneRecommendAppById(id);
+                Long app_id=cellphoneRecommendApp.getAppInfo().getId();
+                
+                Query queryObj=session.createQuery(queryString);
+                queryObj.setLong(0, app_id);
+                queryObj.executeUpdate();               
+            }
+            return true;
+        }catch(Exception e){
+          throw e;
+        }
+    }
+    
+    public int findMaxShowOrderForCellphoneRecommendApp(Short series)
+    {
+        Session session =getSession();
+        Query query=null;
+        int result=0;
+        String sql1="select * from t_cellphone_recommend where series_id="+series ;
+        query=session.createSQLQuery(sql1);
+        if(null!=query.list()&&query.list().size()>0)
+        {
+            String sql2="select max(show_order) from t_cellphone_recommend where series_id="+series;
+            query=session.createSQLQuery(sql2);
+            result=(Integer)query.uniqueResult();
+        }
+        return result;
+        
+    }
+    
+    //查看系列中是否有对应的app
+    public boolean findAppInCellphoneRecommendForSeries(Long app_id, Short series){
+        boolean result = false;
+        Session session =getSession();
+        Query query=null;
+        String sql1="select * from t_cellphone_recommend where app_id="+app_id+" and series_id="+series;     
+        query=session.createSQLQuery(sql1);
+        if(query.list().size()>0){
+            result =true;
+        }
+        return result;
+    }
+    //查找该系列是否已经初始化
+    public boolean findAppInCellphoneRecommendForSeries(Short series,Character order_type){
+        boolean result = false;
+        Session session =getSession();
+        Query query=null;
+        String sql1="select * from t_cellphone_recommend where series_id="+series+" and order_type="+order_type;     
+        query=session.createSQLQuery(sql1);
+        if(query.list().size()>0){
+            result =true;
+        }
+        return result;
+    }
+    
+    public boolean addCellphoneRecommendApp(Long[] ids, Short series, Short model )
+            throws Exception {  
+        Date add_date=new Date();
+        int show_order;
+        if(0!=series){                       //对系列进行添加推荐
+            show_order=findMaxShowOrderForCellphoneRecommendApp(series);
+            for(int i=0; i<ids.length; i++)
+            {
+                AppInfo appInfo=getHibernateTemplate().load(AppInfo.class, ids[i]);
+                CellphoneRecommendApp cellphoneRecommendApp = new CellphoneRecommendApp();
+                cellphoneRecommendApp.setShow_order(++show_order);
+                cellphoneRecommendApp.setAppInfo(appInfo);
+                cellphoneRecommendApp.setSeries_id(series);
+                cellphoneRecommendApp.setOrder_type('1');                //order_type 为0：公共推荐 为1：系列推荐
+                cellphoneRecommendApp.setAdd_date(add_date);
+                getHibernateTemplate().save(cellphoneRecommendApp);
+            }
+        }
+        else{                                             //series==0 添加公共推荐，添加公共推荐同步为系列添加推荐
+            List<Series> seriesClass = modelInfoDAO.getSeriesList();
+            
+            
+            for(int j=0; j<ids.length; j++)
+            {
+                AppInfo appInfo=getHibernateTemplate().load(AppInfo.class, ids[j]);
+                
+                show_order=findMaxShowOrderForCellphoneRecommendApp(series);
+                CellphoneRecommendApp cellphoneRecommendApp = new CellphoneRecommendApp();
+                cellphoneRecommendApp.setSeries_id(series);                          //公告推荐
+                cellphoneRecommendApp.setShow_order(++show_order);
+                cellphoneRecommendApp.setAppInfo(appInfo);
+                cellphoneRecommendApp.setOrder_type('0');                //order_type 为0：公共推荐 为1：系列推荐
+                cellphoneRecommendApp.setAdd_date(add_date);
+                getHibernateTemplate().save(cellphoneRecommendApp);
+                
+                for(Series seriesTmp : seriesClass){                             //同步系列添加推荐
+                    Short series_id = seriesTmp.getId();
+                    
+                    if(!findAppInCellphoneRecommendForSeries(ids[j], series_id)){         ////查看系列中是否有对应的app
+                        show_order=findMaxShowOrderForCellphoneRecommendApp(series_id);
+                        CellphoneRecommendApp cellphoneRecommendApp1 = new CellphoneRecommendApp();
+                        cellphoneRecommendApp1.setSeries_id(series_id);                          
+                        cellphoneRecommendApp1.setShow_order(++show_order);
+                        cellphoneRecommendApp1.setAppInfo(appInfo);
+                        if(findAppInCellphoneRecommendForSeries(series_id,'1')){      //查找该系列是否已经初始化
+                            cellphoneRecommendApp1.setOrder_type('1');               
+                        }
+                        else{
+                            cellphoneRecommendApp1.setOrder_type('0');                //order_type 为0：公共推荐 为1：系列推荐
+                        }
+                        
+                        cellphoneRecommendApp1.setAdd_date(add_date);
+                        getHibernateTemplate().save(cellphoneRecommendApp1);
+                    }   
+                }
+            }
+        }
+        return true;
+    }
+    
+    public boolean updateCellphoneRecommendAppShowOrder(Long id, int show_order) throws Exception {
+        try{
+            String queryString ="update CellphoneRecommendApp set show_order=? where id=?";
+            Session session=getSession();
+            Query queryObj=session.createQuery(queryString);
+            queryObj.setInteger(0, show_order);
+            queryObj.setLong(1, id);
+            queryObj.executeUpdate();
+            session.clear();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    
+    public CellphoneRecommendApp getCellphoneRecommendApp(Long id) throws Exception{
+        return (CellphoneRecommendApp)getHibernateTemplate().load(CellphoneRecommendApp.class, id);
+    }
+    
+    public boolean updateCellphoneRecommendAppShowOrderForCommon(Long app_id, int show_order) throws Exception {
+        try{
+            /*
+            String queryString ="update CellphoneRecommendApp set show_order=? where appid=? and order_type=?";
+            Session session=getSession();
+            Query queryObj=session.createQuery(queryString);
+            queryObj.setInteger(0, show_order);
+            queryObj.setLong(1, app_id);
+            queryObj.setCharacter(2, '0');
+            queryObj.executeUpdate();
+            */
+            Session session = getSession();
+            String queryString="update t_cellphone_recommend set show_order="+show_order+" where app_id="+app_id+" and order_type='0'";
+            Query queryObj=session.createSQLQuery(queryString);
+            queryObj.executeUpdate();
+            session.clear();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    
+    public boolean initCellphoneRecommendAppForSeries(Short series) throws Exception{
+        try{
+            Session session = getSession();
+            Query query = null;
+            String sql;
+            if(findAppInCellphoneRecommendForSeries(series, '0')){    //判断是否存在该系列的数据
+                sql="update t_cellphone_recommend set order_type='1' where series_id ="+series;
+            }
+            else{    //该系列被初始化过，全部删除后又重新初始化
+                sql = "insert into t_cellphone_recommend(app_id,series_id,order_type,show_order,add_date) select app_id,"+series+",'1',show_order,add_date from t_cellphone_recommend where series_id=0 ";
+            }
+            
+            query = session.createSQLQuery(sql);
+            query.executeUpdate();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    
+    public boolean restoreCellphoneRecommendAppForSeries(Short series) throws Exception{
+        try{
+            Session session = getSession();
+            Query query = null;
+            String sql;
+
+            sql = "insert into t_cellphone_recommend(app_id,series_id,order_type,show_order,add_date) select app_id,"+series+",'0',show_order,add_date from t_cellphone_recommend where series_id=0 ";
+
+            query = session.createSQLQuery(sql);
+            query.executeUpdate();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    
+    //end:手机推荐
+    
+    /*
+    //begin:手机推荐
+    public int countCellphoneRecommendAppRecords(final CellphoneRecommendApp cellphoneRecommendApp, final Integer series,final Integer model) throws Exception {
+        int result = 0;
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<CellphoneRecommendApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(CellphoneRecommendApp.class);             
+                        
+                        if ((cellphoneRecommendApp.getAppInfo().getType() != 0)) {
+                            Criteria app_criteria = criteria.createCriteria(
+                                    "appInfo", Criteria.LEFT_JOIN);
+                            cellphoneRecommendApp.getAppInfo().getAppType().setId(cellphoneRecommendApp.getAppInfo().getType());
+                            app_criteria.add(Restrictions.eq("appType", cellphoneRecommendApp.getAppInfo()
+                                    .getAppType()));
+                        }
+                        
+                        if(null!=series && !"".equals(series)){
+                            criteria.add(Restrictions.eq("series_id", series));
+                        }
+                     
+                        List<CellphoneRecommendApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        if (null != list) {
+            result = list.size();
+        }
+        return result;
+    }
+    
+    public List<CellphoneRecommendApp> getCellphoneRecommendAppList(final int start, final CellphoneRecommendApp cellphoneRecommendApp, final Integer series,final Integer model) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<CellphoneRecommendApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(CellphoneRecommendApp.class); 
+                        
+                        if ((cellphoneRecommendApp.getAppInfo().getType() != 0)) {
+                            Criteria app_criteria = criteria.createCriteria(
+                                    "appInfo", Criteria.LEFT_JOIN);
+                            cellphoneRecommendApp.getAppInfo().getAppType().setId(cellphoneRecommendApp.getAppInfo().getType());
+                            app_criteria.add(Restrictions.eq("appType", cellphoneRecommendApp.getAppInfo()
+                                    .getAppType()));
+                        }
+                        
+                        if(null!=series && !"".equals(series)){
+                            criteria.add(Restrictions.eq("series_id", series));
+                        }
+                        
+                        criteria.addOrder(Order.asc("show_order"));
+                        criteria.setFirstResult(start);
+                        criteria.setMaxResults(10);
+                        List<CellphoneRecommendApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        return list;
+    }
+    
+    public List<CellphoneRecommendApp> getAllCellphoneRecommendAppList(final CellphoneRecommendApp cellphoneRecommendApp, final Integer series,final Integer model) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<CellphoneRecommendApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(CellphoneRecommendApp.class); 
+                        
+                        if(null!=series && !"".equals(series)){
+                            criteria.add(Restrictions.eq("series_id", series));
+                        }
+                        
+                        List<CellphoneRecommendApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        return list;
+        
+    }
+    
+    public boolean deleteCellphoneRecommendAppByID(Long[] ids) throws Exception {
+        try{
+            String queryString ="delete CellphoneRecommendApp where id=?";
+            Session session=getSession();
+            for(Long id:ids){
+                Query queryObj=session.createQuery(queryString);
+                queryObj.setLong(0, id);
+                queryObj.executeUpdate();               
+            }
+            return true;
+        }catch(Exception e){
+          throw e;
+        }
+    }
+    
+    public int findMaxShowOrderForCellphoneRecommendApp(Integer series,Character order_type)
+    {
+        Session session =getSession();
+        Query query=null;
+        int result=0;
+        String sql1="select * from t_cellphone_recommend where series_id="+series +"and order_bype="+order_type;
+        query=session.createSQLQuery(sql1);
+        if(null!=query.list()&&query.list().size()>0)
+        {
+            String sql2="select max(show_order) from t_cellphone_recommend where series_id="+series +"and order_bype="+order_type;
+            query=session.createSQLQuery(sql2);
+            result=(Integer)query.uniqueResult();
+        }
+        return result;
+        
+    }
+    
+    public boolean addCellphoneRecommendApp(Long[] ids, Integer series, Integer model)
+            throws Exception {  
+        Date add_date=new Date();
+        int show_order;
+        if(0!=series){                       //对系列进行添加推荐
+            show_order=findMaxShowOrderForCellphoneRecommendApp(series);
+            for(int i=0; i<ids.length; i++)
+            {
+                AppInfo appInfo=getHibernateTemplate().load(AppInfo.class, ids[i]);
+                CellphoneRecommendApp cellphoneRecommendApp = new CellphoneRecommendApp();
+                cellphoneRecommendApp.setShow_order(++show_order);
+                // cellphoneRecommendApp.setOrder_type('1');
+                cellphoneRecommendApp.setAppInfo(appInfo);
+                cellphoneRecommendApp.setAdd_date(add_date);
+                cellphoneRecommendApp.setSeries_id(series);
+                // session.save(cellphoneRecommendApp);
+                getHibernateTemplate().save(cellphoneRecommendApp);
+            }
+        }
+        else{
+            
+            Session session =getSession();
+            Query query=null;
+            String sql1="select distinct series_id from t_cellphone_recommend";
+            query=session.createSQLQuery(sql1);
+            if(query.list().size()>0){
+                for(int i=0;i<query.list().size();i++){
+                    Integer seriesId = (Integer)query.list().get(i);
+                    show_order=findMaxShowOrderForCellphoneRecommendApp(series);
+                    for(int j=0; j<ids.length; j++)
+                    {
+                        AppInfo appInfo=getHibernateTemplate().load(AppInfo.class, ids[j]);
+                        CellphoneRecommendApp cellphoneRecommendApp = new CellphoneRecommendApp();
+                        //Series seriesClass = getHibernateTemplate().load(Series.class, seriesId);
+                        //cellphoneRecommendApp.setSeries(seriesClass);
+                        cellphoneRecommendApp.setSeries_id(seriesId);
+                        cellphoneRecommendApp.setShow_order(++show_order);
+                        cellphoneRecommendApp.setAppInfo(appInfo);
+                       
+                        cellphoneRecommendApp.setAdd_date(add_date);
+                        // session.save(cellphoneRecommendApp);
+                        getHibernateTemplate().save(cellphoneRecommendApp);
+                    }
+
+                }
+            }
+            else {                                                          //公告推荐为空
+                show_order=findMaxShowOrderForCellphoneRecommendApp(series);
+                for(int j=0; j<ids.length; j++)
+                {
+                    AppInfo appInfo=getHibernateTemplate().load(AppInfo.class, ids[j]);
+                    CellphoneRecommendApp cellphoneRecommendApp = new CellphoneRecommendApp();
+                    //Series seriesClass = getHibernateTemplate().load(Series.class, seriesId);
+                    //cellphoneRecommendApp.setSeries(seriesClass);
+                    cellphoneRecommendApp.setSeries_id(series);
+                    cellphoneRecommendApp.setShow_order(++show_order);
+                    cellphoneRecommendApp.setAppInfo(appInfo);
+                    cellphoneRecommendApp.setAdd_date(add_date);
+                    // session.save(cellphoneRecommendApp);
+                    getHibernateTemplate().save(cellphoneRecommendApp);
+                }
+            }
+        }
+        return true;
+    }
+    
+    public boolean updateCellphoneRecommendAppShowOrder(Long id, int order) throws Exception {
+        try{
+            String queryString ="update CellphoneRecommendApp set order=? where id=?";
+            Session session=getSession();
+            Query queryObj=session.createQuery(queryString);
+            queryObj.setInteger(0, order);
+            queryObj.setLong(1, id);
+            queryObj.executeUpdate();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    
+    public boolean initCellphoneRecommendAppForSeries(Integer series) throws Exception{
+        try{
+            Session session = getSession();
+            Query query = null;
+            String sql = "insert into t_cellphone_recommend(app_id,series_id,show_order,add_date) select app_id,"+series+",show_order,add_date from t_cellphone_recommend where series_id=0 ";
+            query = session.createSQLQuery(sql);
+            query.executeUpdate();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    //end:手机推荐
+    */
+    //begin:新品推荐
+    //按app类型获取新品推荐
+    @Override
+    public List<NewApp> getNewAppList(final int start, final NewApp newApp) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<NewApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(NewApp.class); 
+                        
+                        if ((newApp.getAppInfo().getType() != 0)) {
+                            Criteria app_criteria = criteria.createCriteria(
+                                    "appInfo", Criteria.LEFT_JOIN);
+                            newApp.getAppInfo().getAppType().setId(newApp.getAppInfo().getType());
+                            app_criteria.add(Restrictions.eq("appType", newApp.getAppInfo()
+                                    .getAppType()));
+                        }
+                        criteria.addOrder(Order.asc("show_order"));
+                        criteria.setFirstResult(start);
+                        criteria.setMaxResults(Constants.APPS_PER_MAX_PAGE);
+                        List<NewApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        if(null!=list && list.size()>0){
+            return list;
+        }
+        return null;
+    }
+    //获取全部新品推荐
+    public List<NewApp> getAllNewAppList(final NewApp newApp) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<NewApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(NewApp.class); 
+        
+                        List<NewApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        return list;
+        
+    }
+    
+    public boolean deleteNewAppRecomomendByID(Long[] ids) throws Exception {
+        try{
+            String queryString ="delete NewApp where id=?";
+            Session session=getSession();
+            for(Long id:ids){
+                Query queryObj=session.createQuery(queryString);
+                queryObj.setLong(0, id);
+                queryObj.executeUpdate();               
+            }
+            return true;
+        }catch(Exception e){
+          throw e;
+        }
+    }
+    
+    public int findMaxShowOrderForNewAppRecommend()
+    {
+        Session session =getSession();
+        Query query=null;
+        int result=0;
+        String sql1="select * from t_newapp_recommend ";
+        query=session.createSQLQuery(sql1);
+        if(null!=query.list()&&query.list().size()>0)
+        {
+            String sql2="select max(show_order) from t_newapp_recommend ";
+            query=session.createSQLQuery(sql2);
+            result=(Integer)query.uniqueResult();
+        }
+        return result;
+        
+    }
+    
+    public boolean addNewAppRecommend(Long[] ids)
+            throws Exception {    
+        int show_order=findMaxShowOrderForNewAppRecommend();
+        Session session=getSession();
+        Date add_date=new Date();
+        for(int i=0; i<ids.length; i++)
+        {
+            AppInfo appInfo=getHibernateTemplate().load(AppInfo.class, ids[i]);
+            NewApp newApp = new NewApp();
+            newApp.setShow_order(++show_order);
+            newApp.setAppInfo(appInfo);
+            newApp.setAdd_date(add_date);
+      
+            session.save(newApp);
+        }
+        return true;
+    }
+
+    @Override
+    public int countNewAppRecords(final NewApp newApp) throws Exception {
+        int result = 0;
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<NewApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(NewApp.class);             
+                        
+                        if ((newApp.getAppInfo().getType() != 0)) {
+                            Criteria app_criteria = criteria.createCriteria(
+                                    "appInfo", Criteria.LEFT_JOIN);
+                            newApp.getAppInfo().getAppType().setId(newApp.getAppInfo().getType());
+                            app_criteria.add(Restrictions.eq("appType", newApp.getAppInfo()
+                                    .getAppType()));
+                        }
+                     
+                        List<NewApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        if (null != list) {
+            result = list.size();
+        }
+        return result;
+    }
+    
+    public boolean updateNewAppRecommendShowOrder(Long id, int order) throws Exception {
+        // TODO Auto-generated method stub
+        try{
+            String queryString ="update NewApp set show_order=? where id=?";
+            Session session=getSession();
+            Query queryObj=session.createQuery(queryString);
+            queryObj.setInteger(0, order);
+            queryObj.setLong(1, id);
+            queryObj.executeUpdate();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    
+    private Integer findMaxShowOrder(String tableName)
+    {
+        Integer result=null;
+        String sql="select max(show_order) from " + tableName;
+        result= (Integer) getSession().createSQLQuery(sql).uniqueResult();     
+        return result;
+    }
+    
+    public boolean addAppsForNewApp(String idsStr) throws Exception {
+        if (null != idsStr && !"".equals(idsStr)) {
+            String app_ids[] = idsStr.split(",");
+            Long id;
+            for (int i = 0; i < app_ids.length; i++) {
+                id = Long.parseLong(app_ids[i]);
+
+                Integer show_order;
+                show_order = findMaxShowOrder("t_newapp_recommend");
+                if (null == show_order) {
+                    show_order = 0;
+                }
+                AppInfo appInfo = new AppInfo();
+                appInfo.setId(id);
+                NewApp newApp = new NewApp();
+                newApp.setAppInfo(appInfo);
+                newApp.setShow_order(++show_order);
+                newApp.setAdd_date(new Date());
+                getHibernateTemplate().save(newApp);
+            }
+        }
+        return true;
+    }
+    
+    //end:新品推荐
+    
+    //begin:热品推荐
+    public int countPopularRecommendAppRecords(final PopularRecommendApp popularRecommendApp) throws Exception {
+        int result = 0;
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<PopularRecommendApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(PopularRecommendApp.class);             
+                        
+                        if ((popularRecommendApp.getAppInfo().getType() != 0)) {
+                            Criteria app_criteria = criteria.createCriteria(
+                                    "appInfo", Criteria.LEFT_JOIN);
+                            popularRecommendApp.getAppInfo().getAppType().setId(popularRecommendApp.getAppInfo().getType());
+                            app_criteria.add(Restrictions.eq("appType", popularRecommendApp.getAppInfo()
+                                    .getAppType()));
+                        }
+                     
+                        List<PopularRecommendApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        if (null != list) {
+            result = list.size();
+        }
+        return result;
+    }
+    
+    public List<PopularRecommendApp> getPopularRecommendAppList(final int start, final PopularRecommendApp popularRecommendApp) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<PopularRecommendApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(PopularRecommendApp.class); 
+                        
+                        if ((popularRecommendApp.getAppInfo().getType() != 0)) {
+                            Criteria app_criteria = criteria.createCriteria(
+                                    "appInfo", Criteria.LEFT_JOIN);
+                            popularRecommendApp.getAppInfo().getAppType().setId(popularRecommendApp.getAppInfo().getType());
+                            app_criteria.add(Restrictions.eq("appType", popularRecommendApp.getAppInfo()
+                                    .getAppType()));
+                        }
+                        criteria.addOrder(Order.asc("show_order"));
+                        criteria.setFirstResult(start);
+                        criteria.setMaxResults(10);
+                        List<PopularRecommendApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        return list;
+    }
+    
+    public List<PopularRecommendApp> getAllPopularRecommendAppList(final PopularRecommendApp popularRecommendApp) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<PopularRecommendApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(PopularRecommendApp.class); 
+        
+                        List<PopularRecommendApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        return list;
+        
+    }
+    
+    public boolean deletePopularRecommendAppByID(Long[] ids) throws Exception {
+        try{
+            String queryString ="delete PopularRecommendApp where id=?";
+            Session session=getSession();
+            for(Long id:ids){
+                Query queryObj=session.createQuery(queryString);
+                queryObj.setLong(0, id);
+                queryObj.executeUpdate();               
+            }
+            return true;
+        }catch(Exception e){
+          throw e;
+        }
+    }
+    
+    public int findMaxShowOrderForPopularRecommendApp()
+    {
+        Session session =getSession();
+        Query query=null;
+        int result=0;
+        String sql1="select * from t_popular_recommend ";
+        query=session.createSQLQuery(sql1);
+        if(null!=query.list()&&query.list().size()>0)
+        {
+            String sql2="select max(show_order) from t_popular_recommend ";
+            query=session.createSQLQuery(sql2);
+            result=(Integer)query.uniqueResult();
+        }
+        return result;
+        
+    }
+    
+    public boolean addPopularRecommendApp(Long[] ids)
+            throws Exception {    
+        int show_order=findMaxShowOrderForPopularRecommendApp();
+        Session session=getSession();
+        Date add_date=new Date();
+        for(int i=0; i<ids.length; i++)
+        {
+            AppInfo appInfo=getHibernateTemplate().load(AppInfo.class, ids[i]);
+            PopularRecommendApp popularRecommendApp = new PopularRecommendApp();
+            popularRecommendApp.setShow_order(++show_order);
+            popularRecommendApp.setAppInfo(appInfo);
+            popularRecommendApp.setAdd_date(add_date);
+      
+            session.save(popularRecommendApp);
+        }
+        return true;
+    }
+    
+    public boolean updatePopularRecommendAppShowOrder(Long id, int order) throws Exception {
+        try{
+            String queryString ="update PopularRecommendApp set show_order=? where id=?";
+            Session session=getSession();
+            Query queryObj=session.createQuery(queryString);
+            queryObj.setInteger(0, order);
+            queryObj.setLong(1, id);
+            queryObj.executeUpdate();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    
+    //end:热品推荐
+    
+    
+    //begin:编辑推荐
+    public int countEditorRecommendAppRecords(final EditorRecommendApp editorRecommendApp) throws Exception {
+        int result = 0;
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<EditorRecommendApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(EditorRecommendApp.class);             
+                        
+                        if ((editorRecommendApp.getAppInfo().getType() != 0)) {
+                            Criteria app_criteria = criteria.createCriteria(
+                                    "appInfo", Criteria.LEFT_JOIN);
+                            editorRecommendApp.getAppInfo().getAppType().setId(editorRecommendApp.getAppInfo().getType());
+                            app_criteria.add(Restrictions.eq("appType", editorRecommendApp.getAppInfo()
+                                    .getAppType()));
+                        }
+                     
+                        List<EditorRecommendApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        if (null != list) {
+            result = list.size();
+        }
+        return result;
+    }
+    
+    public List<EditorRecommendApp> getEditorRecommendAppList(final int start, final EditorRecommendApp editorRecommendApp) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<EditorRecommendApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(EditorRecommendApp.class); 
+                        
+                        if ((editorRecommendApp.getAppInfo().getType() != 0)) {
+                            Criteria app_criteria = criteria.createCriteria(
+                                    "appInfo", Criteria.LEFT_JOIN);
+                            editorRecommendApp.getAppInfo().getAppType().setId(editorRecommendApp.getAppInfo().getType());
+                            app_criteria.add(Restrictions.eq("appType", editorRecommendApp.getAppInfo()
+                                    .getAppType()));
+                        }
+                        criteria.addOrder(Order.asc("show_order"));
+                        criteria.setFirstResult(start);
+                        criteria.setMaxResults(Constants.APPS_PER_MAX_PAGE);
+                        List<EditorRecommendApp> result = criteria.list();
+                        return result;
+            }
+        });
+        if (null != list && list.size() > 0) {
+            return list;
+        } else {
+            return null;
+        }
+    }
+    
+    public List<EditorRecommendApp> getAllEditorRecommendAppList(final EditorRecommendApp editorRecommendApp) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<EditorRecommendApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(EditorRecommendApp.class); 
+        
+                        List<EditorRecommendApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        return list;
+        
+    }
+    
+    public boolean deleteEditorRecommendAppByID(Long[] ids) throws Exception {
+        try{
+            String queryString ="delete EditorRecommendApp where id=?";
+            Session session=getSession();
+            for(Long id:ids){
+                Query queryObj=session.createQuery(queryString);
+                queryObj.setLong(0, id);
+                queryObj.executeUpdate();               
+            }
+            return true;
+        }catch(Exception e){
+          throw e;
+        }
+    }
+    
+    public int findMaxShowOrderForEditorRecommendApp()
+    {
+        Session session =getSession();
+        Query query=null;
+        int result=0;
+        String sql1="select * from t_editor_recommend ";
+        query=session.createSQLQuery(sql1);
+        if(null!=query.list()&&query.list().size()>0)
+        {
+            String sql2="select max(show_order) from t_editor_recommend ";
+            query=session.createSQLQuery(sql2);
+            result=(Integer)query.uniqueResult();
+        }
+        return result;
+        
+    }
+    
+    public boolean addEditorRecommendApp(Long[] ids)
+            throws Exception {    
+        int show_order=findMaxShowOrderForEditorRecommendApp();
+        Session session=getSession();
+        Date add_date=new Date();
+        for(int i=0; i<ids.length; i++)
+        {
+            AppInfo appInfo=getHibernateTemplate().load(AppInfo.class, ids[i]);
+            EditorRecommendApp editorRecommendApp = new EditorRecommendApp();
+            editorRecommendApp.setShow_order(++show_order);
+            editorRecommendApp.setAppInfo(appInfo);
+            editorRecommendApp.setAdd_date(add_date);
+      
+            session.save(editorRecommendApp);
+        }
+        return true;
+    }
+    
+    public boolean updateEditorRecommendAppShowOrder(Long id, int order) throws Exception {
+        try{
+            String queryString ="update EditorRecommendApp set show_order=? where id=?";
+            Session session=getSession();
+            Query queryObj=session.createQuery(queryString);
+            queryObj.setInteger(0, order);
+            queryObj.setLong(1, id);
+            queryObj.executeUpdate();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    
+    public boolean addAppsForInstalledApp(String idsStr) throws Exception {
+        if (null != idsStr && !"".equals(idsStr)) {
+            String app_ids[] = idsStr.split(",");
+            Long id;
+            for (int i = 0; i < app_ids.length; i++) {
+                id = Long.parseLong(app_ids[i]);
+                Integer show_order;
+                show_order = findMaxShowOrder("t_editor_recommend");
+                if (null == show_order) {
+                    show_order = 0;
+                }
+                AppInfo appInfo = new AppInfo();
+                appInfo.setId(id);
+                EditorRecommendApp editorRecommendApp = new EditorRecommendApp();
+                editorRecommendApp.setAppInfo(appInfo);
+                editorRecommendApp.setShow_order(++show_order);
+                editorRecommendApp.setAdd_date(new Date());
+                getHibernateTemplate().save(editorRecommendApp);
+            }
+        }
+        return true;
+    }
+    //end:编辑推荐
+    
+    //begin:员工推荐
+    public int countStaffRecommendAppRecords(final StaffRecommendApp staffRecommendApp) throws Exception {
+        int result = 0;
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<StaffRecommendApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(StaffRecommendApp.class);             
+                        
+                        if ((staffRecommendApp.getAppInfo().getType() != 0)) {
+                            Criteria app_criteria = criteria.createCriteria(
+                                    "appInfo", Criteria.LEFT_JOIN);
+                            staffRecommendApp.getAppInfo().getAppType().setId(staffRecommendApp.getAppInfo().getType());
+                            app_criteria.add(Restrictions.eq("appType", staffRecommendApp.getAppInfo()
+                                    .getAppType()));
+                        }
+                     
+                        List<StaffRecommendApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        if (null != list) {
+            result = list.size();
+        }
+        return result;
+    }
+    
+    public List<StaffRecommendApp> getStaffRecommendAppList(final int start, final StaffRecommendApp staffRecommendApp) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<StaffRecommendApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(StaffRecommendApp.class); 
+                        
+                        if ((staffRecommendApp.getAppInfo().getType() != 0)) {
+                            Criteria app_criteria = criteria.createCriteria(
+                                    "appInfo", Criteria.LEFT_JOIN);
+                            staffRecommendApp.getAppInfo().getAppType().setId(staffRecommendApp.getAppInfo().getType());
+                            app_criteria.add(Restrictions.eq("appType", staffRecommendApp.getAppInfo()
+                                    .getAppType()));
+                        }
+                        criteria.addOrder(Order.asc("show_order"));
+                        criteria.setFirstResult(start);
+                        criteria.setMaxResults(10);
+                        List<StaffRecommendApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        return list;
+    }
+    
+    public List<StaffRecommendApp> getAllStaffRecommendAppList(final StaffRecommendApp staffRecommendApp) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<StaffRecommendApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(StaffRecommendApp.class); 
+        
+                        List<StaffRecommendApp> result = criteria.list();
+                        return result;
+                    }
+                });
+        return list;
+        
+    }
+    
+    public boolean deleteStaffRecommendAppByID(Long[] ids) throws Exception {
+        try{
+            String queryString ="delete StaffRecommendApp where id=?";
+            Session session=getSession();
+            for(Long id:ids){
+                Query queryObj=session.createQuery(queryString);
+                queryObj.setLong(0, id);
+                queryObj.executeUpdate();               
+            }
+            return true;
+        }catch(Exception e){
+          throw e;
+        }
+    }
+    
+    public int findMaxShowOrderForStaffRecommendApp()
+    {
+        Session session =getSession();
+        Query query=null;
+        int result=0;
+        String sql1="select * from t_staff_recommend ";
+        query=session.createSQLQuery(sql1);
+        if(null!=query.list()&&query.list().size()>0)
+        {
+            String sql2="select max(show_order) from t_staff_recommend ";
+            query=session.createSQLQuery(sql2);
+            result=(Integer)query.uniqueResult();
+        }
+        return result;
+        
+    }
+    
+    public boolean addStaffRecommendApp(Long[] ids)
+            throws Exception {    
+        int show_order=findMaxShowOrderForStaffRecommendApp();
+        Session session=getSession();
+        Date add_date=new Date();
+        for(int i=0; i<ids.length; i++)
+        {
+            AppInfo appInfo=getHibernateTemplate().load(AppInfo.class, ids[i]);
+            StaffRecommendApp staffRecommendApp = new StaffRecommendApp();
+            staffRecommendApp.setShow_order(++show_order);
+            staffRecommendApp.setAppInfo(appInfo);
+            staffRecommendApp.setAdd_date(add_date);
+      
+            session.save(staffRecommendApp);
+        }
+        return true;
+    }
+    
+    public boolean updateStaffRecommendAppShowOrder(Long id, int order) throws Exception {
+        try{
+            String queryString ="update StaffRecommendApp set show_order=? where id=?";
+            Session session=getSession();
+            Query queryObj=session.createQuery(queryString);
+            queryObj.setInteger(0, order);
+            queryObj.setLong(1, id);
+            queryObj.executeUpdate();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+
+    public ModelInfoDAO getModelInfoDAO() {
+        return this.modelInfoDAO;
+    }
+
+    public void setModelInfoDAO(ModelInfoDAO modelInfoDAO) {
+        this.modelInfoDAO = modelInfoDAO;
+    }
+
+	@Override
+	public void addRecommendForNewSeries(Short id) throws Exception {
+		// TODO Auto-generated method stub
+		List<CellphoneRecommendApp> common_list=getHibernateTemplate().find("from CellphoneRecommendApp where series_id=?",(short)0);
+		if(null!=common_list&&common_list.size()>0)
+		{
+			for(CellphoneRecommendApp phoneRecommend : common_list)
+			{
+				CellphoneRecommendApp phone=new CellphoneRecommendApp();
+				phone.setAppInfo(phoneRecommend.getAppInfo());
+				phone.setSeries_id(id);
+				phone.setOrder_type(phoneRecommend.getOrder_type());
+				phone.setShow_order(phoneRecommend.getShow_order());
+				phone.setAdd_date(new Date());
+				
+				getHibernateTemplate().save(phone);
+			}
+		}
+	}
+
+    //end:员工推荐
+	
+	 public boolean isExistApp(String tableName,Long app_id) throws Exception{ 
+	     String sql = "select id from "+tableName+" where app_id="+app_id;
+	     BigInteger id = (BigInteger) getSession().createSQLQuery(sql).uniqueResult();
+	     if(null!=id){
+	         return true;
+	     }else{
+	         return false;
+	     }
+	 }
+	 
+	 public boolean findTopicByAppInfoId(Long app_id,Short series)  throws Exception{
+		 List<CellphoneRecommendApp> common_list = getHibernateTemplate().find("from CellphoneRecommendApp where app_id=? and  series_id=?",app_id,series);
+			if(common_list!=null&&common_list.size()>0){
+				return true;
+			}
+		 return false;
+	 }
+   
+}

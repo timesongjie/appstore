@@ -1,0 +1,170 @@
+package com.bbkmobile.iqoo.console.dao.apptype;
+
+import java.util.List;
+
+import org.apache.commons.lang.StringUtils;
+import org.hibernate.Criteria;
+import org.hibernate.Session;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Restrictions;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.common.vo.CommonResultAppInfo;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+
+public class PersonalTypeAppDaoImpl extends HibernateDaoSupport implements PersonalTypeAppDao{
+
+	@Override
+	public int addPersonalTypeApps(List<PersonalTypeApp> apps)
+			throws Exception {
+		if(apps != null){
+			for(PersonalTypeApp app : apps){
+				getHibernateTemplate().save(app);
+			}
+		}
+		return 0;
+	}
+
+	@Override
+	public List<PersonalTypeApp> list(PersonalTypeApp app) throws Exception {
+		Criteria createCriteria = getSession().createCriteria(PersonalTypeApp.class);
+		if(app != null){
+			if(app.getType() != null && app.getType().getId() != null){
+				Criteria criterion = createCriteria.createCriteria("type", Criteria.LEFT_JOIN);
+				criterion.add(Restrictions.eq("id", app.getType().getId()));
+			}
+		}
+		createCriteria.createCriteria("appInfo", Criteria.LEFT_JOIN);
+		return createCriteria.list();
+	}
+
+	@Override
+	public List<PersonalTypeApp> list(PersonalTypeApp app, PageVO page,
+			String orderBy) throws Exception {
+		Criteria createCriteria = getSession().createCriteria(PersonalTypeApp.class);
+		if(app != null){
+			if(app.getType() != null && app.getType().getId() != null){
+				Criteria criterion = createCriteria.createCriteria("type", Criteria.LEFT_JOIN);
+				criterion.add(Restrictions.eq("id", app.getType().getId()));
+			}
+		}
+		createCriteria.createCriteria("appInfo", Criteria.LEFT_JOIN);
+		createCriteria.setFirstResult((page.getCurrentPageNum()-1)*page.getNumPerPage());
+		createCriteria.setMaxResults(page.getNumPerPage());
+		return createCriteria.list();
+	}
+	@Override
+	public int count(PersonalTypeApp app) throws Exception {
+		Criteria createCriteria = getSession().createCriteria(PersonalTypeApp.class);
+		if(app != null){
+			if(app.getType() != null && app.getType().getId() != null){
+				Criteria criterion = createCriteria.createCriteria("type", Criteria.LEFT_JOIN);
+				criterion.add(Restrictions.eq("id", app.getType().getId()));
+			}
+		}
+		//createCriteria.createCriteria("appInfo", Criteria.LEFT_JOIN);
+		filter(app.getAppInfo(),createCriteria);
+		Integer result = ((Integer) createCriteria.setProjection(Projections.rowCount()).uniqueResult());
+		if(result != null){
+			return result.intValue();
+		}
+		return 0;
+	}
+	@Override
+	public int deletePersonalTypeApps(Integer[] ids) throws Exception {
+		return 0;
+	}
+	@Override
+	public int deletePersonalTypeApps(Integer typeId,Integer[] appIds) throws Exception {
+		if(typeId != null){
+			String sql = "delete from t_type_personal_app where type_id = ? and app_id = ?";
+			Session session = getSession();
+			for(Integer appId : appIds){
+				if(appId != null){
+					session.createSQLQuery(sql).setInteger(0, typeId).setInteger(1, appId).executeUpdate();
+				}
+			}
+		}
+		return 0;
+	}
+	@Override
+	public void updatePersonalTypeApps(List<PersonalTypeApp> apps)
+			throws Exception {
+		if(apps != null && apps.size() >0){
+			Session session = getSession();
+			for(PersonalTypeApp app : apps){
+				if(app != null){
+					PersonalTypeApp a = (PersonalTypeApp) session.load(PersonalTypeApp.class, app.getId());
+					if(app.getOrder() != null){
+						a.setOrder(app.getOrder());
+					}
+					session.update(a);
+				}
+			}
+		}
+	}
+
+	@Override
+	@Deprecated
+	public List<CommonResultAppInfo> listForInterface(PersonalTypeApp app,
+			PageVO page, String orderBy) throws Exception {
+//		final PersonalType type = app.getType();
+//		AppInfo appInfo = app.getAppInfo();
+//		Session session = getSession();
+//		return new AppInfoFilter(session){
+//			@Override
+//			public String preSql() {
+//				return "select this_.orderSort as sortOrder,";
+//			}
+//			@Override
+//			public String postSql() {
+//				return " from t_type_personal_app this_ ,t_type_personal personalty1_,t_app_info appinfo1_ where"
+//						+ "  this_.type_id = personalty1_.id and this_.app_id=appinfo1_.id and this_.type_id = :typeId";
+//			}
+//			@Override
+//			public String orderSq() {
+//				return " order by this_.orderSort asc ";
+//			}
+//			@Override
+//			public void queryAssign() {
+//				this.getQuery().addScalar("sortOrder",Hibernate.INTEGER);
+//				this.getQuery().setInteger("typeId", type.getId());
+//			}
+//			
+//		}.execute(page, appInfo);
+		return null;
+	}
+////////统计时统一过滤////////
+	private void filter(AppInfo info,Criteria criteria) {
+		Criteria app_criteria = criteria.createCriteria("appInfo", "appInfo");
+		if (StringUtils.isNotBlank(info.getFilter_model())) {
+			if(info.getMinSdkVersion() != null){
+				app_criteria.add(Restrictions.or(Restrictions.le(
+						"minSdkVersion", info.getMinSdkVersion()), Restrictions
+						.isNull("minSdkVersion")));
+			}
+			if(info.getMaxSdkVersion() != null){
+				app_criteria.add(Restrictions.or(Restrictions.ge(
+						"maxSdkVersion", info.getMaxSdkVersion()), Restrictions
+						.isNull("maxSdkVersion")));
+			}
+			if(StringUtils.isNotBlank(info.getCPU_ABI())){
+	            String sql="(CPU_ABI is null";
+	            String cpuabis[]=info.getCPU_ABI().split(","); 
+	            for(int i=0; i<cpuabis.length; i++)
+	            {
+	                String cpuabi=cpuabis[i];
+	                sql=sql+" or CPU_ABI like '%,"+cpuabi+",%'";                          
+	            }
+	            sql=sql+")";
+	            app_criteria.add(Restrictions.sqlRestriction(sql)); 
+	        }
+			app_criteria.add(Restrictions
+					.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + info.getFilter_model() + ",%'))"));
+		}
+		else{
+			app_criteria.add(Restrictions.ne("appStatus", (short) 12));
+	    }
+	}
+}

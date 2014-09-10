@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 2012-1-3 14:53:46 by Hibernate Tools 3.4.0.CR1 -->
+<hibernate-mapping>
+	<class name="com.bbkmobile.iqoo.console.dao.appinfo.AppClick"
+		table="t_app_click">
+		<id name="id" type="java.lang.Long">
+			<column name="id" />
+			<generator class="identity" />
+		</id>
+
+		<many-to-one name="appInfo"
+			class="com.bbkmobile.iqoo.console.dao.appinfo.AppInfo" column="app_id"
+			cascade="save-update" outer-join="true" fetch="select" lazy="false"
+			not-null="true" />
+
+		<property name="click_date" type="timestamp">
+			<column name="click_date" length="19">
+			</column>
+		</property>
+
+	</class>
+</hibernate-mapping>

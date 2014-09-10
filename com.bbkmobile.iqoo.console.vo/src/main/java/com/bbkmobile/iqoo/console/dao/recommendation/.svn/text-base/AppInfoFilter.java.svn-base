@@ -1,0 +1,164 @@
+package com.bbkmobile.iqoo.console.dao.recommendation;
+
+import java.util.List;
+
+import org.apache.commons.lang.StringUtils;
+import org.hibernate.Hibernate;
+import org.hibernate.SQLQuery;
+import org.hibernate.Session;
+import org.hibernate.transform.Transformers;
+import org.springframework.util.Assert;
+
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.common.vo.CommonResultAppInfo;
+import com.bbkmobile.iqoo.console.dao.modelmgr.Model;
+
+public abstract class AppInfoFilter {
+
+	private Session session;
+	private SQLQuery query;
+	private Class clazz;
+
+	public AppInfoFilter(Session session) {
+		this.session = session;
+		clazz = CommonResultAppInfo.class;
+	}
+
+	public AppInfoFilter(Session session, Class clazz) {
+		this.session = session;
+		this.clazz = clazz;
+	}
+
+	public List execute(PageVO page, Model model) {
+		StringBuffer sql = new StringBuffer();
+
+		String preSql = preSql();
+		Assert.notNull(preSql);
+		sql.append(preSql);
+
+		sql.append(appInfoSql);
+
+		String postSql = postSql();
+		Assert.notNull(postSql);
+		sql.append(postSql);
+
+		sqlFilter(sql, model);
+
+		String orderSql = orderSq();
+		if (StringUtils.isNotEmpty(orderSql)) {
+			sql.append(orderSql);
+		}
+		if (page != null) {
+			sql.append(" limit :limit,:size ");
+		}
+
+		query = session.createSQLQuery(sql.toString());
+		queryAssign(model);
+		if (page != null) {
+			query.setInteger("limit",
+					(page.getCurrentPageNum() - 1) * page.getNumPerPage());
+			query.setInteger("size", page.getNumPerPage());
+		}
+		queryAssign();
+		queryAddScalar();
+
+		List list = query.setResultTransformer(Transformers.aliasToBean(clazz))
+				.list();
+		return list;
+	}
+	/**
+	 * select + 自需条件
+	 * @return
+	 */
+	public abstract String preSql();
+	/**
+	 * from + 关联表
+	 * @return
+	 */
+	public abstract String postSql();
+
+	public abstract String orderSq();
+
+	/**
+	 *  自定义查询条件 赋值
+	 */
+	public void queryAssign() {
+
+	}
+
+	private final String appInfoSql = "  appinfo1_.appAuthor as developer, "
+			+ " appinfo1_.downloadCount as download_count, appinfo1_.appApk as download_url, appinfo1_.appIcon as icon_url, "
+			+ " appinfo1_.id as id, appinfo1_.official as offical, appinfo1_.appPackage as package_name, "
+			+ " appinfo1_.patchs as patchs, appinfo1_.commentCount as raters_count, appinfo1_.avgComment as score,"
+			+ " appinfo1_.apkSize as size, appinfo1_.tag as tag, appinfo1_.appCnName as title_zh,"
+			+ " appinfo1_.appEnName as title_en, appinfo1_.appVersion as version_name, appinfo1_.appVersionCode as version_code ";
+
+	private StringBuffer sqlFilter(StringBuffer sql, Model model) {
+		if (model != null && model.getId() > 0) {
+			if (model.getSdkVersion() != null) {
+				sql.append(" and (appinfo1_.minSdkVersion<= :minSdkVersion or appinfo1_.minSdkVersion is null) ");
+				sql.append(" and (appinfo1_.maxSdkVersion>= :maxSdkVersion or appinfo1_.maxSdkVersion is null)");
+			}
+			/*
+			 * if (StringUtils.isNotBlank(info.getCPU_ABI())) {
+			 * sql.append(" and (CPU_ABI is null or CPU_ABI like :CPU_ABI)"); }
+			 */
+			sql.append(" and (appStatus=0 or (appStatus=13 and filter_model not like :filter_model)) ");
+		} else {
+			sql.append(" and (appStatus != 12) ");
+		}
+		return sql;
+	}
+
+	private void queryAssign(Model model) {
+		if (model != null && model.getId() > 0) {
+			if (model.getSdkVersion() != null) {
+				query.setInteger("minSdkVersion", model.getSdkVersion());
+				query.setInteger("maxSdkVersion", model.getSdkVersion());
+			}
+			/*
+			 * if (StringUtils.isNotBlank(info.getCPU_ABI())) {
+			 * query.setString("CPU_ABI", transLike(info.getCPU_ABI())); }
+			 */query.setString("filter_model", transLike(model.getId()));
+		}
+	}
+
+	private String transLike(Object paramter) {
+		return "%," + paramter + ",%";
+	}
+
+	private void queryAddScalar() {
+		query.addScalar("developer", Hibernate.STRING)
+				.addScalar("download_count", Hibernate.LONG)
+				.addScalar("download_url", Hibernate.STRING)
+				.addScalar("icon_url", Hibernate.STRING)
+				.addScalar("id", Hibernate.LONG)
+				.addScalar("offical", Hibernate.CHARACTER)
+				.addScalar("package_name", Hibernate.STRING)
+				.addScalar("patchs", Hibernate.STRING)
+				.addScalar("raters_count", Hibernate.INTEGER)
+				.addScalar("score", Hibernate.FLOAT)
+				.addScalar("size", Hibernate.INTEGER)
+				.addScalar("tag", Hibernate.SHORT)
+				.addScalar("title_zh", Hibernate.STRING)
+				.addScalar("title_en", Hibernate.STRING)
+				.addScalar("version_name", Hibernate.STRING)
+				.addScalar("version_code", Hibernate.STRING);
+	}
+
+	public Session getSession() {
+		return session;
+	}
+
+	public void setSession(Session session) {
+		this.session = session;
+	}
+
+	public SQLQuery getQuery() {
+		return query;
+	}
+
+	public void setQuery(SQLQuery query) {
+		this.query = query;
+	}
+}

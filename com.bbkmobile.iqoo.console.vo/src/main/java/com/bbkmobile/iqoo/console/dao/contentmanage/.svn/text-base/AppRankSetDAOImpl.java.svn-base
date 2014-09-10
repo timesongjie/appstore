@@ -1,0 +1,2259 @@
+package com.bbkmobile.iqoo.console.dao.contentmanage;
+
+import java.math.BigInteger;
+import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.List;
+
+import org.hibernate.Criteria;
+import org.hibernate.Hibernate;
+import org.hibernate.HibernateException;
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Restrictions;
+import org.hibernate.transform.Transformers;
+import org.springframework.orm.hibernate3.HibernateCallback;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.common.logging.Lg;
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.console.constants.Constants;
+import com.bbkmobile.iqoo.console.constants.LgType;
+import com.bbkmobile.iqoo.console.dao.advertisement.AdInfoDAO;
+import com.bbkmobile.iqoo.console.dao.advertisement.Advertisement;
+import com.bbkmobile.iqoo.console.dao.advertisement.ModelAdvertisement;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+import com.bbkmobile.iqoo.console.dao.appinfo.SearchHotWord;
+import com.bbkmobile.iqoo.console.dao.apptype.AppType;
+import com.bbkmobile.iqoo.console.dao.modelmgr.ModelInfoDAO;
+import com.bbkmobile.iqoo.console.dao.modelmgr.Series;
+import com.bbkmobile.iqoo.console.top.dao.TopBase;
+
+public class AppRankSetDAOImpl extends HibernateDaoSupport implements
+		AppRankSetDAO {
+
+	public List<TopBase> getRankTops(final int order_type_int,
+			final int apps_per_page_int, final int page_index_int,
+			final Short model_id, final Integer sdkVersion,
+			final String drawable_dpi, final String CPU_ABI,
+			final String tableName) throws Exception {
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		List<TopBase> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Class topClass = null;
+						try {
+							topClass = Class
+									.forName("com.bbkmobile.iqoo.console.top.dao."
+											+ tableName);
+						} catch (ClassNotFoundException e) {
+							// e.printStackTrace();
+						}
+						Criteria criteria = session.createCriteria(topClass);
+						Criteria downloadRankApp_criteria = criteria
+								.createCriteria("appInfo", Criteria.LEFT_JOIN);
+						if (null != model_id) {
+
+							downloadRankApp_criteria.add(Restrictions.or(
+									Restrictions
+											.le("minSdkVersion", sdkVersion),
+									Restrictions.isNull("minSdkVersion")));
+
+							downloadRankApp_criteria.add(Restrictions.or(
+									Restrictions
+											.ge("maxSdkVersion", sdkVersion),
+									Restrictions.isNull("maxSdkVersion")));
+							/*
+							if (CPU_ABI != null) {
+								String sql = "(CPU_ABI is null";
+								String cpuabis[] = CPU_ABI.split(",");
+								for (int i = 0; i < cpuabis.length; i++) {
+									String cpuabi = cpuabis[i];
+									sql = sql + " or CPU_ABI like '%," + cpuabi
+											+ ",%'";
+								}
+								sql = sql + ")";
+								downloadRankApp_criteria.add(Restrictions
+										.sqlRestriction(sql));
+							}
+                            */
+							downloadRankApp_criteria.add(Restrictions
+									.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%,"
+											+ model_id + ",%'))"));
+						} else {
+							downloadRankApp_criteria.add(Restrictions.ne(
+									"appStatus", (short) 12));
+						}
+
+						criteria.setFirstResult((page_index_int - 1)
+								* apps_per_page_int);
+						criteria.setMaxResults(apps_per_page_int);
+						criteria.addOrder(Order.asc("show_order"));
+						List<ApplicationTop> result = criteria.list();
+						return result;
+					}
+				});
+		if (null != list && list.size() > 0) {
+			return list;
+		} else {
+			return null;
+		}
+
+	}
+
+	public List<ApplicationTop> getApplicationTops(final int order_type_int,
+			final int apps_per_page_int, final int page_index_int,
+			final Short model_id, final Integer sdkVersion,
+			final String drawable_dpi, final String CPU_ABI) throws Exception {
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		List<ApplicationTop> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(ApplicationTop.class);
+
+						Criteria downloadRankApp_criteria = criteria
+								.createCriteria("appInfo", Criteria.LEFT_JOIN);
+						if (null != model_id) {
+
+							downloadRankApp_criteria.add(Restrictions.or(
+									Restrictions
+											.le("minSdkVersion", sdkVersion),
+									Restrictions.isNull("minSdkVersion")));
+
+							downloadRankApp_criteria.add(Restrictions.or(
+									Restrictions
+											.ge("maxSdkVersion", sdkVersion),
+									Restrictions.isNull("maxSdkVersion")));
+							/*
+							if (CPU_ABI != null) {
+								String sql = "(CPU_ABI is null";
+								String cpuabis[] = CPU_ABI.split(",");
+								for (int i = 0; i < cpuabis.length; i++) {
+									String cpuabi = cpuabis[i];
+									sql = sql + " or CPU_ABI like '%," + cpuabi
+											+ ",%'";
+								}
+								sql = sql + ")";
+								downloadRankApp_criteria.add(Restrictions
+										.sqlRestriction(sql));
+							}
+                            */
+							downloadRankApp_criteria.add(Restrictions
+									.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%,"
+											+ model_id + ",%'))"));
+						} else {
+							downloadRankApp_criteria.add(Restrictions.ne(
+									"appStatus", (short) 12));
+						}
+
+						criteria.setFirstResult((page_index_int - 1)
+								* apps_per_page_int);
+						criteria.setMaxResults(apps_per_page_int);
+
+						List<ApplicationTop> result = criteria.list();
+						return result;
+					}
+				});
+		if (null != list && list.size() > 0) {
+			return list;
+		} else {
+			return null;
+		}
+
+	}
+
+	public List<GameTop> getGameTops(final int order_type_int,
+			final int apps_per_page_int, final int page_index_int,
+			final Short model_id, final Integer sdkVersion,
+			final String drawable_dpi, final String CPU_ABI) throws Exception {
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		List<GameTop> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(GameTop.class);
+
+						Criteria downloadRankApp_criteria = criteria
+								.createCriteria("appInfo", Criteria.LEFT_JOIN);
+						if (null != model_id) {
+
+							downloadRankApp_criteria.add(Restrictions.or(
+									Restrictions
+											.le("minSdkVersion", sdkVersion),
+									Restrictions.isNull("minSdkVersion")));
+
+							downloadRankApp_criteria.add(Restrictions.or(
+									Restrictions
+											.ge("maxSdkVersion", sdkVersion),
+									Restrictions.isNull("maxSdkVersion")));
+							/*
+							if (CPU_ABI != null) {
+								String sql = "(CPU_ABI is null";
+								String cpuabis[] = CPU_ABI.split(",");
+								for (int i = 0; i < cpuabis.length; i++) {
+									String cpuabi = cpuabis[i];
+									sql = sql + " or CPU_ABI like '%," + cpuabi
+											+ ",%'";
+								}
+								sql = sql + ")";
+								downloadRankApp_criteria.add(Restrictions
+										.sqlRestriction(sql));
+							}
+                            */
+							downloadRankApp_criteria.add(Restrictions
+									.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%,"
+											+ model_id + ",%'))"));
+						} else {
+							downloadRankApp_criteria.add(Restrictions.ne(
+									"appStatus", (short) 12));
+						}
+
+						criteria.setFirstResult((page_index_int - 1)
+								* apps_per_page_int);
+						criteria.setMaxResults(apps_per_page_int);
+
+						List<GameTop> result = criteria.list();
+						return result;
+					}
+				});
+		if (null != list && list.size() > 0) {
+			return list;
+		} else {
+			return null;
+		}
+
+	}
+
+	public List<AppDownloadTop> getDownloadTopApps(final int order_type_int,
+			final int apps_per_page_int, final int page_index_int,
+			final Short model_id, final Integer sdkVersion,
+			final String drawable_dpi, final String CPU_ABI) throws Exception {
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		List<AppDownloadTop> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(AppDownloadTop.class);
+
+						Criteria downloadRankApp_criteria = criteria
+								.createCriteria("appInfo", Criteria.LEFT_JOIN);
+						if (null != model_id) {
+
+							downloadRankApp_criteria.add(Restrictions.or(
+									Restrictions
+											.le("minSdkVersion", sdkVersion),
+									Restrictions.isNull("minSdkVersion")));
+
+							downloadRankApp_criteria.add(Restrictions.or(
+									Restrictions
+											.ge("maxSdkVersion", sdkVersion),
+									Restrictions.isNull("maxSdkVersion")));
+							/*
+							if (CPU_ABI != null) {
+								String sql = "(CPU_ABI is null";
+								String cpuabis[] = CPU_ABI.split(",");
+								for (int i = 0; i < cpuabis.length; i++) {
+									String cpuabi = cpuabis[i];
+									sql = sql + " or CPU_ABI like '%," + cpuabi
+											+ ",%'";
+								}
+								sql = sql + ")";
+								downloadRankApp_criteria.add(Restrictions
+										.sqlRestriction(sql));
+							}
+                            */
+							downloadRankApp_criteria.add(Restrictions
+									.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%,"
+											+ model_id + ",%'))"));
+						} else {
+							downloadRankApp_criteria.add(Restrictions.eq(
+									"appStatus", (short) 0));
+						}
+
+						criteria.setFirstResult((page_index_int - 1)
+								* apps_per_page_int);
+						criteria.setMaxResults(apps_per_page_int);
+
+						List<AppDownloadTop> result = criteria.list();
+						return result;
+					}
+				});
+		if (null != list && list.size() > 0) {
+			return list;
+		} else {
+			return null;
+		}
+
+	}
+
+	public List<AppInfo> getScoreTopApps(final int order_type_int,
+			final int apps_per_page_int, final int page_index_int,
+			final Short model_id, final Integer sdkVersion,
+			final String drawable_dpi, final String CPU_ABI) throws Exception {
+		@SuppressWarnings({ "rawtypes", "unchecked" })
+		List<AppInfo> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(AppInfo.class);
+
+						if (null != model_id) {
+							criteria.add(Restrictions.or(Restrictions.le(
+									"minSdkVersion", sdkVersion), Restrictions
+									.isNull("minSdkVersion")));
+
+							criteria.add(Restrictions.or(Restrictions.ge(
+									"maxSdkVersion", sdkVersion), Restrictions
+									.isNull("maxSdkVersion")));
+							/*
+							if (CPU_ABI != null) {
+								String sql = "(CPU_ABI is null";
+								String cpuabis[] = CPU_ABI.split(",");
+								for (int i = 0; i < cpuabis.length; i++) {
+									String cpuabi = cpuabis[i];
+									sql = sql + " or CPU_ABI like '%," + cpuabi
+											+ ",%'";
+								}
+								sql = sql + ")";
+								criteria.add(Restrictions.sqlRestriction(sql));
+							}
+                            */
+							criteria.add(Restrictions
+									.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%,"
+											+ model_id + ",%'))"));
+						} else {
+							criteria.add(Restrictions.ne("appStatus", (short) 12));
+						}
+
+						criteria.add(Restrictions.ge("downloadCount", 10000));
+						criteria.addOrder(Order.desc("avgComment"));
+						criteria.addOrder(Order.desc("downloadCount"));
+						criteria.setFirstResult((page_index_int - 1)
+								* apps_per_page_int);
+						criteria.setMaxResults(apps_per_page_int);
+
+						List<AppInfo> result = criteria.list();
+						return result;
+					}
+				});
+		return list;
+	}
+
+	public List<AppOnsaleDateTop> getOnsaleDateTopApps(
+			final int order_type_int, final int apps_per_page_int,
+			final int page_index_int, final Short model_id,
+			final Integer sdkVersion, final String drawable_dpi,
+			final String CPU_ABI) throws Exception {
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		List<AppOnsaleDateTop> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(AppOnsaleDateTop.class);
+
+						Criteria onsaleDateRankApp_criteria = criteria
+								.createCriteria("appInfo", Criteria.LEFT_JOIN);
+						if (null != model_id) {
+
+							onsaleDateRankApp_criteria.add(Restrictions.or(
+									Restrictions
+											.le("minSdkVersion", sdkVersion),
+									Restrictions.isNull("minSdkVersion")));
+
+							onsaleDateRankApp_criteria.add(Restrictions.or(
+									Restrictions
+											.ge("maxSdkVersion", sdkVersion),
+									Restrictions.isNull("maxSdkVersion")));
+							/*
+							if (CPU_ABI != null) {
+								String sql = "(CPU_ABI is null";
+								String cpuabis[] = CPU_ABI.split(",");
+								for (int i = 0; i < cpuabis.length; i++) {
+									String cpuabi = cpuabis[i];
+									sql = sql + " or CPU_ABI like '%," + cpuabi
+											+ ",%'";
+								}
+								sql = sql + ")";
+								onsaleDateRankApp_criteria.add(Restrictions
+										.sqlRestriction(sql));
+							}
+                            */
+							onsaleDateRankApp_criteria.add(Restrictions
+									.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%,"
+											+ model_id + ",%'))"));
+						} else {
+							onsaleDateRankApp_criteria.add(Restrictions.eq(
+									"appStatus", (short) 0));
+						}
+
+						criteria.setFirstResult((page_index_int - 1)
+								* apps_per_page_int);
+						criteria.setMaxResults(apps_per_page_int);
+
+						List<AppOnsaleDateTop> result = criteria.list();
+						return result;
+					}
+				});
+		if (null != list && list.size() > 0) {
+			return list;
+		} else {
+			return null;
+		}
+	}
+
+	public List<RankSetup> getRankSetupsForSetup(final RankSetup rankSetup)
+			throws Exception {
+		try {
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+			final String today = sdf.format(new Date());
+			@SuppressWarnings("unchecked")
+			List<RankSetup> list = this.getHibernateTemplate().executeFind(
+					new HibernateCallback() {
+						public Object doInHibernate(Session session)
+								throws HibernateException {
+							Criteria criteria = session
+									.createCriteria(RankSetup.class);
+
+							criteria.add(Restrictions.eq("type",
+									rankSetup.getType()));
+							// criteria.add(Restrictions.eq("object_type",
+							// rankSetup.getObject_type()));
+							criteria.add(Restrictions.eq("valid_date", today));
+							criteria.addOrder(Order.asc("show_order"));
+							List<HubHotContent> result = criteria.list();
+							return result;
+						}
+					});
+
+			if (null != list && list.size() > 0) {
+				return list;
+			} else {
+				return null;
+			}
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	private List<RankSetup> getYesterdayRankSetupsForSetup(
+			final RankSetup rankSetup) throws Exception {
+		try {
+			Date date = new Date();// 取时间
+			Calendar calendar = new GregorianCalendar();
+			calendar.setTime(date);
+			calendar.add(calendar.DATE, -1);// 把日期往后增加一天.整数往后推,负数往前移动
+			date = calendar.getTime(); // 这个时间就是日期往后推一天的结果
+			SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+			final String yesterday = formatter.format(date);
+			@SuppressWarnings("unchecked")
+			List<RankSetup> list = this.getHibernateTemplate().executeFind(
+					new HibernateCallback() {
+						public Object doInHibernate(Session session)
+								throws HibernateException {
+							Criteria criteria = session
+									.createCriteria(RankSetup.class);
+							criteria.add(Restrictions.eq("type",
+									rankSetup.getType()));
+							// criteria.add(Restrictions.eq("object_type",
+							// rankSetup.getObject_type()));
+							criteria.add(Restrictions.eq("valid_date",
+									yesterday));
+							criteria.addOrder(Order.asc("show_order"));
+							List<HubHotContent> result = criteria.list();
+							return result;
+						}
+					});
+
+			if (null != list && list.size() > 0) {
+				return list;
+			} else {
+				return null;
+			}
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	public boolean updateRankWithSetup(String sourceTable, String descTable,
+			RankSetup rankSetup) throws Exception {
+		try {
+			String deleteString = "delete from " + descTable;
+			getSession().createSQLQuery(deleteString).executeUpdate();
+
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+			final String today = sdf.format(new Date());
+			String deleteString2 = "delete from "
+					+ sourceTable
+					+ " where app_id in (select object_id from t_rank_setup where type="
+					+ rankSetup.getType() + " and valid_date='" + today + "')";
+			getSession().createSQLQuery(deleteString2).executeUpdate();
+
+			String insertSql = "insert into " + descTable + "(app_id)"
+					+ " select app_id from " + sourceTable + " limit ";
+
+			String insertSql2 = "insert into " + descTable + "(app_id) value ";
+
+			List<RankSetup> rankSetups = getRankSetupsForSetup(rankSetup);
+			int previousShowOrder;
+			int currentShowOrder;
+			int lastShowOrder = 0;
+			int count = 0;
+			String limit;
+			if (null != rankSetups) {
+				for (int i = 0; i < rankSetups.size(); i++) {
+					currentShowOrder = rankSetups.get(i).getShow_order();
+					if (i == 0) {
+						if (1 == currentShowOrder) {
+							getSession().createSQLQuery(
+									insertSql2 + "("
+											+ rankSetups.get(i).getObject_id()
+											+ ")").executeUpdate();
+						} else {
+							limit = 0 + "," + (currentShowOrder - 1);
+							count += (currentShowOrder - 1);
+							getSession().createSQLQuery(insertSql + limit)
+									.executeUpdate();
+							getSession().createSQLQuery(
+									insertSql2 + "("
+											+ rankSetups.get(i).getObject_id()
+											+ ")").executeUpdate();
+						}
+					} else {
+						previousShowOrder = rankSetups.get(i - 1)
+								.getShow_order();
+						if ((currentShowOrder - previousShowOrder) > 1) {
+							limit = count
+									+ ","
+									+ (currentShowOrder - previousShowOrder - 1);
+							count += (currentShowOrder - previousShowOrder - 1);
+							getSession().createSQLQuery(insertSql + limit)
+									.executeUpdate();
+							getSession().createSQLQuery(
+									insertSql2 + "("
+											+ rankSetups.get(i).getObject_id()
+											+ ")").executeUpdate();
+						} else {
+							getSession().createSQLQuery(
+									insertSql2 + "("
+											+ rankSetups.get(i).getObject_id()
+											+ ")").executeUpdate();
+						}
+					}
+					if (i == (rankSetups.size() - 1)) {
+						lastShowOrder = rankSetups.get(i).getShow_order();
+					}
+				}
+			}
+
+			limit = count + "," + (220 - lastShowOrder);
+			getSession().createSQLQuery(insertSql + limit).executeUpdate();
+
+			updateShowOrderForRank(descTable);
+			return true;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	private Long getMinId(String tableName) throws Exception {
+		String sql = "select min(id) from " + tableName;
+		BigInteger id = (BigInteger) getSession().createSQLQuery(sql)
+				.uniqueResult();
+		Long idLong = Long.parseLong(id.toString());
+		return idLong;
+	}
+
+	public boolean updateShowOrderForRank(String tableName) throws Exception {
+		Long id = getMinId(tableName);
+		String sql = "update " + tableName + " set show_order=id-" + (id - 1);
+		getSession().createSQLQuery(sql).executeUpdate();
+		return true;
+	}
+
+	private boolean updateAppDownloadRankWithDays(int days, int addDays)
+			throws Exception {
+		String countFields = "";
+		String sql = "";
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM");
+
+		sql = "delete from t_app_download_stat";
+		getSession().createSQLQuery(sql).executeUpdate();
+
+		Calendar cal = Calendar.getInstance();
+		cal.add(Calendar.DATE, addDays);
+		int day = cal.get(Calendar.DAY_OF_MONTH);
+		String month = sdf.format(cal.getTime()).replace("-", "");
+
+		if (day >= days) {
+			for (int i = day; i > day - days; i--) {
+				countFields += i + "th+";
+			}
+			countFields = countFields.substring(0, countFields.length() - 1);
+			sql = "insert into t_app_download_stat(app_id,download_count) select app_id,"
+					+ countFields + " from t_app_download_count_" + month;
+			getSession().createSQLQuery(sql).executeUpdate();
+		} else {
+			int lastMonthDays = 0;
+			for (int i = 1; i <= day; i++) {
+				countFields += i + "th+";
+			}
+			countFields = countFields.substring(0, countFields.length() - 1);
+			sql = "insert into t_app_download_stat(app_id,download_count) select app_id,"
+					+ countFields + " from t_app_download_count_" + month;
+			getSession().createSQLQuery(sql).executeUpdate();
+
+			lastMonthDays = days - day;
+			cal.add(Calendar.MONTH, -1);
+			int datesOfLastMonth = cal.getActualMaximum(Calendar.DATE);
+			month = sdf.format(cal.getTime()).replace("-", "");
+			countFields = "";
+			for (int j = datesOfLastMonth; j > datesOfLastMonth - lastMonthDays; j--) {
+				countFields += j + "th+";
+			}
+			countFields = countFields.substring(0, countFields.length() - 1);
+			sql = "insert into t_app_download_stat(app_id,download_count) select app_id,"
+					+ countFields
+					+ " from t_app_download_count_"
+					+ month
+					+ " on duplicate key update download_count=values(download_count)+download_count";
+			getSession().createSQLQuery(sql).executeUpdate();
+		}
+		return true;
+	}
+
+	/*
+	 * 统计过去某段时间的下载量
+	 * 
+	 * @param days 统计的天数
+	 * 
+	 * @param addDays 从过去的-addDays天开始，为负数
+	 * 
+	 * @param tableName 统计输出表
+	 */
+	public boolean updateAppDownloadRankWithDays(int days, int addDays,
+			String tableName) throws Exception {
+		try {
+			String sql = "";
+
+			updateAppDownloadRankWithDays(days, addDays);
+
+			sql = "delete from " + tableName;
+			getSession().createSQLQuery(sql).executeUpdate();
+
+			sql = "insert into "
+					+ tableName
+					+ "(app_id,download_count) "
+					+ "select app_id,download_count from t_app_download_stat order by download_count desc";
+			getSession().createSQLQuery(sql).executeUpdate();
+
+			Long id = getMinId(tableName);
+			sql = "update " + tableName + " set show_order=id-" + (id - 1);
+			getSession().createSQLQuery(sql).executeUpdate();
+
+			Lg.info(LgType.APP_DOWNLOAD_RANK, "update " + tableName + " with "
+					+ days + "days is" + " sucess");
+			return true;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	public boolean updateAppDownloadWeekRank() throws Exception {
+		try {
+			String deleteSql = "delete from t_app_download_week_rank";
+			getSession().createSQLQuery(deleteSql).executeUpdate();
+			long start = System.currentTimeMillis();
+			Calendar day = Calendar.getInstance();
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+			// day.add(Calendar.DATE,-1);
+			String endDate = sdf.format(day.getTime()).toString() + " 00:00:00";
+
+			day.add(Calendar.DATE, -7);
+			String startDate = sdf.format(day.getTime()).toString()
+					+ " 00:00:00";
+
+			String sqlString = "insert into t_app_download_week_rank(app_id,download_count)"
+					+ " select app_id,count(app_id) from t_app_download_log"
+					+ " where add_date<'"
+					+ endDate
+					+ "' and add_date>'"
+					+ startDate
+					+ "' group by app_id order by count(app_id) desc";
+
+			getSession().createSQLQuery(sqlString).executeUpdate();
+
+			long end = System.currentTimeMillis();
+			Lg.info(LgType.APP_DOWNLOAD_RANK,
+					"updateAppDownloadWeekRank sucess,times=" + (end - start)
+							+ "ms");
+			return true;
+		} catch (Exception e) {
+			// Lg.error(LgType.APP_DOWNLOAD_RANK, "DB:获取app周下载排行列表时出错,error=" +
+			// e.getMessage());
+			throw e;
+		}
+	}
+
+	// 对应有映射对系的app要合并统计 ---现忽略
+	public boolean updateMapAppDownloadWeekRank() throws Exception {
+		try {
+
+			long ids[][] = new long[36][2];
+			ids[0][0] = (long) 303;
+			ids[0][1] = (long) 2338;
+			ids[1][0] = (long) 304;
+			ids[1][1] = (long) 46090;
+			ids[2][0] = (long) 302;
+			ids[2][1] = (long) 44678;
+			ids[3][0] = (long) 307;
+			ids[3][1] = (long) 40440;
+			ids[4][0] = (long) 306;
+			ids[4][1] = (long) 41311;
+			ids[5][0] = (long) 255;
+			ids[5][1] = (long) 48013;
+			ids[6][0] = (long) 292;
+			ids[6][1] = (long) 46713;
+			ids[7][0] = (long) 293;
+			ids[7][1] = (long) 40413;
+			ids[8][0] = (long) 291;
+			ids[8][1] = (long) 40458;
+			ids[9][0] = (long) 295;
+			ids[9][1] = (long) 40426;
+			ids[10][0] = (long) 294;
+			ids[10][1] = (long) 44808;
+			ids[11][0] = (long) 296;
+			ids[11][1] = (long) 44036;
+			ids[12][0] = (long) 298;
+			ids[12][1] = (long) 44065;
+			ids[13][0] = (long) 252;
+			ids[13][1] = (long) 41320;
+			ids[14][0] = (long) 263;
+			ids[14][1] = (long) 3208;
+			ids[15][0] = (long) 3453;
+			ids[15][1] = (long) 46090;
+			ids[16][0] = (long) 3185;
+			ids[16][1] = (long) 44678;
+			ids[17][0] = (long) 3241;
+			ids[17][1] = (long) 44468;
+			ids[18][0] = (long) 3242;
+			ids[18][1] = (long) 41311;
+			ids[19][0] = (long) 6348;
+			ids[19][1] = (long) 46491;
+			ids[20][0] = (long) 255;
+			ids[20][1] = (long) 48013;
+			ids[21][0] = (long) 40443;
+			ids[21][1] = (long) 46096;
+			ids[22][0] = (long) 3207;
+			ids[22][1] = (long) 46713;
+			ids[23][0] = (long) 3166;
+			ids[23][1] = (long) 45826;
+			ids[24][0] = (long) 1637;
+			ids[24][1] = (long) 47077;
+			ids[25][0] = (long) 3248;
+			ids[25][1] = (long) 40668;
+			ids[26][0] = (long) 1443;
+			ids[26][1] = (long) 46216;
+			ids[27][0] = (long) 290;
+			ids[27][1] = (long) 45070;
+			ids[28][0] = (long) 305;
+			ids[28][1] = (long) 40424;
+			ids[29][0] = (long) 300;
+			ids[29][1] = (long) 46096;
+			ids[30][0] = (long) 211;
+			ids[30][1] = (long) 40410;
+			ids[31][0] = (long) 41388;
+			ids[31][1] = (long) 48013;
+			ids[32][0] = (long) 40417;
+			ids[32][1] = (long) 48012;
+			ids[33][0] = (long) 3232;
+			ids[33][1] = (long) 48010;
+			ids[34][0] = (long) 3351;
+			ids[34][1] = (long) 48011;
+			ids[35][0] = (long) 47914;
+			ids[35][1] = (long) 48002;
+
+			for (int k = 0; k < 36; k++) {
+				String sqlString = "update t_app_download_week_rank set download_count=download_count+"
+						+ "(select a.download_count from (select * from t_app_download_week_rank tmp) a where a.app_id="
+						+ ids[k][0] + ") where app_id=" + ids[k][1];
+
+				getSession().createSQLQuery(sqlString).executeUpdate();
+			}
+
+			return true;
+		} catch (Exception e) {
+			Lg.error(
+					LgType.APP_DOWNLOAD_RANK,
+					"DB:updateMapAppDownloadWeekRank时出错,error="
+							+ e.getMessage());
+			throw e;
+		}
+	}
+
+	public boolean updateAppOnsaleDateTopWithDate() throws Exception {
+		try {
+			String deleteSql = "delete from t_app_onsale_date_top";
+			getSession().createSQLQuery(deleteSql).executeUpdate();
+
+			Calendar day = Calendar.getInstance();
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+			// day.add(Calendar.DATE,-1);
+			String endDate = sdf.format(day.getTime()) + " 00:00:00";
+
+			day.add(Calendar.DATE, -30);
+			String startDate = sdf.format(day.getTime()) + " 00:00:00";
+
+			String sqlString = "insert into t_app_onsale_date_top(app_id)"
+					+ " select id from t_app_info" + " where updateDate<'"
+					+ endDate + "' and updateDate>'" + startDate
+					+ "' order by updateDate desc limit 220";
+
+			getSession().createSQLQuery(sqlString).executeUpdate();
+			return true;
+		} catch (Exception e) {
+			Lg.error(LgType.APP_DOWNLOAD_RANK, "DB:获取最进一周上架的app列表时出错,error="
+					+ e.getMessage());
+			throw e;
+		}
+	}
+
+	public boolean updateAppOnsaleDateTopWithDownload() throws Exception {
+		try {
+			String sqlString = "insert into t_app_onsale_date_top(app_id)"
+					+ " select app_id from t_app_download_week_rank where app_id not in"
+					+ " (select app_id from t_app_onsale_date_top) limit 200";
+
+			getSession().createSQLQuery(sqlString).executeUpdate();
+			return true;
+		} catch (Exception e) {
+			Lg.error(
+					LgType.APP_DOWNLOAD_RANK,
+					"DB:app周下载列表前200名合并到t_app_onsale_date_rank时出错,error="
+							+ e.getMessage());
+			throw e;
+		}
+	}
+
+	public boolean deleteAppDownloadWeekRank() throws Exception {
+		try {
+
+			String sqlString = "delete from t_app_download_week_rank";
+
+			getSession().createSQLQuery(sqlString).executeUpdate();
+			return true;
+		} catch (Exception e) {
+			Lg.error(LgType.APP_DOWNLOAD_RANK,
+					"DB:删除表t_app_download_week_rank时出错,error=" + e.getMessage());
+			throw e;
+		}
+	}
+
+	public boolean deleteInexistenceAppDownloadWeekRank() throws Exception {
+		try {
+			String sqlString = "delete from t_app_download_week_rank where app_id not in (select id from t_app_info)";
+
+			getSession().createSQLQuery(sqlString).executeUpdate();
+			return true;
+		} catch (Exception e) {
+			Lg.error(
+					LgType.APP_DOWNLOAD_RANK,
+					"DB:deleteInexistenceAppDownloadWeekRank时出错,error="
+							+ e.getMessage());
+			throw e;
+		}
+	}
+
+	public boolean deleteAppOnsaleDateTop() throws Exception {
+		try {
+
+			String sqlString = "delete from t_app_onsale_date_top";
+
+			getSession().createSQLQuery(sqlString).executeUpdate();
+			return true;
+		} catch (Exception e) {
+			Lg.error(LgType.APP_DOWNLOAD_RANK,
+					"DB:删除表t_app_onsale_date_top时出错,error=" + e.getMessage());
+			throw e;
+		}
+	}
+
+	public boolean updateAppRiskRank() throws Exception {
+		try {
+			Lg.info(LgType.APP_DOWNLOAD_RANK, "上升最快榜统计开始......");
+
+			String sql = "";
+			String weekRankTable = "t_app_download_week_rank";
+			String ristRankTable = "t_rank_risk";
+
+			updateAppDownloadRankWithDays(7, -8, weekRankTable);
+
+			sql = "delete from " + ristRankTable;
+			getSession().createSQLQuery(sql).executeUpdate();
+
+			sql = "insert into " + ristRankTable
+					+ "(app_id,order1) select app_id,show_order from "
+					+ weekRankTable;
+			getSession().createSQLQuery(sql).executeUpdate();
+
+			updateAppDownloadRankWithDays(7, -1, weekRankTable);
+
+			sql = "update " + ristRankTable
+					+ " as a set order2= (select show_order from "
+					+ weekRankTable + " as b where a.app_id=b.app_id)";
+			getSession().createSQLQuery(sql).executeUpdate();
+
+			// 删除在t_app_info中不存在的应用
+			String sqlString = "delete from " + ristRankTable
+					+ " where app_id not in (select id from t_app_info)";
+			getSession().createSQLQuery(sqlString).executeUpdate();
+
+			sql = "update " + ristRankTable + " set rise=order1-order2";
+			getSession().createSQLQuery(sql).executeUpdate();
+			
+            // 插入昨日下载量
+            SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM");
+            Calendar day = Calendar.getInstance();
+            day.add(Calendar.DATE, -1);
+            String month = sdf2.format(day.getTime()).replace("-", "");
+            int yestoday = day.get(Calendar.DATE);
+			sql = "update " + ristRankTable
+                    + " as a set download_count= (select " + yestoday + "th from t_app_download_count_"
+                    + month + " as b where a.app_id=b.app_id)";
+            getSession().createSQLQuery(sql).executeUpdate();
+			
+			String deleteSql = "delete from t_rank_risk_order";
+            getSession().createSQLQuery(deleteSql).executeUpdate();
+
+            sql = "insert into t_rank_risk_order(app_id)"
+                    + "  select app_id from t_rank_risk where download_count>=1000 order by rise desc limit 220";
+            getSession().createSQLQuery(sql).executeUpdate();
+
+			Lg.info(LgType.APP_DOWNLOAD_RANK, "上升最快榜统计完成。");
+			return true;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	public boolean updateAppDownloadCount() throws Exception {
+		try {
+			Lg.info(LgType.APP_DOWNLOAD_RANK, "日下载统计开始......");
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+			SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM");
+
+			long start = System.currentTimeMillis();
+
+			Calendar day = Calendar.getInstance();
+			day.add(Calendar.DATE, -1);
+
+			String date = sdf.format(day.getTime()).replace("-", "");
+			String month = sdf2.format(day.getTime()).replace("-", "");
+			int yestoday = day.get(Calendar.DATE);
+
+			String sqlString = "insert into t_app_download_count_"
+					+ month
+					+ "(app_id,"
+					+ yestoday
+					+ "th)"
+					+ " select app_id,count(app_id) as c from t_app_download_log_"
+					+ date + " where cfrom!=250 and status=1 group by app_id"
+					+ " on duplicate key update " + yestoday + "th"
+					+ "=values(" + yestoday + "th)";
+
+			getSession().createSQLQuery(sqlString).executeUpdate();
+
+			long end = System.currentTimeMillis();
+			Lg.info(LgType.APP_DOWNLOAD_RANK,
+					"updateAppDownloadCount sucess,times=" + (end - start)
+							+ "ms");
+			Lg.info(LgType.APP_DOWNLOAD_RANK, "日下载统计完成。");
+			return true;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	public boolean updateAppDownloadMonthRank() throws Exception {
+		try {
+			String deleteSql = "delete from t_app_download_month_rank";
+			getSession().createSQLQuery(deleteSql).executeUpdate();
+
+			long start = System.currentTimeMillis();
+
+			Calendar day = Calendar.getInstance();
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+			// day.add(Calendar.DATE,-1);
+			String endDate = sdf.format(day.getTime()) + " 00:00:00";
+
+			day.add(Calendar.DATE, -30);
+			String startDate = sdf.format(day.getTime()) + " 00:00:00";
+
+			String sqlString = "insert into t_app_download_month_rank(app_id,download_count)"
+					+ " select app_id,count(app_id) from t_app_download_log"
+					+ " where add_date<'"
+					+ endDate
+					+ "' and add_date>'"
+					+ startDate
+					+ "' group by app_id order by count(app_id) desc";
+
+			getSession().createSQLQuery(sqlString).executeUpdate();
+
+			long end = System.currentTimeMillis();
+			Lg.info(LgType.APP_DOWNLOAD_RANK,
+					"updateAppDownloadMonthRank sucess,times=" + (end - start)
+							+ "ms");
+
+			return true;
+		} catch (Exception e) {
+			// Lg.error(LgType.APP_DOWNLOAD_RANK, "DB:获取app月下载排行列表时出错,error=" +
+			// e.getMessage());
+			throw e;
+		}
+	}
+
+	public boolean updateApplicationRank() throws Exception {
+		try {
+			String deleteSql = "delete from t_rank_application";
+			getSession().createSQLQuery(deleteSql).executeUpdate();
+
+			String sqlString = "insert into t_rank_application(app_id)"
+					+ "  select a.app_id from t_app_download_month_rank a left join t_app_info b on a.app_id=b.id left join t_app_type c on b.appType=c.id where c.parentId=0 limit 220";
+
+			getSession().createSQLQuery(sqlString).executeUpdate();
+			Lg.info(LgType.APP_DOWNLOAD_RANK, "updateApplicationRank sucess");
+			return true;
+		} catch (Exception e) {
+			Lg.error(
+					LgType.APP_DOWNLOAD_RANK,
+					"DB:app月下载列表前220名插入t_rank_application时出错,error="
+							+ e.getMessage());
+			throw e;
+		}
+	}
+
+	public boolean updateGameRank() throws Exception {
+		try {
+			String deleteSql = "delete from t_rank_game";
+			getSession().createSQLQuery(deleteSql).executeUpdate();
+
+			String sqlString = "insert into t_rank_game(app_id)"
+					+ "  select a.app_id from t_app_download_month_rank a left join t_app_info b on a.app_id=b.id left join t_app_type c on b.appType=c.id where c.parentId=55 limit 220";
+
+			getSession().createSQLQuery(sqlString).executeUpdate();
+			Lg.info(LgType.APP_DOWNLOAD_RANK, "updateGameRank sucess");
+			return true;
+		} catch (Exception e) {
+			Lg.error(LgType.APP_DOWNLOAD_RANK,
+					"DB:app月下载列表前220名插入t_rank_game时出错,error=" + e.getMessage());
+			throw e;
+		}
+	}
+
+	public boolean deleteAppDownloadMonthRank() throws Exception {
+		try {
+			String sqlString = "delete from t_app_download_month_rank";
+			getSession().createSQLQuery(sqlString).executeUpdate();
+			return true;
+		} catch (Exception e) {
+			Lg.error(
+					LgType.APP_DOWNLOAD_RANK,
+					"DB:删除表t_app_download_month_rank时出错,error="
+							+ e.getMessage());
+			throw e;
+		}
+	}
+
+	public boolean deleteInexistenceAppDownloadMonthRank() throws Exception {
+		try {
+
+			String sqlString = "delete from t_app_download_month_rank where app_id not in (select id from t_app_info)";
+			getSession().createSQLQuery(sqlString).executeUpdate();
+			return true;
+		} catch (Exception e) {
+			// Lg.error(LgType.APP_DOWNLOAD_RANK,
+			// "DB:deleteInexistenceAppDownloadMonthRank时出错,error=" +
+			// e.getMessage());
+			throw e;
+		}
+	}
+
+	public boolean updateMapAppDownloadMonthRank() throws Exception {
+		try {
+
+			long ids[][] = new long[36][2];
+			ids[0][0] = (long) 303;
+			ids[0][1] = (long) 2338;
+			ids[1][0] = (long) 304;
+			ids[1][1] = (long) 46090;
+			ids[2][0] = (long) 302;
+			ids[2][1] = (long) 44678;
+			ids[3][0] = (long) 307;
+			ids[3][1] = (long) 40440;
+			ids[4][0] = (long) 306;
+			ids[4][1] = (long) 41311;
+			ids[5][0] = (long) 255;
+			ids[5][1] = (long) 48013;
+			ids[6][0] = (long) 292;
+			ids[6][1] = (long) 46713;
+			ids[7][0] = (long) 293;
+			ids[7][1] = (long) 40413;
+			ids[8][0] = (long) 291;
+			ids[8][1] = (long) 40458;
+			ids[9][0] = (long) 295;
+			ids[9][1] = (long) 40426;
+			ids[10][0] = (long) 294;
+			ids[10][1] = (long) 44808;
+			ids[11][0] = (long) 296;
+			ids[11][1] = (long) 44036;
+			ids[12][0] = (long) 298;
+			ids[12][1] = (long) 44065;
+			ids[13][0] = (long) 252;
+			ids[13][1] = (long) 41320;
+			ids[14][0] = (long) 263;
+			ids[14][1] = (long) 3208;
+			ids[15][0] = (long) 3453;
+			ids[15][1] = (long) 46090;
+			ids[16][0] = (long) 3185;
+			ids[16][1] = (long) 44678;
+			ids[17][0] = (long) 3241;
+			ids[17][1] = (long) 44468;
+			ids[18][0] = (long) 3242;
+			ids[18][1] = (long) 41311;
+			ids[19][0] = (long) 6348;
+			ids[19][1] = (long) 46491;
+			ids[20][0] = (long) 255;
+			ids[20][1] = (long) 48013;
+			ids[21][0] = (long) 40443;
+			ids[21][1] = (long) 46096;
+			ids[22][0] = (long) 3207;
+			ids[22][1] = (long) 46713;
+			ids[23][0] = (long) 3166;
+			ids[23][1] = (long) 45826;
+			ids[24][0] = (long) 1637;
+			ids[24][1] = (long) 47077;
+			ids[25][0] = (long) 3248;
+			ids[25][1] = (long) 40668;
+			ids[26][0] = (long) 1443;
+			ids[26][1] = (long) 46216;
+			ids[27][0] = (long) 290;
+			ids[27][1] = (long) 45070;
+			ids[28][0] = (long) 305;
+			ids[28][1] = (long) 40424;
+			ids[29][0] = (long) 300;
+			ids[29][1] = (long) 46096;
+			ids[30][0] = (long) 211;
+			ids[30][1] = (long) 40410;
+			ids[31][0] = (long) 41388;
+			ids[31][1] = (long) 48013;
+			ids[32][0] = (long) 40417;
+			ids[32][1] = (long) 48012;
+			ids[33][0] = (long) 3232;
+			ids[33][1] = (long) 48010;
+			ids[34][0] = (long) 3351;
+			ids[34][1] = (long) 48011;
+			ids[35][0] = (long) 47914;
+			ids[35][1] = (long) 48002;
+
+			for (int k = 0; k < 36; k++) {
+				String sqlString = "update t_app_download_month_rank set download_count=download_count+"
+						+ "(select a.download_count from (select * from t_app_download_month_rank tmp) a where a.app_id="
+						+ ids[k][0] + ") where app_id=" + ids[k][1];
+
+				getSession().createSQLQuery(sqlString).executeUpdate();
+			}
+
+			return true;
+		} catch (Exception e) {
+			Lg.error(
+					LgType.APP_DOWNLOAD_RANK,
+					"DB:updateMapAppDownloadWeekRank时出错,error="
+							+ e.getMessage());
+			throw e;
+		}
+	}
+
+	public boolean deleteAppDownloadMonthTop() throws Exception {
+		try {
+			String sqlString = "delete from t_app_download_month_top";
+			getSession().createSQLQuery(sqlString).executeUpdate();
+			return true;
+		} catch (Exception e) {
+			Lg.error(
+					LgType.APP_DOWNLOAD_RANK,
+					"DB:删除表deleteAppDownloadMonthTop时出错,error="
+							+ e.getMessage());
+			throw e;
+		}
+	}
+
+	public boolean updateAppDownloadTop() throws Exception {
+		try {
+			String deleteSql = "delete from t_app_download_month_top";
+			getSession().createSQLQuery(deleteSql).executeUpdate();
+
+			String sqlString = "insert into t_app_download_month_top(app_id)"
+					+ " select app_id from t_app_download_month_rank limit 220";
+
+			getSession().createSQLQuery(sqlString).executeUpdate();
+			return true;
+		} catch (Exception e) {
+			Lg.error(
+					LgType.APP_DOWNLOAD_RANK,
+					"DB:app周下载列表前220名插入t_app_download_month_top时出错,error="
+							+ e.getMessage());
+			throw e;
+		}
+	}
+
+	public String getAppDownloadMonthTopWithType(int appTypeId)
+			throws Exception {
+
+		try {
+			String appCnNames = "";
+			String sqlString = "select b.appCnName from t_app_download_month_rank a "
+					+ "left join t_app_info b on a.app_id=b.id "
+					+ "where b.appType="
+					+ appTypeId
+					+ " order by a.download_count desc limit 3;";
+			List<?> list = getSession().createSQLQuery(sqlString).list();
+			if (null != list && list.size() > 0) {
+				for (int i = 0; i < list.size(); i++) {
+					appCnNames += (String) list.get(i) + ",";
+				}
+				appCnNames = appCnNames.substring(0, appCnNames.length() - 1);
+				return appCnNames;
+			}
+			return null;
+		} catch (Exception e) {
+			// Lg.error(LgType.APP_DOWNLOAD_RANK,
+			// "DB:getAppDownloadMonthTopWithType出错",e);
+			throw e;
+		}
+	}
+
+	public String getAppDownloadMonthTopWithTypes(String appTypeIds)
+			throws Exception {
+
+		try {
+			String appCnNames = "";
+			String sqlString = "select b.appCnName from t_app_download_month_rank a "
+					+ "left join t_app_info b on a.app_id=b.id "
+					+ "where b.appType in ("
+					+ appTypeIds
+					+ ") order by a.download_count desc limit 3;";
+			List<?> list = getSession().createSQLQuery(sqlString).list();
+			if (null != list && list.size() > 0) {
+				for (int i = 0; i < list.size(); i++) {
+					appCnNames += (String) list.get(i) + ",";
+				}
+				appCnNames = appCnNames.substring(0, appCnNames.length() - 1);
+				return appCnNames;
+			}
+			return null;
+		} catch (Exception e) {
+			// Lg.error(LgType.APP_DOWNLOAD_RANK,
+			// "DB:getAppDownloadMonthTopWithType出错",e);
+			throw e;
+		}
+
+	}
+
+	// 更新搜索词top100排行榜
+	public boolean updateSearchWordTop() throws Exception {
+		try {
+			long start = System.currentTimeMillis();
+			Lg.info(LgType.APP_DOWNLOAD_RANK, "搜索词top排行榜统计开始......");
+
+			String sql = "";
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+			Calendar day = Calendar.getInstance();
+			day.add(Calendar.DATE, -1);
+			String date = sdf.format(day.getTime()).replace("-", "");
+			
+            sql = "delete from t_search_word_rank limit 100";
+            getSession().createSQLQuery(sql).executeUpdate();
+
+			sql = "insert into t_search_word_rank(word,search_count)"
+					+ " select word,count(word) from t_search_word_log_" + date
+					+ " group by word order by count(word) desc limit 100";
+			getSession().createSQLQuery(sql).executeUpdate();
+
+			sql = "delete from t_search_word_top";
+			getSession().createSQLQuery(sql).executeUpdate();
+
+			sql = "insert into t_search_word_top(word,search_count)"
+					+ " select word,sum(search_count) as s from t_search_word_rank group by word order by s desc limit 100";
+
+			getSession().createSQLQuery(sql).executeUpdate();
+
+			long end = System.currentTimeMillis();
+			Lg.info(LgType.APP_DOWNLOAD_RANK,
+					"updateSearchWordTop sucess,times=" + (end - start) + "ms");
+			Lg.info(LgType.APP_DOWNLOAD_RANK, "搜索词top排行榜统计完成。");
+			return true;
+		} catch (Exception e) {
+			e.printStackTrace();
+			Lg.error(LgType.APP_DOWNLOAD_RANK,
+					"DB:updateSearchWordTop出错,error=" + e.getMessage());
+			return false;
+			// throw e;
+		}
+	}
+
+	// 更新搜索热词表
+	public boolean updateSearchHotWord() throws Exception {
+		try {
+			String deleteSqlString = "delete from t_search_hot_word";
+
+			String sqlString = "insert into t_search_hot_word(word)"
+					+ " select word from t_search_word_top";
+
+			getSession().createSQLQuery(deleteSqlString).executeUpdate();
+			getSession().createSQLQuery(sqlString).executeUpdate();
+
+			return true;
+		} catch (Exception e) {
+			e.printStackTrace();
+			Lg.error(LgType.APP_DOWNLOAD_RANK, "updateSearchHotWord出错,error="
+					+ e.getMessage());
+			return false;
+			// throw e;
+		}
+	}
+
+	public Integer countRankSetups(RankSetup rankSetup) throws Exception {
+		try {
+			Criteria criteria = getSession().createCriteria(RankSetup.class);
+			if (null != rankSetup.getType() && 0 != rankSetup.getType()) {
+				criteria.add(Restrictions.eq("type", rankSetup.getType()));
+			}
+			if (null == rankSetup.getValid_date()) {
+				criteria.add(Restrictions.between("valid_date",
+						rankSetup.getFromDate(), rankSetup.getToDate()));
+			} else {
+				criteria.add(Restrictions.eq("valid_date",
+						rankSetup.getValid_date()));
+			}
+			Integer totalRows = ((Integer) criteria.setProjection(
+					Projections.rowCount()).uniqueResult());
+			if (null == totalRows) {
+				totalRows = 0;
+			}
+			return totalRows;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+	
+	public List<RankSetup> getRankSetups(final RankSetup rankSetup)
+			throws Exception {
+		try {
+			@SuppressWarnings("unchecked")
+			List<RankSetup> list = this.getHibernateTemplate().executeFind(
+					new HibernateCallback() {
+						public Object doInHibernate(Session session)
+								throws HibernateException {
+							Criteria criteria = session
+									.createCriteria(RankSetup.class);
+
+							if (null != rankSetup.getType()
+									&& 0 != rankSetup.getType()) {
+								criteria.add(Restrictions.eq("type",
+										rankSetup.getType()));
+							}
+
+							if (null == rankSetup.getValid_date()) {
+								criteria.add(Restrictions.between("valid_date",
+										rankSetup.getFromDate(),
+										rankSetup.getToDate()));
+							} else {
+								criteria.add(Restrictions.eq("valid_date",
+										rankSetup.getValid_date()));
+							}
+
+							criteria.addOrder(Order.asc("type"));
+							criteria.addOrder(Order.asc("valid_date"));
+							criteria.addOrder(Order.asc("show_order"));
+							criteria.setFirstResult(rankSetup
+									.getStartPosition());
+							criteria.setMaxResults(Constants.APPS_PER_MAX_PAGE);
+							List<HubHotContent> result = criteria.list();
+							return result;
+						}
+					});
+
+			if (null != list && list.size() > 0) {
+				return list;
+			} else {
+				return null;
+			}
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+	
+	public List<RankSetup> getAdRankSetups(PageVO page,RankSetup rankSetup,Advertisement advertisement) throws Exception{
+		String sql = "from RankSetup where type="+rankSetup.getType() +" and valid_date<='"+rankSetup.getToDate()+"' and valid_date>='"+rankSetup.getFromDate()+"' ";
+		if(null!=advertisement.getId()&&!"".equals(advertisement.getId())){
+			sql=sql+" and object_id="+advertisement.getId();
+		}
+		if(null!=advertisement.getAd_name()&&!"".equals(advertisement.getAd_name())){
+			sql=sql+" and object_id in("+"select id from Advertisement where ad_name like '%"+advertisement.getAd_name()+"%')";
+		}
+		sql= sql +" order by valid_date,show_order ";
+		Session session = getSession();
+        Query queryObject = session.createQuery(sql);
+        queryObject.setFirstResult(rankSetup.getStartPosition());
+        queryObject.setMaxResults(page.getNumPerPage());
+        List<RankSetup> list = queryObject.list();
+		return list;
+	}
+	
+    public Integer countAdRankSetup(RankSetup rankSetup,Advertisement advertisement) throws Exception{
+    	String sql = "select count(*) from RankSetup where type="+rankSetup.getType() +" and valid_date<='"+rankSetup.getToDate()+"' and valid_date>='"+rankSetup.getFromDate()+"' ";
+		if(null!=advertisement.getId()&&!"".equals(advertisement.getId())){
+			sql=sql+" and object_id="+advertisement.getId();
+		}
+		if(null!=advertisement.getAd_name()&&!"".equals(advertisement.getAd_name())){
+			sql=sql+" and object_id in("+"select id from Advertisement where ad_name like '%"+advertisement.getAd_name()+"%')";
+		}
+		Session session = getSession();
+		Query queryObject = session.createQuery(sql);
+		Number num = (Number) queryObject.uniqueResult();
+		return num.intValue();		
+    }
+
+	public boolean isExistRankSetup(RankSetup rankSetup) throws Exception {
+		try {
+			String sql = "select object_id from t_rank_setup where object_id="
+					+ rankSetup.getObject_id() + " and object_type="
+					+ rankSetup.getObject_type() + " and type="
+					+ rankSetup.getType() + " and valid_date='"
+					+ rankSetup.getValid_date() + "'";
+			BigInteger object_id = (BigInteger) getSession()
+					.createSQLQuery(sql).uniqueResult();
+			if (null != object_id) {
+				return true;
+			} else {
+				return false;
+			}
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	private Short findMaxShowOrderForRankSetup(RankSetup rankSetup)
+			throws Exception {
+		Short result = 0;
+		String sql = "select max(show_order) from t_rank_setup where type="
+				+ rankSetup.getType() + " and valid_date='"
+				+ rankSetup.getValid_date() + "'";
+		Byte show_order = (Byte) getSession().createSQLQuery(sql)
+				.uniqueResult();
+		if (null != show_order) {
+			result = show_order.shortValue();
+		}
+		return result;
+	}
+
+	public boolean addRankSetup(RankSetup rankSetup, Long[] ids)
+			throws Exception {
+
+		try {
+			Short show_order;
+			show_order = findMaxShowOrderForRankSetup(rankSetup);
+			if (null == show_order) {
+				show_order = 0;
+			}
+			for (int i = 0; i < ids.length; i++) {
+				Short type = rankSetup.getType();
+				RankSetup rankSetup2 = new RankSetup();
+				rankSetup2.setType(type);
+				rankSetup2.setObject_id(ids[i]);
+				rankSetup2.setObject_type(rankSetup.getObject_type());
+				rankSetup2.setShow_order(++show_order);
+				rankSetup2.setValid_date(rankSetup.getValid_date());
+				rankSetup2.setAdd_date(new Date());
+				getHibernateTemplate().save(rankSetup2);
+			}
+			return true;
+		} catch (Exception e) {
+			throw e;
+		}
+
+	}
+	
+	public boolean addAdRankSetup(RankSetup rankSetup,Long[] ids) throws Exception{
+		String fromDate = rankSetup.getFromDate();
+		String toDate = rankSetup.getToDate();
+		SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd");
+		Date startDate = sdf.parse(fromDate);
+		Date endDate = sdf.parse(toDate);
+       while(startDate.getTime()<=endDate.getTime()){
+    	    Short show_order;
+    	    rankSetup.setValid_date(sdf.format(startDate));
+			show_order = findMaxShowOrderForRankSetup(rankSetup);
+			if (null == show_order) {
+				show_order = 0;
+			}
+			for (int i = 0; i < ids.length; i++) {
+				RankSetup rankSetup2 = new RankSetup();
+				rankSetup2.setType(rankSetup.getType());
+				rankSetup2.setObject_id(ids[i]);
+				rankSetup2.setObject_type(rankSetup.getObject_type());
+				rankSetup2.setShow_order(++show_order);
+				rankSetup2.setValid_date(rankSetup.getValid_date());
+				rankSetup2.setAdd_date(new Date());
+				if(!isExistRankSetup(rankSetup2)){
+					getHibernateTemplate().save(rankSetup2);//如果数据库中不存在该记录，就插入
+				}
+			}
+			startDate = new Date(startDate.getTime() + 1 * 24 * 60 * 60 * 1000); //加一天
+       }
+		return true;
+	}
+
+	public boolean deleteRankSetups(RankSetup rankSetup, String idsStr)
+			throws Exception {
+		if (null != idsStr && !"".equals(idsStr)) {
+			String queryString = "delete RankSetup where id=?";
+			Query queryObj = getSession().createQuery(queryString);
+
+			String app_ids[] = idsStr.split(",");
+			for (int i = 0; i < app_ids.length; i++) {
+				queryObj.setInteger(0, Integer.parseInt(app_ids[i]));
+				queryObj.executeUpdate();
+			}
+		}
+		return true;
+	}
+
+	public boolean updateRankSetups(RankSetup rankSetup, String idsStr)
+			throws Exception {
+
+		if (null != idsStr && !"".equals(idsStr)) {
+			String queryString = "update RankSetup set show_order=?,operation_type=? where id=?";
+			Query queryObj = getSession().createQuery(queryString);
+			String idsShowOrder[] = idsStr.split(";");
+
+			for (int i = 0; i < idsShowOrder.length; i++) {
+				String id = idsShowOrder[i].split(",")[0];
+				String showOrder = idsShowOrder[i].split(",")[1];
+				String operation_type = idsShowOrder[i].split(",")[2];
+				queryObj.setShort(0, Short.parseShort(showOrder));
+				queryObj.setShort(1, Short.parseShort(operation_type));
+				queryObj.setInteger(2, Integer.parseInt(id));
+				queryObj.executeUpdate();
+			}
+		}
+		return true;
+	}
+
+	private Integer getSearchHotWordId(SearchHotWord searchHotWord)
+			throws Exception {
+		Integer sm_id = null;
+		String sqlString = "select id from t_hot_word where word='"
+				+ searchHotWord.getWord() + "'";
+		sm_id = (Integer) getSession().createSQLQuery(sqlString).uniqueResult();
+		return sm_id;
+	}
+
+	public boolean addSearchHotWordSetup(RankSetup rankSetup,
+			SearchHotWord searchHotWord) throws Exception {
+		String sql = "";
+		Integer searchHotWordId = getSearchHotWordId(searchHotWord);
+		if (null == searchHotWordId) {
+			sql = "insert into t_hot_word(word) value ('"
+					+ searchHotWord.getWord() + "')";
+			searchHotWordId = getSession().createSQLQuery(sql).executeUpdate();
+			searchHotWordId = getSearchHotWordId(searchHotWord);
+		}
+		Short show_order = searchHotWord.getShow_order();
+		if (null == show_order) {
+			show_order = findMaxShowOrderForRankSetup(rankSetup);
+			if (null == show_order) {
+				show_order = 0;
+			} else {
+				show_order++;
+			}
+		}
+		RankSetup rankSetup2 = new RankSetup();
+		rankSetup2.setType(rankSetup.getType());
+		rankSetup2.setObject_id(Long.parseLong(searchHotWordId + ""));
+		rankSetup2.setObject_type(rankSetup.getObject_type());
+		rankSetup2.setShow_order(show_order);
+		rankSetup2.setValid_date(rankSetup.getValid_date());
+		rankSetup2.setAdd_date(new Date());
+		getHibernateTemplate().save(rankSetup2);
+
+		return true;
+	}
+
+	public boolean updateHotWordWithSetup(String sourceTable, String descTable,
+			RankSetup rankSetup) throws Exception {
+		try {
+			String deleteString = "delete from " + descTable;
+			getSession().createSQLQuery(deleteString).executeUpdate();
+
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+			final String today = sdf.format(new Date());
+			String deleteString2 = "delete from "
+					+ sourceTable
+					+ " where word in (select a.word from t_hot_word a,t_rank_setup b where a.id=b.object_id and b.type="
+					+ rankSetup.getType() + " and b.valid_date='" + today
+					+ "')";
+			getSession().createSQLQuery(deleteString2).executeUpdate();
+
+			String insertSql = "insert into " + descTable + "(word)"
+					+ " select word from " + sourceTable + " limit ";
+
+			String insertSql2 = "insert into " + descTable
+					+ "(word) select word from t_hot_word where id=";
+
+			List<RankSetup> rankSetups = getRankSetupsForSetup(rankSetup);
+			int previousShowOrder;
+			int currentShowOrder;
+			int lastShowOrder = 0;
+			int count = 0;
+			String limit;
+			if (null != rankSetups) {
+				for (int i = 0; i < rankSetups.size(); i++) {
+					currentShowOrder = rankSetups.get(i).getShow_order();
+					if (i == 0) {
+						if (1 == currentShowOrder) {
+							getSession().createSQLQuery(
+									insertSql2
+											+ rankSetups.get(i).getObject_id())
+									.executeUpdate();
+						} else {
+							limit = 0 + "," + (currentShowOrder - 1);
+							count += (currentShowOrder - 1);
+							getSession().createSQLQuery(insertSql + limit)
+									.executeUpdate();
+							getSession().createSQLQuery(
+									insertSql2
+											+ rankSetups.get(i).getObject_id())
+									.executeUpdate();
+						}
+					} else {
+						previousShowOrder = rankSetups.get(i - 1)
+								.getShow_order();
+						if ((currentShowOrder - previousShowOrder) > 1) {
+							limit = count
+									+ ","
+									+ (currentShowOrder - previousShowOrder - 1);
+							count += (currentShowOrder - previousShowOrder - 1);
+							getSession().createSQLQuery(insertSql + limit)
+									.executeUpdate();
+							getSession().createSQLQuery(
+									insertSql2
+											+ rankSetups.get(i).getObject_id())
+									.executeUpdate();
+						} else {
+							getSession().createSQLQuery(
+									insertSql2
+											+ rankSetups.get(i).getObject_id())
+									.executeUpdate();
+						}
+					}
+					if (i == (rankSetups.size() - 1)) {
+						lastShowOrder = rankSetups.get(i).getShow_order();
+					}
+				}
+			}
+
+			limit = count + "," + (100 - lastShowOrder);
+			getSession().createSQLQuery(insertSql + limit).executeUpdate();
+
+			updateShowOrderForRank(descTable);
+			return true;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	public boolean deleteYesterDayRankSetups(String setupTable,
+			String descTable, RankSetup rankSetup) throws Exception {
+		// 删除昨日排期
+		// List<RankSetup> yesterDayrankSetups =
+		// getYesterdayRankSetupsForSetup(rankSetup);
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		Calendar day = Calendar.getInstance();
+		day.add(Calendar.DATE, -1);
+		String yesterday = sdf.format(day.getTime());
+
+		String deleteYesterDayRankSetups = "delete from " + descTable
+				+ " where order_type=0 and app_id in "
+				+ "(select object_id from " + setupTable + " where type ="
+				+ rankSetup.getType() + " and valid_date='" + yesterday + "')";
+		getSession().createSQLQuery(deleteYesterDayRankSetups).executeUpdate();
+		Lg.info(LgType.APP_DOWNLOAD_RANK, descTable + "成功删除昨日排期");
+		return true;
+
+	}
+
+	public boolean updateRecommendWithSetup(String sourceTable,
+			String descTable, RankSetup rankSetup) throws Exception {
+		try {
+		    String setupTable = "t_rank_setup";
+		    String originalTable = "t_cellphone_recommend";
+		    deleteYesterDayRankSetups(setupTable, originalTable, rankSetup);
+		    
+			// sourceTable = "t_recommend_common";
+			// descTable = "t_recommend_common_setup";
+
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+
+			List<RankSetup> rankSetups = getRankSetupsForSetup(rankSetup);
+			if (null == rankSetups) { // 当天没有排期
+				return true;
+			}
+
+			String deleteString = "delete from " + descTable;
+			getSession().createSQLQuery(deleteString).executeUpdate();
+
+			deleteString = "delete from " + sourceTable;
+			getSession().createSQLQuery(deleteString).executeUpdate();
+
+			String copySql = "insert into "
+					+ sourceTable
+					+ "(app_id,show_order) select app_id,show_order from t_cellphone_recommend where series_id=0 order by show_order asc";
+			getSession().createSQLQuery(copySql).executeUpdate();
+
+			final String today = sdf.format(new Date());
+			String deleteString2 = "delete from "
+					+ sourceTable
+					+ " where app_id in (select object_id from t_rank_setup where type="
+					+ rankSetup.getType() + " and valid_date='" + today + "')";
+			getSession().createSQLQuery(deleteString2).executeUpdate();
+
+			String insertSql = "insert into " + descTable + "(app_id)"
+					+ " select app_id from " + sourceTable + " limit ";
+
+			String insertSql2 = "insert into " + descTable + "(app_id) value ";
+
+			int previousShowOrder;
+			int currentShowOrder;
+			int lastShowOrder = 0;
+			int count = 0;
+			String limit;
+
+			// 获取不同系列
+			// String
+			// getSeriesSql="select distinct(series_id) from t_cellphone_recommend where order_type=0";
+			String getSeriesSql = "select id from t_series_info";
+			List<Object> list = getSession().createSQLQuery(getSeriesSql)
+					.list();
+			list.add(0);
+			if (null != rankSetups) {
+				for (int i = 0; i < rankSetups.size(); i++) {
+					currentShowOrder = rankSetups.get(i).getShow_order();
+					if (i == 0) {
+						if (1 == currentShowOrder) {
+							getSession().createSQLQuery(
+									insertSql2 + "("
+											+ rankSetups.get(i).getObject_id()
+											+ ")").executeUpdate();
+						} else {
+							limit = 0 + "," + (currentShowOrder - 1);
+							count += (currentShowOrder - 1);
+							getSession().createSQLQuery(insertSql + limit)
+									.executeUpdate();
+							getSession().createSQLQuery(
+									insertSql2 + "("
+											+ rankSetups.get(i).getObject_id()
+											+ ")").executeUpdate();
+						}
+					} else {
+						previousShowOrder = rankSetups.get(i - 1)
+								.getShow_order();
+						if ((currentShowOrder - previousShowOrder) > 1) {
+							limit = count
+									+ ","
+									+ (currentShowOrder - previousShowOrder - 1);
+							count += (currentShowOrder - previousShowOrder - 1);
+							getSession().createSQLQuery(insertSql + limit)
+									.executeUpdate();
+							getSession().createSQLQuery(
+									insertSql2 + "("
+											+ rankSetups.get(i).getObject_id()
+											+ ")").executeUpdate();
+						} else {
+							getSession().createSQLQuery(
+									insertSql2 + "("
+											+ rankSetups.get(i).getObject_id()
+											+ ")").executeUpdate();
+						}
+					}
+					if (i == (rankSetups.size() - 1)) {
+						lastShowOrder = rankSetups.get(i).getShow_order();
+					}
+					// 插入排期新增数据
+					String getAppId = "select app_id from t_cellphone_recommend where series_id=0 and app_id="
+							+ rankSetups.get(i).getObject_id();
+					BigInteger appId = (BigInteger) getSession()
+							.createSQLQuery(getAppId).uniqueResult();
+					// System.out.println("appId="+appId+"=========setup_app_id="+rankSetups.get(i).getObject_id());
+					if (null == appId) {
+						for (Object object : list) {
+							SimpleDateFormat sdf2 = new SimpleDateFormat(
+									"yyyy-MM-dd HH:mm:ss");
+							String insertAppIdSql = "insert into t_cellphone_recommend(app_id,series_id,order_type,show_order,add_date) value("
+									+ rankSetups.get(i).getObject_id()
+									+ ","
+									+ Integer.parseInt(object.toString())
+									+ ",0,1000,'"
+									+ sdf2.format(new Date())
+									+ "')";
+							getSession().createSQLQuery(insertAppIdSql)
+									.executeUpdate();
+						}
+					}
+
+				}
+			}
+
+			limit = count + "," + (200 - lastShowOrder);
+			getSession().createSQLQuery(insertSql + limit).executeUpdate();
+
+			// 按顺序更新show_order
+			String countRcommendAppSql = "select count(*) from " + descTable;
+			BigInteger countRcommendApps = (BigInteger) getSession()
+					.createSQLQuery(countRcommendAppSql).uniqueResult();
+			Integer countRcommendApp = countRcommendApps.intValue();
+			for (int j = 0; j < countRcommendApp; j++) {
+				String getAppIdSql = "select app_id from " + descTable
+						+ " limit " + j + ",1";
+				BigInteger app_id = (BigInteger) getSession().createSQLQuery(
+						getAppIdSql).uniqueResult();
+
+				String updateShowOrderSql = "update " + descTable
+						+ " set show_order=" + (j + 1) + " where app_id="
+						+ app_id;
+				getSession().createSQLQuery(updateShowOrderSql).executeUpdate();
+			}
+
+			// 同步到正式表中
+			String syncShowOrderSql = "update t_cellphone_recommend a,"
+					+ descTable
+					+ " b set a.show_order=b.show_order where a.app_id=b.app_id and a.order_type=0";
+			getSession().createSQLQuery(syncShowOrderSql).executeUpdate();
+
+			return true;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	public boolean updateBakTable(String descTable, String bakTable)
+			throws Exception {
+		String sql = "delete from " + bakTable;
+		getSession().createSQLQuery(sql).executeUpdate();
+		sql = "insert into " + bakTable + " select * from " + descTable;
+		getSession().createSQLQuery(sql).executeUpdate();
+		return true;
+	}
+
+	public SearchHotWord getSearchHotWord(Integer id) throws Exception {
+
+		String queryString = "select * from t_hot_word where id=" + id;
+		@SuppressWarnings("unchecked")
+		List<SearchHotWord> list = getSession()
+				.createSQLQuery(queryString)
+				.addScalar("id", Hibernate.INTEGER)
+				.addScalar("word", Hibernate.STRING)
+				.setResultTransformer(
+						Transformers.aliasToBean(SearchHotWord.class)).list();
+		if (null != list && list.size() > 0) {
+			return list.get(0);
+		}
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppRankSet> findRankSetByType(final Integer appType,
+			final int startRecord, final char sellType) throws Exception {
+		// TODO Auto-generated method stub
+		List<AppRankSet> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException, SQLException {
+						String hql = "from AppRankSet where app_type="
+								+ appType + " and appInfo.sellType=" + sellType
+								+ " order by rank_order";
+						Query query = session.createQuery(hql);
+						query.setFirstResult(startRecord);
+						query.setMaxResults(1000);
+						List<AppRankSet> list = query.list();
+						return list;
+					}
+				});
+		return list;
+	}
+
+	@Override
+	public boolean addRankSetForFreeApp(Long[] ids, Integer appType,
+			String admin_name) throws Exception {
+		// TODO Auto-generated method stub
+
+		int rank_order = findMaxOrderRankSet(appType);
+		Session session = getSession();
+		Date date = new Date();
+		for (int i = 0; i < ids.length; i++) {
+			AppInfo appInfo = getHibernateTemplate()
+					.load(AppInfo.class, ids[i]);
+			AppRankSet appRankSet = new AppRankSet();
+			appRankSet.setAdmin_name(admin_name);
+			appRankSet.setApp_type(appType);
+			appRankSet.setAppInfo(appInfo);
+			appRankSet.setRank_order(++rank_order);
+			appRankSet.setSet_date(date);
+			appRankSet.setRank_status('1');
+			session.save(appRankSet);
+		}
+		return true;
+	}
+
+	/*
+	 * 
+	 */
+	public int findMaxOrderRankSet(Integer appType) {
+		Session session = getSession();
+		Query query = null;
+		int result = 0;
+		String sql1 = "select * from t_rank_set where app_type=" + appType;
+		query = session.createSQLQuery(sql1);
+		if (null != query.list() && query.list().size() > 0) {
+			String sql2 = "select max(rank_order) from t_rank_set where app_type="
+					+ appType;
+			query = session.createSQLQuery(sql2);
+			result = (Integer) query.uniqueResult();
+		}
+		return result;
+
+	}
+
+	@Override
+	public List<AppRankSet> findAllRankSetByType(List<AppType> listType)
+			throws Exception {
+		// TODO Auto-generated method stub
+		List<AppRankSet> appRankSet = new ArrayList<AppRankSet>();
+		AppRankSet rankSet = null;
+		Session session = getSession();
+		String sql = "from AppRankSet where appInfo.appType=?";
+		for (AppType appType : listType) {
+			Query query = session.createQuery(sql);
+			query.setEntity(0, appType);
+			rankSet = (AppRankSet) query.uniqueResult();
+			appRankSet.add(rankSet);
+		}
+		return appRankSet;
+	}
+
+	@Override
+	public int countRankSetByType(Integer appType, char sellType)
+			throws Exception {
+		// TODO Auto-generated method stub
+		Session session = getSession();
+		String sql = "from AppRankSet where appInfo.sellType=? and app_type=?";
+		Query query = session.createQuery(sql);
+		query.setCharacter(0, (Character) sellType);
+		query.setInteger(1, appType);
+		query.list();
+		if (null != query.list() && query.list().size() > 0) {
+			return query.list().size();
+		}
+		return 0;
+	}
+
+	@Override
+	public List<AppRankSet> findAllRankSetByType(Integer appType, char sellType)
+			throws Exception {
+		// TODO Auto-generated method stub
+		Session session = getSession();
+		String sql = "from AppRankSet where appInfo.sellType=? and app_type=?";
+		Query query = session.createQuery(sql);
+		query.setCharacter(0, (Character) sellType);
+		query.setInteger(1, appType);
+		query.list();
+		if (null != query.list() && query.list().size() > 0) {
+			return query.list();
+		}
+		return null;
+	}
+
+	@Override
+	public boolean deleteRankSetByAppid(Long[] ids) throws Exception {
+		// TODO Auto-generated method stub
+		for (Long id : ids) {
+			AppRankSet appRankSet = this.getHibernateTemplate().load(
+					AppRankSet.class, id);
+			this.getHibernateTemplate().delete(appRankSet);
+		}
+
+		return true;
+	}
+
+	@Override
+	public boolean updateShowOrderForRankSet(String[] str) throws Exception {
+		// TODO Auto-generated method stub
+		Session session = getSession();
+		String sql = "update AppRankSet set rank_order=? where id=?";
+		for (int i = 0; i < str.length; i++) {
+			if (null != str[i] && str[i].length() > 0) {
+				String order[] = str[i].split(",");
+				if (null != order && order.length == 2) {
+					Query query = session.createQuery(sql);
+					query.setInteger(0, Integer.parseInt(order[1]));
+					query.setLong(1, Long.parseLong(order[0]));
+					query.executeUpdate();
+				}
+			}
+		}
+		return true;
+	}
+
+	public List<AppHubSet> findHubSetByAppInfoId(Long app_id, Integer hub_id)
+			throws Exception {	
+		Short series_id = 0;
+		List<AppHubSet> hub_list = getHibernateTemplate().find("from AppHubSet where hub_id=? and series_id=? and appInfo.id=? ",hub_id, series_id, app_id);
+		if (hub_list != null && hub_list.size() > 0) {
+			return hub_list;
+		}
+		
+		return null;
+	}
+
+	// 更新游戏汇排期
+	public void updateGameHubWithSetup(RankSetup rankSetup, Integer hubId,
+			List<Series> phoneSeriesList) throws Exception {
+		List<RankSetup> rankSetups = this.getRankSetupsForSetup(rankSetup); // 获取当日的游戏汇排期
+		String adminName = "vivo";
+		if(null!=rankSetups&&rankSetups.size()>0){
+			for (RankSetup rank : rankSetups) {
+				List<AppHubSet> appHubs = findHubSetByAppInfoId(
+						rank.getObject_id(), hubId);
+				Short seriesId = 0;
+				if (null == appHubs) {
+					// 游戏汇不存在该app，添加app
+					addHubAppForSeries(hubId, seriesId, rank.getObject_id(),
+							Constants.DEFAULT_TYPE, adminName);
+					if (null != phoneSeriesList && phoneSeriesList.size() > 0) {
+						for (Series s : phoneSeriesList) {
+							seriesId = s.getId();
+							if (isInitSeriesHubSet(hubId, s.getId())) // 判断该系列是否初始化
+							{
+								addHubAppForSeries(hubId, seriesId,
+										rank.getObject_id(), Constants.SERIES_TYPE,
+										adminName);
+							} else {
+								addHubAppForSeries(hubId, seriesId,
+										rank.getObject_id(),
+										Constants.DEFAULT_TYPE, adminName);
+							}
+						}
+					}
+				} else {
+			//		if (appHubs.get(0).getRecommend() == '0') {
+						// 游戏汇中存在该app，没有主推，主推该app
+						updateRecommend(Constants.RECOMMEND, appHubs.get(0).getId());
+			//		}
+				}
+	
+			}
+		}
+	}
+	
+	public void updateAdvertisementWithSetup(RankSetup rankSetup,List<Series> phoneSeriesList) throws Exception{
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		Calendar day = Calendar.getInstance();
+		day.add(Calendar.DATE, -1);
+		String yesterday = sdf.format(day.getTime());
+		//删除昨日广告排期
+		String deleteYesterDayRankSetups = "delete from t_model_ad where ad_id in "
+				+ "(select object_id from t_rank_setup  where type ="
+				+ rankSetup.getType() + " and valid_date='" + yesterday + "')";
+		getSession().createSQLQuery(deleteYesterDayRankSetups).executeUpdate();
+		Lg.info(LgType.APP_DOWNLOAD_RANK, "成功删除昨日广告排期");
+		
+		List<RankSetup> rankSetups = this.getRankSetupsForSetup(rankSetup); // 获取当日的广告排期
+		if(null!=rankSetups&&rankSetups.size()>0){
+			List<ModelAdvertisement> new_list = new ArrayList<ModelAdvertisement>();
+			for(RankSetup rank:rankSetups){
+				ModelAdvertisement modelAd = new ModelAdvertisement();
+				modelAd.setAdvertisement(adInfoDAO.getAdvertisementById(rank.getObject_id()));
+				modelAd.setShow_order(rank.getShow_order());
+				modelAd.setSet_time(new Date());
+				new_list.add(modelAd);
+			}
+			addModelAdvertisementSetupBySeriesId(Constants.DEFAULT_TYPE,new_list); //公共方法
+			for(Series series :phoneSeriesList){
+				addModelAdvertisementSetupBySeriesId(series.getId(),new_list);
+			}
+		}
+	}
+	
+	//为每个系列添加排期
+	private void addModelAdvertisementSetupBySeriesId(Short series_id,List<ModelAdvertisement> new_list) throws Exception{
+		List<ModelAdvertisement> old_list=adInfoDAO.getModelAdvertisementBySeriesId(series_id);
+		int type=0;
+		if(series_id!=0){
+			if(adInfoDAO.isInitSeriesAdSet(series_id)){ //判断该系列是否初始化
+				type=1;
+			}
+		}
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		List<ModelAdvertisement> list = createNewModelAdvertisementList(old_list,new_list);
+		String deleteStr = "delete from t_model_ad where series_id="+series_id;
+		getSession().createSQLQuery(deleteStr).executeUpdate(); // 删除t_model_ad的该系列所有的数据		
+		//将新的排序村插入到t_model_ad中			
+		StringBuffer sb = new StringBuffer();
+		sb.append("insert into t_model_ad(series_id,ad_id,show_order,set_time,type) values");
+		int i=0;
+		for (ModelAdvertisement modelAd : list){
+			if(0!=i){
+				sb.append(",");
+			}
+			sb.append("('"+series_id+"','"+modelAd.getAdvertisement().getId()+"','"+modelAd.getShow_order()+"','"+sdf.format(modelAd.getSet_time())+"','"+type+"')");
+			i++;
+		}	
+		getSession().createSQLQuery(sb.toString()).executeUpdate();
+		getSession().clear();        //如果不添加这行代码，hibernate会报错
+	}
+	/*test
+	private void printList(String name,List<ModelAdvertisement> list){
+		if(list!=null&&list.size()>0){
+			String str = name+":";
+			for(ModelAdvertisement modle:list){
+				str=str+" ("+modle.getAdvertisement().getId()+":"+modle.getShow_order()+"),";
+			}
+			System.out.println(str);
+		}else{
+			System.out.println( name+":");
+		}
+	}
+	*/
+	//show_order排序算法 old_list和new_list的顺序时按show_order排序的
+	private List<ModelAdvertisement> createNewModelAdvertisementList(List<ModelAdvertisement> old_list,List<ModelAdvertisement> new_list){
+		if(null==old_list||old_list.size()<=0){
+			return new_list;
+		}
+		if(null==new_list||new_list.size()<=0){
+			return old_list;
+		}
+		List<ModelAdvertisement> list = new ArrayList<ModelAdvertisement>();
+		list.addAll(new_list);
+		inner:for (ModelAdvertisement modelAd : old_list) {
+			int order = modelAd.getShow_order();
+			Long ad_id = modelAd.getAdvertisement().getId();
+			for (ModelAdvertisement model : list) { //先判断该广告是否已经存在广告排期中
+				if(ad_id.equals(model.getAdvertisement().getId())){
+					continue inner;
+				}
+			}
+			for (ModelAdvertisement model : list) {
+					if (order == model.getShow_order()) {
+						order++;
+					}
+			}
+			modelAd.setShow_order(order);
+			list.add(modelAd);
+		}
+		return list;
+	}
+
+	private boolean isInitSeriesHubSet(Integer hub_id, Short series_id)
+			throws Exception {
+		// TODO Auto-generated method stub
+		List list = getHibernateTemplate().find(
+				"from AppHubSet where hub_id=? and series_id=? and type=?",
+				hub_id, series_id, (short) 1);
+		if (null != list && list.size() > 0) {
+			return true;
+		}
+		return false;
+	}
+
+	// 昨日游戏汇排期 “取消主推”
+	public boolean deleteYesterDayGameHubSetups(RankSetup rankSetup,
+			Integer hub_id) throws Exception {
+		List<RankSetup> yesterDayrankSetups = getYesterdayRankSetupsForSetup(rankSetup); // 获取昨日的游戏汇排期
+		if(null!=yesterDayrankSetups&&yesterDayrankSetups.size()>0){
+			for (RankSetup rank : yesterDayrankSetups) {
+				List<AppHubSet> appHubs = findHubSetByAppInfoId(
+						rank.getObject_id(), hub_id);
+				if (null != appHubs && appHubs.size() > 0) {
+					updateRecommend('0', appHubs.get(0).getId()); // 游戏汇中昨日的排期->取消主推
+				}
+			}
+		}
+		return true;
+	}
+
+	private void addHubAppForSeries(Integer hubId, Short seriesId, Long appId,
+			short Type, String adminName) throws Exception {
+		// TODO Auto-generated method stub
+		AppHubSet appHubSet = new AppHubSet();
+		AppInfo appInfo = getHibernateTemplate().load(AppInfo.class, appId);
+		appHubSet.setHub_id(hubId);
+		appHubSet.setSeries_id(seriesId);
+		appHubSet.setAppInfo(appInfo);
+		appHubSet.setShow_order(10);
+		appHubSet.setSet_date(new Date());
+		appHubSet.setRecommend('1');
+		appHubSet.setType(Type);
+		appHubSet.setLevel((short) 1);
+		appHubSet.setAdmin_name(adminName);
+		getHibernateTemplate().save(appHubSet);
+	}
+
+	private void updateRecommend(char recommend, Long id) throws Exception {
+		// TODO Auto-generated method stub
+		Session session = getSession();
+		Query query = null;
+		String sql = "update AppHubSet set recommend=? where appInfo.id=? and hub_id=?";
+		String sql2 = "update AppHubSet set recommend=? where id=?";
+		AppHubSet appHubSet = this.getHibernateTemplate().load(AppHubSet.class,
+				id);
+		if (null != appHubSet) {
+			if (appHubSet.getSeries_id().shortValue() == 0) {
+				// 如果是修改公共的推荐，则所有系列都会做修改
+				query = session.createQuery(sql);
+				query.setCharacter(0, recommend);
+				query.setLong(1, appHubSet.getAppInfo().getId());
+				query.setInteger(2, appHubSet.getHub_id());
+				query.executeUpdate();
+			} else {
+				query = session.createQuery(sql2);
+				query.setCharacter(0, recommend);
+				query.setLong(1, id);
+				query.executeUpdate();
+			}
+		}
+	}
+	
+	private AdInfoDAO adInfoDAO;
+
+	public AdInfoDAO getAdInfoDAO() {
+		return adInfoDAO;
+	}
+
+	public void setAdInfoDAO(AdInfoDAO adInfoDAO) {
+		this.adInfoDAO = adInfoDAO;
+	}
+
+}

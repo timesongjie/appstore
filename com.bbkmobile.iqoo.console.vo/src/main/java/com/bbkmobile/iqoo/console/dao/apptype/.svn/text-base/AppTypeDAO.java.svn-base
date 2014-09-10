@@ -1,0 +1,78 @@
+/**
+ * AppTypeDAO.java
+ * com.bbkmobile.iqoo.console.dao.apptype
+ *
+ * Function： TODO 
+ *
+ *   ver     date      		author
+ * ──────────────────────────────────
+ *   		 2011-12-29 		dengkehai
+ *
+ * Copyright (c) 2011, TNT All Rights Reserved.
+ */
+
+package com.bbkmobile.iqoo.console.dao.apptype;
+
+import java.util.List;
+import java.util.Map;
+
+import com.bbkmobile.iqoo.console.business.search.xml.vo.CateVO;
+
+/**
+ * ClassName:AppTypeDAO Function: TODO ADD FUNCTION
+ * 
+ * @author dengkehai
+ * @version
+ * @since Ver 1.1
+ * @Date 2011-12-29 上午10:26:14
+ * 
+ */
+public interface AppTypeDAO {
+
+	List<AppType> findAllType() throws Exception;//查询所有类型
+
+	List<AppType> findAllSelType() throws Exception;//查询所有叶子节点类型
+
+	List<AppType> findSubType(Integer parentId) throws Exception;
+
+	Object findPropertyById(String property, Integer id) throws Exception;
+
+	AppType findById(Integer id) throws Exception;
+	public AppType findAppTypeById(Integer id) throws Exception ;
+
+	boolean save(AppType appType) throws Exception;
+
+	boolean update(AppType appType) throws Exception;
+
+	boolean delete(Integer id) throws Exception;
+
+	boolean updateStatus(AppType appType) throws Exception;
+
+	List<AppType> findAllSubType(Integer id) throws Exception;
+	Object[] getTypeIcon(Integer type_id) throws Exception;
+	
+	public boolean updateAppTypeParentId() throws Exception;
+
+	String getAppTypeIconById(Integer id) throws Exception;
+	
+	List<AppType> getAppTypes() throws Exception;
+	
+	boolean updateAppType(AppType appType) throws Exception;
+	
+	public boolean updateBaiduType(List<CateVO> cates) throws Exception;
+
+	Integer countAppTypes(AppType appType);
+
+	List<AppType> getAppTypesList(Integer start, AppType appType);
+	//保存应用三张图片
+	boolean saveTypeIcons(AppType2 appType) throws Exception;
+	boolean updateOrder(Map<String,Integer> params)throws Exception;
+	boolean updateAppTypeName(AppType appType) throws Exception;
+
+	boolean updateAppType2ICons(AppType2 appType) throws Exception;
+
+	boolean updateAppTypeStatus(AppType appType) throws Exception;
+	
+	int countAppsByAppTypeId(int id)throws Exception;
+	List<String> getIcons(Integer id)throws Exception;
+}

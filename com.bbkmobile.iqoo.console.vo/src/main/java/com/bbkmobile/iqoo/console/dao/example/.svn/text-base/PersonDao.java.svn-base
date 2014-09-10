@@ -1,0 +1,15 @@
+/**
+ * 
+ */
+package com.bbkmobile.iqoo.console.dao.example;
+
+import java.util.List;
+
+/**
+ * @author wangbo
+ * @version 1.0.0.0/2011-11-18
+ */
+public interface PersonDao {
+	
+	public abstract List<Person> findAll();
+}

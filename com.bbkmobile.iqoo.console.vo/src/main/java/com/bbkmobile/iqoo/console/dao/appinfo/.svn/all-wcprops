@@ -1,0 +1,251 @@
+K 25
+svn:wc:ra_dav:version-url
+V 126
+/repositories/IqooSourceCode/!svn/ver/9134/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo
+END
+AppOrderSet.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 146
+/repositories/IqooSourceCode/!svn/ver/2261/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/AppOrderSet.hbm.xml
+END
+TAppHistoryScreenshot.java
+K 25
+svn:wc:ra_dav:version-url
+V 153
+/repositories/IqooSourceCode/!svn/ver/5764/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/TAppHistoryScreenshot.java
+END
+BaiduAppComment.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 150
+/repositories/IqooSourceCode/!svn/ver/6335/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/BaiduAppComment.hbm.xml
+END
+AppDownload.java
+K 25
+svn:wc:ra_dav:version-url
+V 143
+/repositories/IqooSourceCode/!svn/ver/1128/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/AppDownload.java
+END
+TAppPermission.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 149
+/repositories/IqooSourceCode/!svn/ver/2261/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/TAppPermission.hbm.xml
+END
+AppComment.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 145
+/repositories/IqooSourceCode/!svn/ver/6326/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/AppComment.hbm.xml
+END
+BaiduAppId.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 145
+/repositories/IqooSourceCode/!svn/ver/2383/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/BaiduAppId.hbm.xml
+END
+BaiduAppId.java
+K 25
+svn:wc:ra_dav:version-url
+V 142
+/repositories/IqooSourceCode/!svn/ver/2383/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/BaiduAppId.java
+END
+AppHistoryInfo.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 149
+/repositories/IqooSourceCode/!svn/ver/7099/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/AppHistoryInfo.hbm.xml
+END
+AppHistoryInfo.java
+K 25
+svn:wc:ra_dav:version-url
+V 146
+/repositories/IqooSourceCode/!svn/ver/7099/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/AppHistoryInfo.java
+END
+TBaiduAppScreenshot.java
+K 25
+svn:wc:ra_dav:version-url
+V 151
+/repositories/IqooSourceCode/!svn/ver/5475/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/TBaiduAppScreenshot.java
+END
+TAppScreenshotDAO.java
+K 25
+svn:wc:ra_dav:version-url
+V 149
+/repositories/IqooSourceCode/!svn/ver/2031/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/TAppScreenshotDAO.java
+END
+TAppScreenshotDAOImpl.java
+K 25
+svn:wc:ra_dav:version-url
+V 153
+/repositories/IqooSourceCode/!svn/ver/5764/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/TAppScreenshotDAOImpl.java
+END
+AndroidPermission.java
+K 25
+svn:wc:ra_dav:version-url
+V 149
+/repositories/IqooSourceCode/!svn/ver/1658/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/AndroidPermission.java
+END
+RequestParameter.java
+K 25
+svn:wc:ra_dav:version-url
+V 148
+/repositories/IqooSourceCode/!svn/ver/9134/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/RequestParameter.java
+END
+AppDownload.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 146
+/repositories/IqooSourceCode/!svn/ver/2261/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/AppDownload.hbm.xml
+END
+BaiduAppComment.java
+K 25
+svn:wc:ra_dav:version-url
+V 147
+/repositories/IqooSourceCode/!svn/ver/3361/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/BaiduAppComment.java
+END
+Developer.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 144
+/repositories/IqooSourceCode/!svn/ver/2261/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/Developer.hbm.xml
+END
+TAppHistoryScreenshot.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 156
+/repositories/IqooSourceCode/!svn/ver/5764/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/TAppHistoryScreenshot.hbm.xml
+END
+AppOrderSet.java
+K 25
+svn:wc:ra_dav:version-url
+V 143
+/repositories/IqooSourceCode/!svn/ver/1128/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/AppOrderSet.java
+END
+BaiduAppInfo.java
+K 25
+svn:wc:ra_dav:version-url
+V 144
+/repositories/IqooSourceCode/!svn/ver/5475/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/BaiduAppInfo.java
+END
+AndroidPermissionDAOImpl.java
+K 25
+svn:wc:ra_dav:version-url
+V 156
+/repositories/IqooSourceCode/!svn/ver/9134/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/AndroidPermissionDAOImpl.java
+END
+AndroidPermissionDAO.java
+K 25
+svn:wc:ra_dav:version-url
+V 152
+/repositories/IqooSourceCode/!svn/ver/9134/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/AndroidPermissionDAO.java
+END
+TAppScreenshot.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 149
+/repositories/IqooSourceCode/!svn/ver/5764/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/TAppScreenshot.hbm.xml
+END
+SearchHotWord.java
+K 25
+svn:wc:ra_dav:version-url
+V 145
+/repositories/IqooSourceCode/!svn/ver/3905/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/SearchHotWord.java
+END
+AppInfo.java
+K 25
+svn:wc:ra_dav:version-url
+V 140
+/repositories/IqooSourceCode/!svn/ver/10040/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/AppInfo.java
+END
+BaiduAppInfo.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 147
+/repositories/IqooSourceCode/!svn/ver/5475/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/BaiduAppInfo.hbm.xml
+END
+SystemPackage.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 148
+/repositories/IqooSourceCode/!svn/ver/2383/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/SystemPackage.hbm.xml
+END
+Developer.java
+K 25
+svn:wc:ra_dav:version-url
+V 141
+/repositories/IqooSourceCode/!svn/ver/1262/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/Developer.java
+END
+AppClick.java
+K 25
+svn:wc:ra_dav:version-url
+V 140
+/repositories/IqooSourceCode/!svn/ver/1128/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/AppClick.java
+END
+AndroidPermission.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 152
+/repositories/IqooSourceCode/!svn/ver/2261/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/AndroidPermission.hbm.xml
+END
+AppInfoDAOImpl.java
+K 25
+svn:wc:ra_dav:version-url
+V 147
+/repositories/IqooSourceCode/!svn/ver/10040/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/AppInfoDAOImpl.java
+END
+AppInfoDAO.java
+K 25
+svn:wc:ra_dav:version-url
+V 142
+/repositories/IqooSourceCode/!svn/ver/8737/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/AppInfoDAO.java
+END
+TBaiduAppScreenshot.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 154
+/repositories/IqooSourceCode/!svn/ver/5475/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/TBaiduAppScreenshot.hbm.xml
+END
+AppComment.java
+K 25
+svn:wc:ra_dav:version-url
+V 142
+/repositories/IqooSourceCode/!svn/ver/4338/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/AppComment.java
+END
+TAppPermission.java
+K 25
+svn:wc:ra_dav:version-url
+V 145
+/repositories/IqooSourceCode/!svn/ver/800/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/TAppPermission.java
+END
+AppClick.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 143
+/repositories/IqooSourceCode/!svn/ver/2261/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/AppClick.hbm.xml
+END
+SearchKey.java
+K 25
+svn:wc:ra_dav:version-url
+V 141
+/repositories/IqooSourceCode/!svn/ver/1963/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/SearchKey.java
+END
+SystemPackage.java
+K 25
+svn:wc:ra_dav:version-url
+V 145
+/repositories/IqooSourceCode/!svn/ver/2326/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/SystemPackage.java
+END
+TAppScreenshot.java
+K 25
+svn:wc:ra_dav:version-url
+V 146
+/repositories/IqooSourceCode/!svn/ver/5764/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/TAppScreenshot.java
+END
+AppInfo.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 143
+/repositories/IqooSourceCode/!svn/ver/10040/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/appinfo/AppInfo.hbm.xml
+END

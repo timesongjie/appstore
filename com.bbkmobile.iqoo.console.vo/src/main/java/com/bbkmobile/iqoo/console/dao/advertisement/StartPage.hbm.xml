@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 2012-1-3 14:53:46 by Hibernate Tools 3.4.0.CR1 -->
+<hibernate-mapping>
+	<class name="com.bbkmobile.iqoo.console.dao.advertisement.StartPage"
+		table="t_start_page" dynamic-insert="true" dynamic-update="true">
+		<id name="id" type="java.lang.Integer">
+			<column name="id" />
+			<generator class="identity" />
+		</id>
+		<property name="name" type="string">
+			<column name="name" length="60" not-null="true">
+			</column>
+		</property>
+		<property name="image" type="string">
+			<column name="image" length="100">
+			</column>
+		</property>
+		<property name="description" type="string">
+			<column name="description" length="500">
+			</column>
+		</property>
+		<property name="valid_date" type="string">
+			<column name="valid_date" length="10">
+			</column>
+		</property>
+		<property name="invalid_date" type="string">
+			<column name="invalid_date" length="10">
+			</column>
+		</property>
+		<property name="default_view" type="java.lang.Character">
+			<column name="default_view" length="1">
+			</column>
+		</property>
+
+		<property name="add_date" type="timestamp">
+			<column name="add_date" length="19" not-null="true">
+			</column>
+		</property>
+		<property name="modify_date" type="timestamp">
+			<column name="modify_date" length="19" not-null="true">
+			</column>
+		</property>
+	</class>
+</hibernate-mapping>

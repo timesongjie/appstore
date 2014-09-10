@@ -1,0 +1,348 @@
+package com.bbkmobile.iqoo.interfaces.search.business;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.lang.StringUtils;
+import org.springframework.stereotype.Service;
+
+import com.bbkmobile.iqoo.common.json.JackSonParser;
+import com.bbkmobile.iqoo.common.json.ResultObject;
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.common.vo.RelationRecResultAppInfo;
+import com.bbkmobile.iqoo.console.business.search.baidu.RelatedRecResult;
+import com.bbkmobile.iqoo.console.business.search.xml.SearchConstants;
+import com.bbkmobile.iqoo.console.business.search.xml.vo.AppVO;
+import com.bbkmobile.iqoo.console.business.search.xml.vo.UpdateResultVO;
+import com.bbkmobile.iqoo.console.constants.Constants;
+import com.bbkmobile.iqoo.console.constants.UtilTool;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+import com.bbkmobile.iqoo.console.dao.modelmgr.Model;
+import com.bbkmobile.iqoo.interfaces.appinfo.business.SystemPackageService;
+import com.bbkmobile.iqoo.interfaces.appinfo.dao.AppInfoDAO;
+import com.bbkmobile.iqoo.interfaces.common.ObjectTJson;
+import com.bbkmobile.iqoo.interfaces.model.business.ModelInfoService;
+import com.bbkmobile.iqoo.interfaces.search.util.SearchXmlProcessor;
+@Service("iRelatedRecService")
+public class RelatedRecServiceImpl implements RelatedRecService{
+	
+	@Resource(name="searchXmlProcessor")
+    private SearchXmlProcessor xmlProc;
+	
+	@Resource(name="iAppInfoDAO")
+    private AppInfoDAO appInfoDAO;
+	
+	@Resource(name="iModelInfoService")
+    private ModelInfoService modelInfoService;
+	
+	@Resource
+	private SystemPackageService systemPackageService;
+	
+    @Override
+    public String getRelatedRecApps(String package_name, String model, String appVersion) throws Exception{
+        try {
+            if(Constants.SWITCH_CLOSE_BAIDU_RELATED){  
+            	return getRelatedRecLocalStr(package_name,model,appVersion);
+            }
+            return  getRelatedRecBaiduStr(package_name,model,appVersion);
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+    private String getRelatedRecBaiduStr(String package_name,String model,String appVersion)throws Exception{
+         List<AppVO> apps = getRelatedRecBaidu(package_name);
+         if (null != apps && apps.size() > 0) { 
+        	if(StringUtils.isNotBlank(appVersion) && StringUtils.isNumeric(appVersion) && Float.valueOf(appVersion) >= Constants.APPVERSION530){
+        		return getBaiduAppInfoJson(apps,appVersion);
+        	}else{
+             	StringBuilder sb = new StringBuilder();
+             	sb.append("<?xml version=\"1.0\" encoding=\"utf-8\" ?><PackageList>");//百度数据
+                sb.append(getBaiduAppInfoXml(apps,appVersion));
+                sb.append("</PackageList>");    
+                return sb.toString();
+        	}
+         }
+		 return getRelatedRecLocalStr(package_name,model,appVersion);
+    }
+   
+    private String getRelatedRecLocalStr(String package_name, String model, String appVersion)throws Exception{
+    	List<AppInfo> appInfos = getRelatedRecAppsFromLocal(package_name, model, appVersion);//TODO 为空，则表示该应用从百度获取，直接去百度查找相关推荐
+    	if(StringUtils.isNotBlank(appVersion) && StringUtils.isNumeric(appVersion) && Float.valueOf(appVersion) >= Constants.APPVERSION530){
+            int relatedRecCount = Constants.RELATED_REC_COUNT_2 ;
+    		return ObjectTJson.getAppsJSON(appInfos,appVersion,relatedRecCount);
+    	}else{
+    		StringBuilder sb = new StringBuilder();
+            sb.append("<?xml version=\"1.0\" encoding=\"utf-8\" ?><PackageList>");
+            sb.append(getAppsXml(appInfos, appVersion));
+            sb.append("</PackageList>");
+            return sb.toString();
+    	}
+    }
+    private List<AppVO> getRelatedRecBaidu(String package_name)throws Exception{
+    	UpdateResultVO updateResultVO = null;
+        String relatedRecXml = new RelatedRecResult().relatedRecApps(package_name);
+        updateResultVO = xmlProc.processRelatedRecXml(relatedRecXml);
+        return updateResultVO.getApps();
+   }
+    private List<AppInfo> getRelatedRecAppsFromLocal(String package_name, String model, String appVersion) throws Exception{
+        //从本地数据库同类型中随机返回
+        //获取机型对应的信息
+        Model modelClass = modelInfoService.findModelByMdName(model);
+        AppInfo appInfo = appInfoDAO.findAppByPackage(package_name);
+        if(null != appInfo){
+            int total_count = appInfoDAO.countAppsByLeafTypeIdWithFilterModel(appInfo.getAppType(),modelClass);
+            if(total_count > 0){
+                List<AppInfo> appInfos = null;
+                List<AppInfo> appInfos2 = null;
+                Random ran = new Random();
+                int ranInt = ran.nextInt(total_count);
+                int relatedRecCount = Constants.RELATED_REC_COUNT + 1;        //多查找一个，如果查找列表包含应用本身时，可以去掉，满足返回个数
+                if(null != appVersion && Float.parseFloat(appVersion) >= 510){
+                    relatedRecCount = Constants.RELATED_REC_COUNT_2 + 1;
+                }
+                PageVO page = new PageVO();
+                if(ranInt > total_count-relatedRecCount){
+                	page.setCurrentPageNum(ranInt);
+                	page.setNumPerPage(total_count-ranInt);
+                    appInfos = appInfoDAO.getAppsByLeafType(appInfo.getAppType(),page,modelClass);//ranInt, total_count-ranInt
+                    
+                  	page.setCurrentPageNum(0);
+                	page.setNumPerPage(relatedRecCount-(total_count-ranInt));
+                    appInfos2 = appInfoDAO.getAppsByLeafType(appInfo.getAppType(),page,modelClass);// 0, relatedRecCount-(total_count-ranInt)
+                    appInfos.addAll(appInfos2);
+                }else{
+                	page.setCurrentPageNum(ranInt);
+                	page.setNumPerPage(relatedRecCount);
+                    appInfos = appInfoDAO.getAppsByLeafType(appInfo.getAppType(), page, modelClass);//ranInt, relatedRecCount
+                }
+                //  sb.append(getAppsXml(appInfo, appInfos, appVersion));
+                appInfos.remove(appInfo);//可能移除本身
+                return appInfos;
+            }
+        }
+        return Collections.emptyList();
+    }
+    private String getBaiduAppInfoXml(List<AppVO> apps,String appVersion) throws Exception{
+        try {
+            int count=0;
+            String package_name = "";
+            int relatedRecCount = Constants.RELATED_REC_COUNT;
+            if(null!=appVersion && Float.parseFloat(appVersion)>=510){
+                relatedRecCount = Constants.RELATED_REC_COUNT_2;
+            }
+            StringBuilder sb = new StringBuilder();
+            for (AppVO app : apps) {
+                if(count == relatedRecCount){       
+                    break;
+                }
+                package_name = app.getPackagename();
+                AppInfo appInfo = appInfoDAO.getApppInfoWithPackage(package_name);
+                
+                if(null != appInfo){
+                    sb.append(getAppInfoXml(appInfo,appVersion));
+                    count++;  
+                    continue;
+                }
+                if (!systemPackageService.isSystemPackage(package_name)) {
+                	sb.append(getAppVOXml(app));
+                    count++;  
+                }
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            throw e;
+        } 
+    }
+    private String getAppVOXml(AppVO app){
+    	StringBuffer sb = new StringBuffer();
+    	sb.append("<Package><id><![CDATA[");
+        sb.append(app.getDocid());
+        sb.append("]]></id><package_name><![CDATA[");
+        sb.append(app.getPackagename());
+        sb.append("]]></package_name><parent_id><![CDATA[");
+        sb.append("null");
+        sb.append("]]></parent_id><title_zh><![CDATA[");
+        sb.append(app.getSname());
+        sb.append("]]></title_zh><title_en><![CDATA[");
+        sb.append(app.getSname());
+        sb.append("]]></title_en><icon_url><![CDATA[");
+        sb.append(app.getIcon());
+        sb.append("]]></icon_url><developer><![CDATA[");
+        sb.append(SearchConstants.DEVELOPER_FROM_NETWORK);
+        sb.append("]]></developer><version_name><![CDATA[");
+        sb.append(app.getVersionname());
+        sb.append("]]></version_name><version_code><![CDATA[");
+        sb.append(app.getVersioncode() + "");  
+        sb.append("]]></version_code><download_url><![CDATA[");  
+        sb.append(app.getUrl());
+        sb.append("]]></download_url><size><![CDATA[");
+        sb.append(app.getPackagesize()/1024 + "");
+        sb.append("]]></size><download_count><![CDATA["); 
+        sb.append(app.getDownload_count());
+        sb.append("]]></download_count><offical><![CDATA["); 
+        sb.append(app.getOfficial());
+        sb.append("]]></offical><from><![CDATA["); 
+        sb.append(SearchConstants.FROM_BAIDU);
+        sb.append("]]></from></Package>"); 
+        return sb.toString();
+    }
+    private String getAppsXml(List<AppInfo> appInfos, String appVesion) throws Exception{
+        try { 
+            int relatedRecCount = Constants.RELATED_REC_COUNT;        
+            if(null!=appVesion && Float.parseFloat(appVesion)>=510){
+                relatedRecCount = Constants.RELATED_REC_COUNT_2 ;
+            }
+            StringBuffer sb = new StringBuffer();
+            int count=0;
+            if(null != appInfos){
+                for (AppInfo app : appInfos) {
+//                    if(appInfo.getId() == app.getId()){
+//                        continue;
+//                    }
+                    sb.append(getAppInfoXml(app,appVesion));
+                    count++;
+                    if(count >= relatedRecCount){
+                        break;
+                    }
+                } 
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+    
+    private String getAppInfoXml(AppInfo app, String appVersion) throws Exception{
+        try {
+            StringBuffer sb = new StringBuffer();
+            sb.append("<Package><id><![CDATA[");
+            sb.append(app.getId());
+            sb.append("]]></id><package_name><![CDATA[");
+            sb.append(app.getAppPackage());
+            sb.append("]]></package_name><parent_id><![CDATA[");
+            sb.append(app.getAppType().getParentId());
+            sb.append("]]></parent_id><title_zh><![CDATA[");
+            sb.append(app.getAppCnName());
+            sb.append("]]></title_zh><title_en><![CDATA[");
+            sb.append(app.getAppEnName());
+            sb.append("]]></title_en><icon_url><![CDATA[");
+            sb.append(UtilTool.getDownloadImageHttpURL(app.getAppIcon()));
+            sb.append("]]></icon_url><developer><![CDATA[");
+            sb.append(app.getDeveloper().getName());
+            sb.append("]]></developer><version_name><![CDATA[");
+            sb.append(app.getAppVersion());
+            sb.append("]]></version_name><version_code><![CDATA[");
+            sb.append(app.getAppVersionCode());  
+            sb.append("]]></version_code><download_url><![CDATA[");  
+            sb.append(UtilTool.getHttpURL("/appinfo/downloadApkFile?id=" + app.getId()+"&app_version="+appVersion));
+            sb.append("]]></download_url><size><![CDATA[");
+            sb.append(app.getApkSize());
+            sb.append("]]></size><download_count><![CDATA["); 
+            sb.append(app.getDownloadCount());
+            sb.append("]]></download_count><offical><![CDATA["); 
+            sb.append("0");
+            sb.append("]]></offical><from><![CDATA["); 
+            sb.append(SearchConstants.FROM_LOCAL);
+            sb.append("]]></from></Package>");     
+        
+            return sb.toString();
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+    
+    public SearchXmlProcessor getXmlProc() {
+        return this.xmlProc;
+    }
+
+    public void setXmlProc(SearchXmlProcessor xmlProc) {
+        this.xmlProc = xmlProc;
+    }
+
+    private String getBaiduAppInfoJson(List<AppVO> apps,String appVersion) throws Exception{
+        try {
+            int count=0;
+            String package_name = "";
+            int relatedRecCount = Constants.RELATED_REC_COUNT;
+            if(null!=appVersion && Float.parseFloat(appVersion)>=510){
+                relatedRecCount = Constants.RELATED_REC_COUNT_2;
+            }
+            
+            StringBuilder sb = new StringBuilder();
+            if(apps != null){
+            	List<RelationRecResultAppInfo> value = new ArrayList<RelationRecResultAppInfo>();
+            	 for (AppVO app : apps) {
+                     if(count==relatedRecCount){       
+                         break;
+                     }
+                     package_name = app.getPackagename();
+                     AppInfo appInfo = appInfoDAO.getApppInfoWithPackage(package_name);
+                     if(null != appInfo){
+                     	value.add(ObjectTJson.appInfoTThis(appInfo, appVersion));
+                         count++;  
+                         continue;
+                     }
+                     if (!systemPackageService.isSystemPackage(package_name)) {
+                     	value.add(appVOTThis(app,appVersion));
+                        count++;  
+                     }
+                 }
+            	 ResultObject<List<RelationRecResultAppInfo>> result = new ResultObject<List<RelationRecResultAppInfo>>();
+            	 result.setResult(true);
+            	 result.setValue(value);
+            	 return JackSonParser.bean2Json(result);
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            throw e;
+        } 
+    }
+
+    private RelationRecResultAppInfo appVOTThis(AppVO app, String appVersion) throws Exception{
+    	if(app != null){
+    		AppInfo appInfo = null;
+			if (systemPackageService.isSystemPackage(app.getPackagename()) || (appInfo = appInfoDAO
+					.getApppInfoWithPackage(app.getPackagename())) != null ) {
+    			 if(appInfo != null && appInfo.getAppStatus() != Constants.APP_OFFSALE){
+    				 RelationRecResultAppInfo info = new RelationRecResultAppInfo();
+    	 	    		info.setId(appInfo.getId());
+    	 	    		info.setPackage_name(appInfo.getAppPackage());
+    	 	    		info.setTitle_zh(appInfo.getAppCnName());
+    	 	    		info.setTitle_en(appInfo.getAppEnName());
+    	 	    		info.setIcon_url(appInfo.getAppIcon());
+    	 	    		info.setDeveloper(appInfo.getAppAuthor() == null ? "" : appInfo
+								.getAppAuthor());
+    	 	    		info.setVersion_name(appInfo.getAppVersion());
+    	 	    		info.setVersion_code(appInfo.getAppVersionCode());
+    	 	    		info.setDownload_url(appInfo.getAppApk());
+    	 	    		info.setSize(appInfo.getApkSize()/1024);
+    	 	    		info.setDownload_count(appInfo.getDownloadCount());
+    	 	    		info.setOffical('0');
+    	 	    		info.setFrom(SearchConstants.FROM_LOCAL);
+    	 	    		return info;
+    			 }
+    		 }else{
+    			RelationRecResultAppInfo info = new RelationRecResultAppInfo();
+ 	    		info.setId(Long.valueOf(StringUtils.defaultIfEmpty(app.getDocid(), "0")));
+ 	    		info.setPackage_name(app.getPackagename());
+ 	    		info.setTitle_zh(app.getSname());
+ 	    		info.setTitle_en(app.getSname());
+ 	    		info.setIcon_url(app.getIcon());
+ 	    		info.setDeveloper(SearchConstants.DEVELOPER_FROM_NETWORK);
+ 	    		info.setVersion_name(app.getVersionname());
+ 	    		info.setVersion_code(app.getVersioncode() + "");
+ 	    		info.setDownload_url(app.getUrl());
+ 	    		info.setSize((int)app.getPackagesize()/1024);
+ 	    		info.setDownload_count(Integer.valueOf(StringUtils.defaultIfEmpty(app.getDownload_count(),"0")));
+ 	    		info.setOffical(app.getOfficial() != null ?app.getOfficial().charAt(0):'0');
+ 	    		info.setFrom(SearchConstants.FROM_BAIDU);
+ 	    		return info; 
+    		 }
+    	}
+    	return null;
+	}
+}

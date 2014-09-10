@@ -1,0 +1,25 @@
+package com.bbkmobile.iqoo.console.dao.apptest;
+
+import java.io.File;
+import java.util.List;
+
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+
+public interface AppTestDAO {
+
+	List<AppInfo> findTestByProperty(int start, AppInfo appInfo) throws Exception;
+	
+	int countAllRecords(AppInfo appInfo) throws Exception;
+	
+	AppInfo findAppById(Long app_id) throws Exception;
+
+	boolean updateForTest(AppTestRecords appTestRecords, Integer userId) throws Exception;
+
+	boolean saveTestReport(File file, String fileName, String path) throws Exception;
+
+	List<AppTestRecords> getTestRecords(AppInfo appInfo) throws Exception;
+
+	List<AppInfo> findAllTestAppType() throws Exception;
+
+    boolean updateAppInfo(AppInfo appInfo) throws Exception;
+}

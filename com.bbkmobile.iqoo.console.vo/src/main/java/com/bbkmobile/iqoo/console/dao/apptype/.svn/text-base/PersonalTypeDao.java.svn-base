@@ -1,0 +1,26 @@
+package com.bbkmobile.iqoo.console.dao.apptype;
+
+import java.util.List;
+
+/**
+ * 
+ * @author time
+ *
+ */
+public interface PersonalTypeDao {
+
+	public int addPersonal(PersonalType type)throws Exception;
+	
+	public List<PersonalType> list(PersonalType type)throws Exception;
+	
+	public int updatePersonal(PersonalType type)throws Exception;
+
+	public int updatePersonal(List<PersonalType> types)throws Exception;
+	
+	public int deletePersonalType(Integer []ids)throws Exception;
+	
+	public int getCurShowOrder(char tag)throws Exception;
+	
+	char DISPLAY = '1';
+	char UNDISPLAY = '0';
+}

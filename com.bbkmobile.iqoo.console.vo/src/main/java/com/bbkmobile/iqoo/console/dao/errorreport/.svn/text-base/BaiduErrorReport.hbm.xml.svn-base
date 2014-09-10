@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 2012-1-3 14:53:46 by Hibernate Tools 3.4.0.CR1 -->
+<hibernate-mapping>
+	<class name="com.bbkmobile.iqoo.console.dao.errorreport.BaiduErrorReport"
+		table="t_moble_error_baidu">
+		<id name="id" type="java.lang.Long">
+			<column name="id" />
+			<generator class="identity" />
+		</id>
+
+		<property name="user" type="string">
+			<column name="user">
+			</column>
+		</property>
+					
+		<property name="user_ip" type="string">
+			<column name="user_ip" length="30">
+			</column>
+		</property>
+		
+		<property name="user_imei" type="string">
+			<column name="imei" length="30">
+			</column>
+		</property>
+		
+		<property name="app_id" type="java.lang.Long">
+			<column name="app_id" length="20">
+			</column>
+		</property>
+
+		<property name="error_type" type="java.lang.Character">
+			<column name="error_type" length="1">
+			</column>
+		</property>
+		
+		<property name="model" type="string">
+			<column name="model" length="50">
+			</column>
+		</property>
+		
+		<property name="error_content" type="string">
+			<column name="error_content" length="2000">
+			</column>
+		</property>
+		
+		<property name="error_code" type="string">
+			<column name="error_code" length="10">
+			</column>
+		</property>
+		
+		<property name="agent" type="string">
+			<column name="agent" length="200">
+			</column>
+		</property>
+		
+		<property name="report_date" type="timestamp">
+			<column name="report_date" length="19">
+			</column>
+		</property>
+		
+	</class>
+</hibernate-mapping>

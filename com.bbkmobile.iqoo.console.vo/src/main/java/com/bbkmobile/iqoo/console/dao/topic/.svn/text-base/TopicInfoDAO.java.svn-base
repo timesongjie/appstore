@@ -1,0 +1,96 @@
+package com.bbkmobile.iqoo.console.dao.topic;
+
+import java.io.File;
+import java.util.List;
+
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+import com.bbkmobile.iqoo.console.dao.appinfo.RequestParameter;
+import com.bbkmobile.iqoo.console.dao.modelmgr.Model;
+
+public interface TopicInfoDAO {
+    
+    //手机接口@haiyan
+    List<ModelTopic> getModelTopicsBySeries(Model model) throws Exception;
+    
+    List<TopicInfo> getTopicsBySeries(Model model) throws Exception;
+    
+    int countTopicAppsByIdWihtFilterModel(TopicInfo topicInfo, RequestParameter requestParameter, Model model) throws Exception;
+    
+    List<TopicApp> getTopicAppsByIdWihtFilterModel(TopicInfo topicInfo, RequestParameter requestParameter, Model model) throws Exception;
+    
+    TopicInfo getModelTopicById(long id) throws Exception;
+    //end
+    
+    List<TopicInfo> getTopicInfoList() throws Exception;     
+    
+    boolean addTopicInfo(TopicInfo topic) throws Exception;  
+
+    boolean saveTopicImage(File file, String path) throws Exception;
+    
+    boolean deleteTopicImage(String path) throws Exception;
+
+    TopicInfo findTopicInfoById(Long id) throws Exception;
+
+    boolean updateTopicInfo(TopicInfo topicInfo) throws Exception;   
+
+    boolean deleteTopicInfoByID(Long[] ids) throws Exception;   
+
+    boolean updateRecommend(Long id, Character recommend)throws Exception;
+
+    public List<TopicApp> findTopicAppByTopicId(int start, Long topic_id) throws Exception;
+
+	void addAppForTopic(Long topicId, Long[] appIds, String adminName) throws Exception;
+
+	Integer countTopicAppByTopicId(Long id) throws Exception;
+
+	void deleteTopicAppSetId(Long[] ids,TopicInfo topic) throws Exception ;
+
+	void updateAppOrderForToic(String[] str) throws Exception;
+
+	List<TopicInfo> getAllPhoneTopic() throws Exception;
+
+	List<ModelTopic> getModelTopicBySeriesId(Short seriesId, Short type) throws Exception;
+
+	void addTopicForSeries(Short seriesId, Long[] topicIds, short defaultType,
+			String adminName) throws Exception;
+	
+	boolean isInitSeriesTopicSet(Short series_id) throws Exception;
+
+	void updateTopicSetForSeries(List<ModelTopic> list, Short seriesId) throws Exception;
+
+	List<ModelTopic> findSeriesTopicByProperty(String property, Object value) ;
+
+	void deleteTopicSetById(Short seriesId, Long[] ids) throws Exception;
+
+	void updateTopicOrderForSeries(String[] str) throws Exception;
+
+	List<TopicIcon> getTopicImgByTopicId(Long topicId) throws Exception;
+
+	TopicInfo getTopicById(Long id) throws Exception;
+
+	void saveTopicImages(File file, String fileName, String uploaddir) throws Exception;
+
+	void saveImgForTopic(Long id, String icon_url,String fileName, String screen) throws Exception;
+
+	void addTopicForNewSeries(Short id) throws Exception;
+
+	boolean addPhoneTopic(TopicInfo topic) throws Exception;
+
+	TopicInfo getPhoneTopicByName(String topicName) throws Exception;
+	
+	String getTopicImgUrlByIdWithScreen(Long topicId, String cs) throws Exception;
+	
+	boolean updateRecommend(Short seriesId, Long id) throws Exception;
+	
+	boolean updateCancelRecommend(Short seriesId, Long id) throws Exception;
+	
+	boolean findTopicByAppInfoId(Long app_id , TopicInfo topic) ;
+	
+	int countTopicInfo(TopicInfo topic) throws Exception;
+	
+	List<TopicInfo> search(PageVO page,final TopicInfo topic,final String advSortWayy,Short series_id) throws Exception;
+	
+	void updateRamarkTag( List<TopicInfo> list_topic, Short series_id) throws Exception;
+
+}

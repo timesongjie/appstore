@@ -1,0 +1,377 @@
+package com.bbkmobile.iqoo.interfaces.keyword.dao;
+
+import java.util.List;
+
+import org.hibernate.Hibernate;
+import org.hibernate.transform.Transformers;
+import org.springframework.stereotype.Repository;
+
+import com.bbkmobile.iqoo.console.dao.keyword.CensorWord;
+import com.bbkmobile.iqoo.interfaces.common.AnnotationBaseDao;
+@Repository("iKeywordInfoDAO")
+public class KeywordInfoDAOImpl extends AnnotationBaseDao implements KeywordInfoDAO {
+    
+//    private char recommend = '1';
+    
+
+    public List<CensorWord> getHitCensorWoreList(String content) throws Exception{
+        String sql = " select word,grade from t_censor_word where ? regexp word order by grade";
+        @SuppressWarnings("unchecked")
+        List<CensorWord> censorWords = getSession().createSQLQuery(sql)
+                .addScalar("word", Hibernate.STRING)
+                .addScalar("grade", Hibernate.INTEGER)
+                .setString(0, content)
+                .setResultTransformer(Transformers.aliasToBean(CensorWord.class))
+                .list();  
+        if(null!=censorWords && censorWords.size()>0){
+            return censorWords;
+        }else{
+            return null;
+        }
+    }
+    
+//    //过滤评论词汇相关
+//    @SuppressWarnings("unchecked")
+//    public List<CensorWord> getCensorWordList() throws Exception{
+//        return getHibernateTemplate().find("from CensorWord");
+//    }
+//    
+//    public Integer countCensorWords(CensorWord censorWord) throws Exception{
+//        try {
+//            Criteria criteria = getSession().createCriteria(CensorWord.class);
+//            Integer totalRows = ((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult());
+//            if(null==totalRows){
+//                totalRows=0;
+//            }
+//            return totalRows;
+//        } catch (Exception e) {
+//            throw e;
+//        }
+//    }
+//    public List<CensorWord> getCensorWords(final CensorWord censorWord) throws Exception{
+//        try {
+//            @SuppressWarnings("unchecked")
+//            List<CensorWord> list = this.getHibernateTemplate().executeFind(new HibernateCallback() {
+//                public Object doInHibernate(Session session) throws HibernateException {
+//                    Criteria criteria = session.createCriteria(CensorWord.class);
+//                    String word = censorWord.getWord();
+//                    if(null!=word && !word.equals("")){
+//                        word = word.replaceAll("\\s", "");
+//                        word = appendPersentSign(word);
+//                        criteria.add(Restrictions.like("word", word));
+//                    }
+//         
+//                    if(null!=censorWord.getType() && !censorWord.getType().equals("") && 0!=censorWord.getType()){
+//                        criteria.add(Restrictions.eq("type", censorWord.getType()));
+//                    }
+//                    
+//                    if(null!=censorWord.getGrade() && !censorWord.getGrade().equals("") && 0!=censorWord.getGrade()){
+//                        criteria.add(Restrictions.eq("grade", censorWord.getGrade()));
+//                    }
+//                    
+//                    criteria.addOrder(Order.desc("id"));
+//                    criteria.setFirstResult(censorWord.getStartPosition());
+//                    criteria.setMaxResults(Constants.APPS_PER_PAGE_20);
+//                    List<CensorWord> result = criteria.list();
+//                    return result;
+//                }
+//            });
+//
+//            if (null != list && list.size() > 0) {
+//                return list;
+//            } else {
+//                return null;
+//            }
+//        } catch (Exception e) {
+//            throw e;
+//        }
+//    }
+//    
+//    public String appendPersentSign(String  word){  
+//        int length = word.length();  
+//        char[] words = new char[length << 1];  
+//        for (int i=0, j=0; i<length; ++i, j = i << 1) {  
+//            words[j] = word.charAt(i);  
+//            words[1 + j] = '%';  
+//        }  
+//        word = new String(words);
+//        word = "%"+word;
+//        return word;  
+//    }  
+//    
+//    public boolean deleteCensorWords(CensorWord censorWord, String ids) throws Exception {
+//        if (null != ids && !ids.equals("")) {
+//            String queryString = "delete CensorWord where id=?";
+//            Query queryObj = getSession().createQuery(queryString);
+//            String app_ids[] = ids.split(",");
+//            for (int i = 0; i < app_ids.length; i++) {
+//                queryObj.setInteger(0, Integer.parseInt(app_ids[i]));
+//                queryObj.executeUpdate();
+//            }
+//        }
+//        return true;
+//    }
+//    
+//    public boolean addCensorWord(CensorWord censorWord) throws Exception{
+//        censorWord.setAdd_date(new Date());
+//        getHibernateTemplate().save(censorWord);
+//        return true;
+//    }
+//
+//    /**
+//     * 查询关键词，获取符合条件的记录的总数，为分页服务
+//     */
+//    @SuppressWarnings({ "unchecked", "rawtypes" })
+//    @Override
+//    public int countAllRecords(final Keyword keyword) throws Exception {
+//        int result = 0;
+//        List<Keyword> list = this.getHibernateTemplate().executeFind(
+//                new HibernateCallback() {
+//                    public Object doInHibernate(Session session)
+//                            throws HibernateException {
+//                        Criteria criteria = session
+//                                .createCriteria(Keyword.class);
+//                        if(null!=keyword.getFrom_date()){
+//                            criteria.add(Restrictions.between("add_date", keyword.getFrom_date(), keyword.getTo_date()));
+//                        }    
+//                        List<Keyword> result = criteria.list();
+//                        return result;
+//                    }
+//                });
+//        if (null != list) {
+//            result = list.size();
+//        }
+//        return result;
+//    } 
+//    
+//    
+//    /**
+//     * 根据用户输入动态组织查询查询条件，查询符合条件的关键词
+//     */
+//    @SuppressWarnings("unchecked")
+//    @Override
+//    public List<Keyword> findKeywordByProperty(final int start, final Keyword keyword) throws Exception {
+//        @SuppressWarnings("rawtypes")
+//        List<Keyword> list = this.getHibernateTemplate().executeFind(
+//                new HibernateCallback() {
+//                    public Object doInHibernate(Session session)
+//                            throws HibernateException {
+//                        Criteria criteria = session
+//                                .createCriteria(Keyword.class); 
+//                        if(null!=keyword.getFrom_date()){
+//                            criteria.add(Restrictions.between("add_date", keyword.getFrom_date(), keyword.getTo_date()));
+//                        }             
+//                        criteria.addOrder(Order.asc("sequence"));
+//                        criteria.setFirstResult(start);
+//                        criteria.setMaxResults(10);
+//                        List<Keyword> result = criteria.list();
+//                        return result;
+//                    }
+//                });
+//        return list;
+//    }
+//    
+//    @SuppressWarnings({ "unchecked", "rawtypes" })
+//    public int countAllRecommendKeyword(final Keyword keyword) throws Exception {
+//        int result = 0;
+//        List<Keyword> list = this.getHibernateTemplate().executeFind(
+//                new HibernateCallback() {
+//                    public Object doInHibernate(Session session)
+//                            throws HibernateException {
+//                        Criteria criteria = session
+//                                .createCriteria(Keyword.class);
+// 
+//                        criteria.add(Restrictions.eq("recommend", recommend));         
+//                        List<Keyword> result = criteria.list();
+//                        return result;
+//                    }
+//                });
+//        if (null != list) {
+//            result = list.size();
+//        }
+//        return result;
+//    } 
+//    
+//    @SuppressWarnings("unchecked")
+//    public List<Keyword> getRecommendKeywordInfo(final int start, final Keyword keyword) throws Exception {    
+//        @SuppressWarnings("rawtypes")
+//        List<Keyword> list = this.getHibernateTemplate().executeFind(
+//                new HibernateCallback() {
+//                    public Object doInHibernate(Session session)
+//                            throws HibernateException {
+//                        Criteria criteria = session
+//                                .createCriteria(Keyword.class);
+//                     
+//                        criteria.add(Restrictions.eq("recommend", recommend));           
+//                        criteria.addOrder(Order.asc("sequence"));
+//                        criteria.setFirstResult(start);
+//                        criteria.setMaxResults(10);
+//                        List<Keyword> result = criteria.list();
+//                        return result;
+//                    }
+//                });
+//        return list;
+//  }
+//        
+//    @Override
+//    public Keyword findKeywordById(Long id) throws Exception {
+//        try{
+//            return (Keyword)getHibernateTemplate().find("from Keyword where id=?",id).get(0);
+//        }catch(Exception e){
+//            throw e;
+//        }
+//    }
+//
+//    @Override
+//    public boolean addRecommendKeyword(Keyword keyword) throws Exception {
+//        boolean result=false;
+//        if(null != keyword)
+//        {
+//            keyword.setAdd_date(new Date());
+//            keyword.setRecommend(recommend);
+//            getHibernateTemplate().save(keyword);
+//            result=true;
+//        }
+//        return result;
+//    }
+//
+//    @Override
+//    public boolean deleteKeywordByID(Long[] ids) throws Exception {
+//        try{
+//            String queryString ="delete Keyword where id=?";
+//            Session session=getSession();
+//            for(Long id:ids){
+//                Query queryObj=session.createQuery(queryString);
+//                queryObj.setLong(0, id);
+//                queryObj.executeUpdate();               
+//            }
+//            return true;
+//        }catch(Exception e){
+//          throw e;
+//        }
+//    }
+//
+//    @Override
+//    public boolean updateSequenceAndRank(Long id, int sequence, int rank) throws Exception {
+//        try{
+//            String queryString ="update Keyword set sequence=?,rate_rank=? where id=?";
+//            Session session=getSession();
+//            Query queryObj=session.createQuery(queryString);
+//            queryObj.setInteger(0, sequence);
+//            queryObj.setInteger(1, rank);
+//            queryObj.setLong(2, id);
+//            queryObj.executeUpdate();
+//            return true;
+//       }catch(Exception e){
+//          throw e;
+//       }
+//    }
+//
+//    @Override
+//    public boolean updateRecommendKeyword(Long id, Character recommend) throws Exception {
+//        try{
+//            String queryString ="update Keyword set recommend = ? where id=?";
+//            Session session=getSession();
+//            Query queryObj=session.createQuery(queryString);
+//            queryObj.setCharacter(0, recommend);
+//            queryObj.setLong(1, id);
+//            queryObj.executeUpdate();
+//            return true;
+//       }catch(Exception e){
+//          throw e;
+//       }
+//    }
+//
+//    public boolean recommendKeywordByID(Long[] ids) throws Exception {
+//        try{
+//            String queryString ="update Keyword set recommend = '1' where id=?";
+//            Session session=getSession();
+//            for(Long id:ids){
+//                Query queryObj=session.createQuery(queryString);
+//                queryObj.setLong(0, id);
+//                queryObj.executeUpdate();               
+//            }
+//            return true;
+//        }catch(Exception e){
+//          throw e;
+//        }
+//    }
+//    
+//    public boolean cancelRecommendKeywordByID(Long[] ids) throws Exception {
+//        try{
+//            String queryString ="update Keyword set recommend = '0' where id=?";
+//            Session session=getSession();
+//            for(Long id:ids){
+//                Query queryObj=session.createQuery(queryString);
+//                queryObj.setLong(0, id);
+//                queryObj.executeUpdate();               
+//            }
+//            return true;
+//        }catch(Exception e){
+//          throw e;
+//        }
+//    }
+//    
+//    @SuppressWarnings("unchecked")
+//    //参数from_date和to_date为保留参数，方便统计某时间段点击次数
+//    public List<KeywordClick> findClickForKeyword(final Keyword keyword,Date from_date,Date to_date) throws Exception {
+//        try {
+//            Query queryObj ;
+//            String queryString = "from KeywordClick where keyword=?";
+//            Session session = getSession();
+//            queryObj = session.createQuery(queryString);
+//            queryObj.setEntity(0, keyword);
+//            /*统计某时间段点击次数
+//            if (null != from_date){
+//                String queryString = "from KeywordClick where keyword=? and click_date>=? and click_date<=?";
+//                Session session = getSession();
+//                queryObj = session.createQuery(queryString);
+//                queryObj.setEntity(0, keyword);
+//                queryObj.setTimestamp(1,  from_date);
+//                queryObj.setTimestamp(2, to_date);
+//            }else{
+//                String queryString = "from KeywordClick where keyword=?";
+//                Session session = getSession();
+//                queryObj = session.createQuery(queryString);
+//                queryObj.setEntity(0, keyword);
+//            }    
+//            */
+//
+//            return queryObj.list();
+//        } catch (Exception e) {
+//            throw e;
+//        }
+//    }
+//
+//    @SuppressWarnings("unchecked")
+//    //参数from_date和to_date为保留参数，方便统计某时间段点击次数
+//    public List<KeywordSearch> findSearchForKeyword(Keyword keyword,Date from_date,Date to_date)
+//            throws Exception {
+//        try {
+//            Query queryObj ;
+//            String queryString = "from KeywordSearch where keyword=?";
+//            Session session = getSession();
+//            queryObj = session.createQuery(queryString);
+//            queryObj.setEntity(0, keyword);
+//            /*统计某时间段点搜索次数
+//            if (null != from_date){
+//                String queryString = "from KeywordSearch where keyword=? and search_date>=? and search_date<=?";
+//                Session session = getSession();
+//                queryObj = session.createQuery(queryString);
+//                queryObj.setEntity(0, keyword);
+//                queryObj.setTimestamp(1,  from_date);
+//                queryObj.setTimestamp(2, to_date);
+//            }else{
+//                String queryString = "from KeywordSearch where keyword=?";
+//                Session session = getSession();
+//                queryObj = session.createQuery(queryString);
+//                queryObj.setEntity(0, keyword);
+//            }    
+//            */
+//
+//            return queryObj.list();
+//        } catch (Exception e) {
+//            throw e;
+//        }
+//    }
+}

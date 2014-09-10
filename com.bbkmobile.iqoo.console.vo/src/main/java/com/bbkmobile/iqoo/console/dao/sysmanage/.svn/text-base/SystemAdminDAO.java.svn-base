@@ -1,0 +1,34 @@
+package com.bbkmobile.iqoo.console.dao.sysmanage;
+
+import java.util.List;
+
+import com.bbkmobile.iqoo.console.dao.login.BbkAdminUser;
+import com.bbkmobile.iqoo.console.menu.dao.BbkAdminMenu;
+
+public interface SystemAdminDAO {
+
+	List<BbkAdminMenu> findByProperty(String propertyName, Object value) throws Exception;
+
+	void save(BbkAdminUser pojo)throws Exception;
+
+	List<BbkAdminUser> findAllAdmin(int startRecord) throws Exception;
+
+	List<BbkAdminMenu> findInMenuID(String admUserPower) throws Exception;
+
+	void deleteAdminByID(Integer id) throws Exception;
+
+	BbkAdminUser findAdminById(Integer id) throws Exception;
+
+	boolean updateAdminPrivilege(Integer id, String newPris) throws Exception;
+	
+	public int countAllAdminUser() throws Exception;
+
+	BbkAdminUser findAdminByName(String name) throws Exception;
+
+	void updateAdminInfo(SystemAdminVO systemAdmin) throws Exception;
+
+	void updateAdminPwd(SystemAdminVO systemAdmin) throws Exception;
+
+	boolean validateAdminPwd(SystemAdminVO systemAdmin)throws Exception;
+
+}

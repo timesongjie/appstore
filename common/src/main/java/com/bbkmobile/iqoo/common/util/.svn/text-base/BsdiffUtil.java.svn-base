@@ -1,0 +1,75 @@
+package com.bbkmobile.iqoo.common.util;
+
+import java.io.File;
+
+import com.bbkmobile.iqoo.common.logging.Lg;
+import com.bbkmobile.iqoo.common.util.cfgfile.PropertiesFileManager;
+import com.bbkmobile.iqoo.console.apkupload.business.utils.ParseApk;
+import com.bbkmobile.iqoo.console.apkupload.business.utils.UploadManager;
+import com.bbkmobile.iqoo.console.constants.LgType;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+
+public class BsdiffUtil {
+
+    static {
+        System.loadLibrary("Bsdiff");
+    }
+
+    // 所有native关键词修饰的都是对本地的声明
+    public native int getPatchByBsdiff(String old_apk, String new_apk,
+            String patch);
+
+    /**
+     * 
+     * @Description:
+     * @param appInfo
+     *            旧包信息
+     * @param apkInfo
+     *            新包信息
+     * @param realPath
+     *            新包真实路径
+     * @Author:time
+     * @see:
+     * @since: 1.0
+     * @Create Date:2014年8月28日
+     */
+    public void patch(AppInfo appInfo, AppInfo apkInfo, String realPath) {
+        // 检查是否需要拆分包，不需要，直接返回
+        String[] exclude_patch = PropertiesFileManager.getInstance()
+                .getArrayFromPropFile("exclude_patch");
+        if (exclude_patch != null && exclude_patch.length > 0) {
+            for (String packageName : exclude_patch) {
+                if (packageName != null
+                        && packageName.equals(apkInfo.getAppPackage())) {
+                    return;
+                }
+            }
+        }
+        // BsdiffUtil bsdiffApk = new BsdiffUtil();
+        String oldapk_file = UploadManager.getAbsolutePath(appInfo.getAppApk());
+        String newapk_file = UploadManager.getAbsolutePath(realPath);
+        String patchVersionCode = apkInfo.getAppVersionCode() + "_"
+                + appInfo.getAppVersionCode();
+        String patch_file = newapk_file.substring(0,
+                newapk_file.lastIndexOf("."))
+                + "_" + patchVersionCode + ".patch";
+        Lg.info(LgType.APPINFO, "bsdiff begin...");
+        Lg.info(LgType.APPINFO, "oldapk_file=" + oldapk_file);
+        Lg.info(LgType.APPINFO, "newapk_file=" + newapk_file);
+        Lg.info(LgType.APPINFO, "patch_file=" + patch_file);
+
+        if (new File(oldapk_file).exists() && new File(newapk_file).exists()) {
+            this.getPatchByBsdiff(oldapk_file, newapk_file, patch_file);
+            Lg.info(LgType.APPINFO, "bsdiff end...");
+            File patchFile = new File(patch_file);
+            int patch_size = (new Long(patchFile.length())).intValue() / 1024; // apk包大小---kb
+            Long md5 = ParseApk.getFileMD5Hash(patchFile);
+            Long oldapk_file_md5 = ParseApk
+                    .getFileMD5Hash(new File(oldapk_file));
+            apkInfo.setPatchs(patchVersionCode + ":" + patch_size + ":" + md5
+                    + ":" + oldapk_file_md5);
+        } else {
+            Lg.info(LgType.APPINFO, "oldapk_file or newapk_file is no exists");
+        }
+    }
+}

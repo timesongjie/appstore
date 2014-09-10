@@ -1,0 +1,201 @@
+package com.bbkmobile.iqoo.console.dao.score;
+
+import java.util.Date;
+import java.util.List;
+
+import org.hibernate.Criteria;
+import org.hibernate.HibernateException;
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.criterion.Restrictions;
+import org.springframework.orm.hibernate3.HibernateCallback;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+
+public class ScoreDAOImpl extends HibernateDaoSupport implements ScoreDAO {
+   
+    
+    @SuppressWarnings("unchecked")
+    public List<VCoinSetting> getVCoinSetting() throws Exception {
+          return getHibernateTemplate().find("from VCoinSetting order ");
+    }
+    public VCoinLimit getVCoinLimit() throws Exception {
+        return (VCoinLimit) getHibernateTemplate().find("from VCoinLimit order by id ASC").get(0);
+    }
+
+    @Override
+    public VCoinSetting findVCoinSettingById(Long id) throws Exception {
+        try{
+            return (VCoinSetting)getHibernateTemplate().find("from VCoinSetting where id=?",id).get(0);
+        }catch(Exception e){
+            throw e;
+        }
+    }
+
+    @Override
+    public boolean modifyVCoinLimit(Long id, int value_limit) throws Exception {
+        try{
+            String queryString ="update VCoinLimit set value_limit=? where id=?";
+            Session session=getSession();
+            Query queryObj=session.createQuery(queryString);
+            queryObj.setInteger(0, value_limit);
+            queryObj.setLong(1, id);
+            queryObj.executeUpdate();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+
+    @Override
+    public boolean modifyVCoinSetting(VCoinSetting vCoinSetting) throws Exception {
+        try{
+            vCoinSetting.setModify_date(new Date());
+            String queryString ="update VCoinSetting set indicator_paramenter=?,score=?,user=?,modify_date=? where id=?";  
+            Session session=getSession();
+            Query queryObject=session.createQuery(queryString);
+            queryObject.setInteger(0, vCoinSetting.getIndicator_paramenter());
+            queryObject.setInteger(1, vCoinSetting.getScore());
+            queryObject.setString(2, vCoinSetting.getUser());
+            queryObject.setDate(3, vCoinSetting.getModify_date());
+            queryObject.setLong(4, vCoinSetting.getId());
+            queryObject.executeUpdate();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    
+    //下载赠送V币管理
+
+    public int countVCoinPresentInfoRecords(final VCoinPresentInfo vCoinPresentInfo) throws Exception {
+        int result = 0;
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<VCoinPresentInfo> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(VCoinPresentInfo.class);             
+                        
+                        if ((vCoinPresentInfo.getAppInfo().getType() != 0)) {
+                            Criteria app_criteria = criteria.createCriteria(
+                                    "appInfo", Criteria.LEFT_JOIN);
+                            vCoinPresentInfo.getAppInfo().getAppType().setId(vCoinPresentInfo.getAppInfo().getType());
+                            app_criteria.add(Restrictions.eq("appType", vCoinPresentInfo.getAppInfo()
+                                    .getAppType()));
+                        }
+                     
+                        List<VCoinPresentInfo> result = criteria.list();
+                        return result;
+                    }
+                });
+        if (null != list) {
+            result = list.size();
+        }
+        return result;
+    }
+    
+    public List<VCoinPresentInfo> getVCoinPresentInfoList(final int start, final VCoinPresentInfo vCoinPresentInfo) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<VCoinPresentInfo> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(VCoinPresentInfo.class); 
+                        if ((vCoinPresentInfo.getAppInfo().getType() != 0)) {
+                            Criteria app_criteria = criteria.createCriteria(
+                                    "appInfo", Criteria.LEFT_JOIN);
+                            vCoinPresentInfo.getAppInfo().getAppType().setId(vCoinPresentInfo.getAppInfo().getType());
+                            app_criteria.add(Restrictions.eq("appType", vCoinPresentInfo.getAppInfo()
+                                    .getAppType()));
+                        }                      
+                        criteria.setFirstResult(start);
+                        criteria.setMaxResults(10);
+                        List<VCoinPresentInfo> result = criteria.list();
+                        return result;
+                    }
+                });
+        return list;
+    }
+    
+    public List<VCoinPresentInfo> getAllVCoinPresentInfoList(final VCoinPresentInfo vCoinPresentInfo) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<VCoinPresentInfo> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(VCoinPresentInfo.class); 
+        
+                        List<VCoinPresentInfo> result = criteria.list();
+                        return result;
+                    }
+                });
+        return list;
+        
+    }
+    
+    public boolean deleteVCoinPresentInfoByID(Long[] ids) throws Exception {
+        try{
+            String queryString ="delete VCoinPresentInfo where id=?";
+            Session session=getSession();
+            for(Long id:ids){
+                Query queryObj=session.createQuery(queryString);
+                queryObj.setLong(0, id);
+                queryObj.executeUpdate();               
+            }
+            return true;
+        }catch(Exception e){
+          throw e;
+        }
+    }
+    
+    public boolean addVCoinPresentInfo(Long[] ids)
+            throws Exception {    
+        Session session=getSession();
+        Date add_date=new Date();
+        for(int i=0; i<ids.length; i++)
+        {
+            AppInfo appInfo=getHibernateTemplate().load(AppInfo.class, ids[i]);
+            VCoinPresentInfo vCoinPresentInfo = new VCoinPresentInfo();
+            vCoinPresentInfo.setAppInfo(appInfo);
+            vCoinPresentInfo.setAdd_date(add_date);
+      
+            session.save(vCoinPresentInfo);
+        }
+        return true;
+    }
+    
+    public boolean updateVCoinLargess(Long id, int largess) throws Exception {
+        try{
+            String queryString ="update VCoinPresentInfo set largess=? where id=?";
+            Session session=getSession();
+            Query queryObj=session.createQuery(queryString);
+            queryObj.setInteger(0, largess);
+            queryObj.setLong(1, id);
+            queryObj.executeUpdate();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    
+    public boolean updateAppInfoLargess() throws Exception {
+        try{
+            Session session = getSession();
+            Query query = null;
+            String sql="update t_app_info,t_v_coin_present set t_app_info.largess=t_v_coin_present.largess where t_app_info.id=t_v_coin_present.appInfo_id";
+            query = session.createSQLQuery(sql);
+            query.executeUpdate();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+        
+
+    }
+	
+}

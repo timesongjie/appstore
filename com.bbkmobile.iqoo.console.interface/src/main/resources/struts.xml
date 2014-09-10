@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE struts PUBLIC
+    "-//Apache Software Foundation//DTD Struts Configuration 2.0//EN"
+    "http://struts.apache.org/dtds/struts-2.0.dtd">
+
+<!-- START SNIPPET: xworkSample -->
+<struts>
+
+	<package name="default" namespace="/" extends="struts-default">
+		<default-interceptor-ref name="basicStack" />
+		<global-results>
+			<result name="resourceNotExists">/exception/methodNotExists.html
+			</result>
+			<result name="error_msg">/error_msg.jsp</result>
+		</global-results>
+		<global-exception-mappings>
+			<exception-mapping result="resourceNotExists"
+				exception="java.lang.IllegalArgumentException" />
+		</global-exception-mappings>
+	</package>
+	<!-- push end -->
+	<include file="struts_interface.xml"></include>
+
+</struts>
+<!-- END SNIPPET: xworkSample -->
+

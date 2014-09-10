@@ -1,0 +1,99 @@
+package com.bbkmobile.iqoo.console.dao.recommendation;
+
+import java.util.List;
+
+import com.bbkmobile.iqoo.console.dao.appinfo.RequestParameter;
+import com.bbkmobile.iqoo.console.dao.modelmgr.Model;
+
+public interface RecommendationDAO {
+    //手机接口
+    List<CellphoneRecommendApp> getCellphoneRecommendAppsWithFilterModel(int apps_per_page,int page_index,Short series_id, Short model_id, Integer sdkVersion,String drawable_dpi, String CPU_ABI) throws Exception;
+    
+    List<NewApp> getNewApps(RequestParameter requestParameter, Model model) throws Exception;
+    int countNewApps(RequestParameter requestParameter, Model model) throws Exception;
+    
+    List<EditorRecommendApp> getEditorRecommendApps(RequestParameter requestParameter, Model model) throws Exception;
+    int countEditorRecommendApps(RequestParameter requestParameter, Model model) throws Exception;
+
+    int countAllCellphoneRecommendAppsWithFilterModel(Short series_id, Short model_id, Integer sdkVersion,String drawable_dpi, String CPU_ABI) throws Exception;
+    
+    //手机推荐
+    int countCellphoneRecommendAppRecords(CellphoneRecommendApp cellphoneRecommendApp, Short series, Short model) throws Exception; 
+    
+    List<CellphoneRecommendApp> getCellphoneRecommendAppList(int start, final CellphoneRecommendApp cellphoneRecommendApp, Short series, Short model) throws Exception; 
+    
+    List<CellphoneRecommendApp> getAllCellphoneRecommendAppList(CellphoneRecommendApp cellphoneRecommendApp, Short series, Short model) throws Exception ;
+    
+    boolean deleteCellphoneRecommendAppByID(Long[] ids) throws Exception ;  
+    
+    boolean deleteCellphoneRecommendAppByAppID(Long[] ids) throws Exception;
+    
+    boolean addCellphoneRecommendApp(Long[] ids, Short series, Short model) throws Exception;     
+    
+    boolean updateCellphoneRecommendAppShowOrder(Long app_id, int order) throws Exception;
+    
+    public CellphoneRecommendApp getCellphoneRecommendApp(Long id) throws Exception;
+    
+    boolean updateCellphoneRecommendAppShowOrderForCommon(Long app_id, int show_order) throws Exception;
+
+    boolean initCellphoneRecommendAppForSeries(Short series) throws Exception;
+    
+    boolean restoreCellphoneRecommendAppForSeries(Short series) throws Exception;
+    /*
+    //手机推荐
+    int countCellphoneRecommendAppRecords(CellphoneRecommendApp cellphoneRecommendApp, Integer series, Integer model) throws Exception; 
+    
+    List<CellphoneRecommendApp> getCellphoneRecommendAppList(int start, final CellphoneRecommendApp cellphoneRecommendApp, Integer series, Integer model) throws Exception; 
+    
+    List<CellphoneRecommendApp> getAllCellphoneRecommendAppList(CellphoneRecommendApp cellphoneRecommendApp, Integer series, Integer model) throws Exception ;
+    
+    boolean deleteCellphoneRecommendAppByID(Long[] ids) throws Exception ;  
+    
+    boolean addCellphoneRecommendApp(Long[] ids, Integer series, Integer model) throws Exception;     
+    
+    boolean updateCellphoneRecommendAppShowOrder(Long id, int order) throws Exception;
+
+    boolean initCellphoneRecommendAppForSeries(Integer series) throws Exception;
+    */
+    //新品推荐
+    int countNewAppRecords(NewApp newApp) throws Exception;   
+    List<NewApp> getNewAppList(int start, final NewApp newApp) throws Exception;    
+    List<NewApp> getAllNewAppList(NewApp newApp) throws Exception ; 
+    boolean deleteNewAppRecomomendByID(Long[] ids) throws Exception ;   
+    boolean addNewAppRecommend(Long[] ids) throws Exception;      
+    boolean updateNewAppRecommendShowOrder(Long id, int order) throws Exception;
+    boolean addAppsForNewApp(String idsStr) throws Exception;
+    boolean addAppsForInstalledApp(String idsStr) throws Exception;
+    
+    //热门推荐
+    int countPopularRecommendAppRecords(PopularRecommendApp popularRecommendApp) throws Exception; 
+    List<PopularRecommendApp> getPopularRecommendAppList(int start, final PopularRecommendApp popularRecommendApp) throws Exception;    
+    List<PopularRecommendApp> getAllPopularRecommendAppList(PopularRecommendApp popularRecommendApp) throws Exception ;
+    boolean deletePopularRecommendAppByID(Long[] ids) throws Exception ;  
+    boolean addPopularRecommendApp(Long[] ids) throws Exception;     
+    boolean updatePopularRecommendAppShowOrder(Long id, int order) throws Exception;
+    
+    //编辑推荐推荐
+    int countEditorRecommendAppRecords(EditorRecommendApp editorRecommendApp) throws Exception;  
+    List<EditorRecommendApp> getEditorRecommendAppList(int start, final EditorRecommendApp editorRecommendApp) throws Exception;    
+    List<EditorRecommendApp> getAllEditorRecommendAppList(EditorRecommendApp editorRecommendApp) throws Exception ;
+    boolean deleteEditorRecommendAppByID(Long[] ids) throws Exception ;
+    boolean addEditorRecommendApp(Long[] ids) throws Exception;      
+    boolean updateEditorRecommendAppShowOrder(Long id, int order) throws Exception;
+
+    //员工推荐
+    int countStaffRecommendAppRecords(StaffRecommendApp staffRecommendApp) throws Exception; 
+    List<StaffRecommendApp> getStaffRecommendAppList(int start, final StaffRecommendApp staffRecommendApp) throws Exception;    
+    List<StaffRecommendApp> getAllStaffRecommendAppList(StaffRecommendApp staffRecommendApp) throws Exception ;
+    boolean deleteStaffRecommendAppByID(Long[] ids) throws Exception ;  
+    boolean addStaffRecommendApp(Long[] ids) throws Exception;     
+    boolean updateStaffRecommendAppShowOrder(Long id, int order) throws Exception;
+
+    //添加机型时初始化推荐
+	void addRecommendForNewSeries(Short id) throws Exception;
+	
+
+    boolean isExistApp(String typeName,Long id) throws Exception;
+    
+    boolean findTopicByAppInfoId(Long app_id,Short series) throws Exception;
+}

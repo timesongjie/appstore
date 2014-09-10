@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 134
+/repositories/IqooSourceCode/!svn/ver/9734/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/interfaces/userfeedback/dao
+END
+ErrorReportDAO.java
+K 25
+svn:wc:ra_dav:version-url
+V 154
+/repositories/IqooSourceCode/!svn/ver/9734/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/interfaces/userfeedback/dao/ErrorReportDAO.java
+END
+ErrorReportDAOImpl.java
+K 25
+svn:wc:ra_dav:version-url
+V 158
+/repositories/IqooSourceCode/!svn/ver/9734/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/interfaces/userfeedback/dao/ErrorReportDAOImpl.java
+END
+UserFeedbackDAO.java
+K 25
+svn:wc:ra_dav:version-url
+V 155
+/repositories/IqooSourceCode/!svn/ver/9734/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/interfaces/userfeedback/dao/UserFeedbackDAO.java
+END
+UserFeedbackDAOImpl.java
+K 25
+svn:wc:ra_dav:version-url
+V 159
+/repositories/IqooSourceCode/!svn/ver/9734/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/interfaces/userfeedback/dao/UserFeedbackDAOImpl.java
+END

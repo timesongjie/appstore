@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping>
+	<class name="com.bbkmobile.iqoo.console.push.dao.TPushActivity"
+		table="t_push_activity">
+		<id name="id" type="java.lang.Integer">
+			<column name="id" />
+			<generator class="identity" />
+		</id>
+		<property name="pid" type="java.lang.String">
+			<column name="pid">
+			</column>
+		</property>
+		<property name="title" type="java.lang.String">
+			<column name="push_title">
+			</column>
+		</property>
+		<property name="content" type="java.lang.String">
+			<column name="push_content">
+			</column>
+		</property>
+		<property name="icon" type="java.lang.String">
+			<column name="push_icon">
+			</column>
+		</property>
+		<property name="relationId" type="java.lang.String">
+			<column name="relation_id">
+			</column>
+		</property>
+		<property name="relationType" type="java.lang.Character">
+			<column name="relation_type">
+			</column>
+		</property>
+		<property name="status" type="java.lang.Character">
+			<column name="status">
+			</column>
+		</property>
+		<property name="pushType" type="java.lang.Integer">
+			<column name="push_type">
+			</column>
+		</property>
+		<property name="createtime" type="timestamp">
+			<column name="createtime" length="19" >
+			</column>
+		</property>
+		<property name="stime" type="timestamp">
+			<column name="stime" length="19">
+			</column>
+		</property>
+		<property name="etime" type="timestamp">
+			<column name="etime" length="19">
+			</column>
+		</property>
+	</class>
+</hibernate-mapping>
+

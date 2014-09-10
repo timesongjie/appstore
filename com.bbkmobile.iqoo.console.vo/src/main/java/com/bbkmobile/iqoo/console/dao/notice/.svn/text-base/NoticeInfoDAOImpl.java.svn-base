@@ -1,0 +1,134 @@
+package com.bbkmobile.iqoo.console.dao.notice;
+
+import java.util.Date;
+import java.util.List;
+
+import org.hibernate.Criteria;
+import org.hibernate.HibernateException;
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.criterion.Order;
+import org.springframework.orm.hibernate3.HibernateCallback;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+public class NoticeInfoDAOImpl extends HibernateDaoSupport implements NoticeInfoDAO {
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public List<NoticeInfo> getNoticeInfo(final int startRecord, NoticeInfo noticeInfo) throws Exception {
+        @SuppressWarnings("rawtypes")
+        List<NoticeInfo> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(NoticeInfo.class); 
+                        criteria.addOrder(Order.asc("id"));
+                        criteria.setFirstResult(startRecord);
+                        criteria.setMaxResults(10);    
+                        List<NoticeInfo> result = criteria.list();
+                        return result;
+                    }
+                });
+        return list;
+    }
+
+    @Override
+    public int countAllRecords(NoticeInfo noticeInfo) throws Exception {
+        int result = 0;
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<NoticeInfo> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(NoticeInfo.class);
+                        List<NoticeInfo> result = criteria.list();
+                        return result;
+                    }
+                });
+        if (null != list) {
+            result = list.size();
+        }
+        return result;
+    }
+
+    @Override
+    public boolean addNoticeInfo(NoticeInfo noticeInfo) throws Exception {
+        boolean result=false;
+        if(null != noticeInfo)
+        {
+            noticeInfo.setAdd_date(new Date());
+            if(null==noticeInfo.getRecommend()){
+                noticeInfo.setRecommend('0');
+            }
+            getHibernateTemplate().save(noticeInfo);
+            result=true;
+        }
+        return result;
+    }
+
+    @Override
+    public NoticeInfo findModelById(Long id) throws Exception {
+        try{
+            return (NoticeInfo)getHibernateTemplate().find("from NoticeInfo where id=?",id).get(0);
+        }catch(Exception e){
+            throw e;
+        }
+    }
+
+    @Override
+    public boolean modifyNoticeInfo(NoticeInfo noticeInfo) throws Exception {
+        try{
+            noticeInfo.setModify_date(new Date());
+            if(null==noticeInfo.getRecommend()){
+                noticeInfo.setRecommend('0');
+            }
+            String queryString ="update NoticeInfo set title=?,recommend=?,releaser=?,content=?,modify_date=? where id=?";  
+            Session session=getSession();
+            Query queryObject=session.createQuery(queryString);
+            queryObject.setString(0,noticeInfo.getTitle());
+            queryObject.setCharacter(1, noticeInfo.getRecommend());
+            queryObject.setString(2, noticeInfo.getReleaser());
+            queryObject.setString(3, noticeInfo.getContent());
+            queryObject.setDate(4, noticeInfo.getModify_date());
+            queryObject.setLong(5, noticeInfo.getId());
+            queryObject.executeUpdate();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+
+    @Override
+    public boolean deleteNoticeInfoByID(Long[] ids) throws Exception {
+        try{
+            String queryString ="delete NoticeInfo where id=?";
+            Session session=getSession();
+            for(Long id:ids){
+                Query queryObj=session.createQuery(queryString);
+                queryObj.setLong(0, id);
+                queryObj.executeUpdate();               
+            }
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+
+    @Override
+    public boolean updateRecommend(Long id, Character recommend) throws Exception {
+        try{
+            String queryString ="update NoticeInfo set recommend = ? where id=?";
+            Session session=getSession();
+            Query queryObj=session.createQuery(queryString);
+            queryObj.setCharacter(0, recommend);
+            queryObj.setLong(1, id);
+            queryObj.executeUpdate();
+            return true;
+       }catch(Exception e){
+          throw e;
+       }
+    }
+	
+}

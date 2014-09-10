@@ -1,0 +1,13 @@
+package com.bbkmobile.iqoo.console.dao.contentmanage;
+
+import java.util.List;
+import com.bbkmobile.iqoo.common.page.PageVO;
+
+public interface FocusRankSetDAO {
+	List<FocusRank> searchFocusRankList(FocusRank focusRank,PageVO page) throws Exception;
+	Integer countFocusRank (FocusRank focusRank) throws Exception;
+	boolean addFocusRank(String id[],FocusRank focusRank) throws Exception;
+	boolean deleteFocusRank(String id[]) throws Exception;
+	boolean updateFocusRank(String id[]) throws Exception;
+	boolean updateFocusPicWithSetUp() throws Exception;
+}

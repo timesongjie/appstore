@@ -1,0 +1,385 @@
+package com.bbkmobile.iqoo.console.dao.review;
+
+import java.util.Date;
+import java.util.List;
+
+import org.hibernate.Criteria;
+import org.hibernate.HibernateException;
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Restrictions;
+import org.springframework.orm.hibernate3.HibernateCallback;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.console.constants.UtilTool;
+import com.bbkmobile.iqoo.console.dao.appinfo.Developer;
+import com.bbkmobile.iqoo.console.dao.login.BbkAdminUser;
+
+public class DeveloperReviewDAOImpl extends HibernateDaoSupport implements DeveloperReviewDAO {
+
+	/**
+	 * 查询所有个人开发者的详细信息，及审核情况
+	 */
+	@Override
+	public List<DeveloperPersonalInfo> findAllDeveloperReview(
+			final DeveloperPersonalInfo personalInfo, final int startRecord)
+			throws Exception {
+		// TODO Auto-generated method stub
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		List<DeveloperPersonalInfo> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(DeveloperPersonalInfo.class);
+						if (null != personalInfo.getStatus_select()) {
+							personalInfo.setVerify_status(personalInfo.getStatus_select());
+							criteria.add(Restrictions.eq("verify_status",
+									personalInfo.getVerify_status()));
+						}
+						if (null != personalInfo.getFrom_date()) {
+							criteria.add(Restrictions.between("updatetime",
+									personalInfo.getFrom_date(),
+									personalInfo.getTo_date()));
+						}
+						if (null != personalInfo.getVerify_status()) {
+							criteria.add(Restrictions.eq("verify_status",
+									personalInfo.getVerify_status()));
+						}
+						if (!UtilTool.checkStringNull(personalInfo.getDeveloper().getName())) {
+							Criteria dev_criteria = criteria.createCriteria(
+									"developer", Criteria.LEFT_JOIN);
+							dev_criteria.add(Restrictions.like("name", 
+									"%"+ personalInfo.getDeveloper().getName() + "%"));
+						}
+						else
+						{
+							Criteria dev_criteria = criteria.createCriteria(
+									"developer", Criteria.LEFT_JOIN);
+							dev_criteria.add(Restrictions.eq("type", '0'));
+						}
+						criteria.addOrder(Order.asc("id"));
+						criteria.setFirstResult(startRecord);
+						criteria.setMaxResults(10);
+						List<DeveloperPersonalInfo> result = criteria.list();
+						return result;
+					}
+				});
+		return list;
+	}
+
+	/*
+	 * 计算个人开发者
+	 * @see com.bbkmobile.iqoo.console.dao.review.DeveloperReviewDAO#countAllPersonalRecords(com.bbkmobile.iqoo.console.dao.review.DeveloperPersonalInfo)
+	 */
+	@Override
+	public int countAllPersonalRecords(final DeveloperPersonalInfo personalInfo)
+			throws Exception {
+		// TODO Auto-generated method stub
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		List<DeveloperPersonalInfo> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(DeveloperPersonalInfo.class);
+						
+						if (null != personalInfo.getStatus_select()) {
+							personalInfo.setVerify_status(personalInfo.getStatus_select());
+							criteria.add(Restrictions.eq("verify_status",
+									personalInfo.getVerify_status()));
+						}
+						if (null != personalInfo.getFrom_date()) {
+							criteria.add(Restrictions.between("updatetime",
+									personalInfo.getFrom_date(),
+									personalInfo.getTo_date()));
+						}
+						if (null != personalInfo.getVerify_status()) {
+							criteria.add(Restrictions.eq("verify_status",
+									personalInfo.getVerify_status()));
+						}
+						if (!UtilTool.checkStringNull(personalInfo.getDeveloper().getName())) {
+							Criteria dev_criteria = criteria.createCriteria(
+									"developer", Criteria.LEFT_JOIN);
+							dev_criteria.add(Restrictions.like("name", "%"
+									+ personalInfo.getDeveloper().getName() + "%"));
+						}
+						else
+						{
+							Criteria dev_criteria = criteria.createCriteria(
+									"developer", Criteria.LEFT_JOIN);
+							dev_criteria.add(Restrictions.eq("type", '0'));
+						}
+						List<DeveloperPersonalInfo> result = criteria.list();
+						return result;
+					}
+				});
+		if(null!=list)
+		{
+			return list.size();
+		}
+		return 0;
+	}
+
+	/**
+	 * 根据ID找出个人开发者的信息
+	 */
+	@Override
+	public DeveloperPersonalInfo findPersonalDetailInfo(Integer id)
+			throws Exception {
+		// TODO Auto-generated method stub
+		return getHibernateTemplate().load(DeveloperPersonalInfo.class, id);
+	}
+
+	/**
+	 * 修改个人开发者的审核状态
+	 * @param developer
+	 * @param status
+	 * @param date
+	 * @return
+	 */
+	public boolean updateDeveloperPersonalInfo(Developer developer, Short status, Date date)
+	{
+		String sql="";
+		Session session =getSession();
+		if(status==0)
+		{
+			sql="update DeveloperPersonalInfo set verify_status=? where developer.id=?";
+			Query query=session.createQuery(sql);
+			query.setCharacter(0, '3');
+			query.setInteger(1, developer.getId());
+			query.executeUpdate();
+		}
+		else
+		{
+			sql="update DeveloperPersonalInfo set verify_status=?,sign_time=? where developer.id=?";
+			Query query=session.createQuery(sql);
+			query.setCharacter(0, '0');
+			query.setTimestamp(1, date);
+			query.setInteger(2, developer.getId());
+			query.executeUpdate();
+		}
+		return true;
+	}
+	
+	/**
+	 * 修改企业开发者的审核状态
+	 * @param developer
+	 * @param status
+	 * @param date
+	 * @return
+	 */
+	public boolean updateDeveloperCompanyInfo(Developer developer, Short status, Date date)
+	{
+		String sql="";
+		Session session =getSession();
+		if(status==0)
+		{
+			sql="update DeveloperCompanyInfo set verify_status=? where developer.id=?";
+			Query query=session.createQuery(sql);
+			query.setCharacter(0, '3');
+			query.setInteger(1, developer.getId());
+			query.executeUpdate();
+		}
+		else
+		{
+			sql="update DeveloperCompanyInfo set verify_status=?,sign_time=? where developer.id=?";
+			Query query=session.createQuery(sql);
+			query.setCharacter(0, '4');
+			query.setTimestamp(1, date);
+			query.setInteger(2, developer.getId());
+			query.executeUpdate();
+		}
+		return true;
+	}
+	/**
+	 * 添加个人开发者审核记录
+	 */
+	@Override
+	public boolean addDeveloperReviewRecord(
+			DeveloperReviewRecords developerReviewRecords, Integer adminUserId)
+			throws Exception {
+		// TODO Auto-generated method stub
+		Short status=developerReviewRecords.getStatus();
+		Date date=new Date();
+		updateDeveloperPersonalInfo(developerReviewRecords.getDeveloper(), status,date);
+		Developer developer=getHibernateTemplate().load(Developer.class, developerReviewRecords.getDeveloper().getId());
+		BbkAdminUser adminUser=getHibernateTemplate().load(BbkAdminUser.class, adminUserId);
+		developerReviewRecords.setBbkAdminUser(adminUser);
+		developerReviewRecords.setVerify_date(date);
+		developerReviewRecords.setDeveloper(developer);
+		getHibernateTemplate().save(developerReviewRecords);
+		return true;
+	}
+
+	/**
+	 * 添加企业开发者审核记录
+	 */
+	@Override
+	public boolean addCompanyReviewRecord(
+			DeveloperReviewRecords developerReviewRecords, Integer adminUserId)
+			throws Exception {
+		// TODO Auto-generated method stub
+		Short status=developerReviewRecords.getStatus();
+		Date date=new Date();
+		updateDeveloperCompanyInfo(developerReviewRecords.getDeveloper(), status,date);
+		Developer developer=getHibernateTemplate().load(Developer.class, developerReviewRecords.getDeveloper().getId());
+		BbkAdminUser adminUser=getHibernateTemplate().load(BbkAdminUser.class, adminUserId);
+		developerReviewRecords.setBbkAdminUser(adminUser);
+		developerReviewRecords.setVerify_date(date);
+		developerReviewRecords.setDeveloper(developer);
+		getHibernateTemplate().save(developerReviewRecords);
+		return true;
+	}
+	/**
+	 * 查找个人开发者的审核记录
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<DeveloperReviewRecords> findDeveloperReviewRecords(
+			Developer developer) throws Exception {
+		// TODO Auto-generated method stub
+		return getHibernateTemplate().find("from DeveloperReviewRecords where developer.id=?", developer.getId());
+	}
+
+	/**
+	 * 计算企业开发者
+	 */
+	@Override
+	public int countAllCompanyRecords(final DeveloperCompanyInfo companyInfo)
+			throws Exception {
+		// TODO Auto-generated method stub
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		List<DeveloperCompanyInfo> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(DeveloperCompanyInfo.class);
+						
+						if (null != companyInfo.getStatus_select()) {
+							companyInfo.setVerify_status(companyInfo.getStatus_select());
+							criteria.add(Restrictions.eq("verify_status",
+									companyInfo.getVerify_status()));
+						}
+						if (null != companyInfo.getFrom_date()) {
+							criteria.add(Restrictions.between("submit_time",
+									companyInfo.getFrom_date(),
+									companyInfo.getTo_date()));
+						}
+						if (null != companyInfo.getVerify_status()) {
+							criteria.add(Restrictions.eq("verify_status",
+									companyInfo.getVerify_status()));
+						}
+						if (!UtilTool.checkStringNull(companyInfo.getDeveloper().getName())) {
+							Criteria dev_criteria = criteria.createCriteria(
+									"developer", Criteria.LEFT_JOIN);
+							dev_criteria.add(Restrictions.like("name", "%"
+									+ companyInfo.getDeveloper().getName() + "%"));
+						}
+						else
+						{
+							Criteria dev_criteria = criteria.createCriteria(
+									"developer", Criteria.LEFT_JOIN);
+							dev_criteria.add(Restrictions.eq("type", '1'));
+						}
+						List<DeveloperCompanyInfo> result = criteria.list();
+						return result;
+					}
+				});
+		if(null!=list)
+		{
+			return list.size();
+		}
+		return 0;
+	}
+
+	/**
+	 *获取所有企业开发者的信息
+	 */
+	@Override
+	public List<DeveloperCompanyInfo> findAllCompanyReview(
+			final DeveloperCompanyInfo companyInfo,final int startRecord)
+			throws Exception {
+		// TODO Auto-generated method stub
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		List<DeveloperCompanyInfo> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(DeveloperCompanyInfo.class);
+						
+						if (null != companyInfo.getStatus_select()) {
+							companyInfo.setVerify_status(companyInfo.getStatus_select());
+							criteria.add(Restrictions.eq("verify_status",
+									companyInfo.getVerify_status()));
+						}
+						if (null != companyInfo.getFrom_date()) {
+							criteria.add(Restrictions.between("submit_time",
+									companyInfo.getFrom_date(),
+									companyInfo.getTo_date()));
+						}
+						if (null != companyInfo.getVerify_status()) {
+							criteria.add(Restrictions.eq("verify_status",
+									companyInfo.getVerify_status()));
+						}
+						if (!UtilTool.checkStringNull(companyInfo.getDeveloper().getName())) {
+							Criteria dev_criteria = criteria.createCriteria(
+									"developer", Criteria.LEFT_JOIN);
+							dev_criteria.add(Restrictions.like("name", "%"
+									+ companyInfo.getDeveloper().getName() + "%"));
+						}
+						else
+						{
+							Criteria dev_criteria = criteria.createCriteria(
+									"developer", Criteria.LEFT_JOIN);
+							dev_criteria.add(Restrictions.eq("type", '1'));
+						}
+						
+						criteria.addOrder(Order.asc("id"));
+						criteria.setFirstResult(startRecord);
+						criteria.setMaxResults(10);
+						List<DeveloperCompanyInfo> result = criteria.list();
+						return result;
+
+					}
+				});
+			return list;
+	}
+
+	/**
+	 * 根据ID找出企业开发者的信息
+	 */
+	@Override
+	public DeveloperCompanyInfo findCompanyDetailInfo(Long id) throws Exception {
+		// TODO Auto-generated method stub
+		return getHibernateTemplate().load(DeveloperCompanyInfo.class, id);
+	}
+
+	@Override
+	public DeveloperCompanyInfo findCompanyByDeveloper(Integer id)
+			throws Exception {
+		// TODO Auto-generated method stub
+		String sql="from DeveloperCompanyInfo where developer.id=?";
+		Session session=getSession();
+		Query query=session.createQuery(sql);
+		query.setInteger(0, id);
+		query.list();
+		return null!=query.list()&&query.list().size()==1?(DeveloperCompanyInfo)query.list().get(0) : null;
+	}
+
+	@Override
+	public DeveloperPersonalInfo findPersonalByDeveloper(Integer id)
+			throws Exception {
+		// TODO Auto-generated method stub
+		String sql="from DeveloperPersonalInfo where developer.id=?";
+		Session session=getSession();
+		Query query=session.createQuery(sql);
+		query.setInteger(0, id);
+		query.list();
+		return null!=query.list()&&query.list().size()==1?(DeveloperPersonalInfo)query.list().get(0) : null;
+	}
+
+}

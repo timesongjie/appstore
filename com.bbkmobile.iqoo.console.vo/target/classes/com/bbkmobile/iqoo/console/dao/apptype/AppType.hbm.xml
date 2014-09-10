@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 2011-12-28 16:55:07 by Hibernate Tools 3.4.0.CR1 -->
+<hibernate-mapping package="com.bbkmobile.iqoo.console.dao.apptype">
+	<class name="AppType" table="t_app_type">
+		<id name="id" type="java.lang.Integer">
+			<column name="id" />
+			<generator class="identity" />
+		</id>
+		<property name="typeName" type="string">
+			<column name="typeName" length="20" not-null="true" unique="true">
+			</column>
+		</property>
+
+		<property name="typeEnName" type="string">
+			<column name="typeEnName" length="50">
+			</column>
+		</property>
+
+		<property name="typeIcon" type="string">
+			<column name="typeIcon" length="100" not-null="true">
+			</column>
+		</property>
+		<property name="typeOrder" type="int">
+			<column name="typeOrder" not-null="true">
+			</column>
+		</property>
+		<property name="typeDesc" type="string">
+			<column name="typeDesc" length="200">
+			</column>
+		</property>
+		<property name="typeStatus" type="char">
+			<column name="TypeStatus" length="1" not-null="true">
+			</column>
+		</property>
+
+		<property name="appCnNames" type="string">
+			<column name="appCnNames" length="150">
+			</column>
+		</property>
+
+		<many-to-one name="parentType" column="parentId" />
+
+		<set name="childAppTypes" inverse="true" lazy="true" cascade="all"
+			order-by="typeOrder">
+			<key>
+				<column name="parentId"></column>
+			</key>
+			<one-to-many class="AppType" />
+		</set>
+
+	</class>
+</hibernate-mapping>

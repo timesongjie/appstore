@@ -1,0 +1,21 @@
+package com.bbkmobile.iqoo.console.dao.word;
+
+import java.util.List;
+
+/**
+ * 
+ * @author time
+ *
+ */
+public interface PopupWordDao {
+
+	public int addOne(PopupWord word) throws Exception;
+	
+	public int deleteOne(Long id) throws Exception;
+	
+	public int deleteAll(List<Long> ids) throws Exception;
+	
+	public List<PopupWord> list() throws Exception;
+	
+	public List<PopupWord> list(Character type) throws Exception;
+}

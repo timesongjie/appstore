@@ -1,0 +1,69 @@
+package com.bbkmobile.iqoo.interfaces.appinfo.business;
+
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Service;
+
+import com.bbkmobile.iqoo.common.cache.CacheManager;
+import com.bbkmobile.iqoo.interfaces.appinfo.dao.SystemPackageDao;
+@Service("systemPackageService")
+public class SystemPackageServiceImpl implements SystemPackageService{
+
+	@Resource(name="systemPackageDao")
+	private SystemPackageDao systemPackageDao;
+	@Resource
+	CacheManager cacheManager;
+	
+	private String cacheName = "systempackage";
+	private String key = "systempackage.package";
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public boolean isSystemPackage(String packageName)throws Exception {
+		
+		List<String> packages = null;
+		if(cacheManager != null){
+			packages = (List<String>) cacheManager.getCache(cacheName).get(key);
+		}
+		if(packages == null){
+			packages = systemPackageDao.getSystemPackage();
+			if(cacheManager != null){
+				cacheManager.getCache(cacheName).put(key, packages);
+			}
+		}
+		if(packages != null){
+			return packages.contains(packageName);
+		}
+		return false;
+	}
+
+	@Override
+	public void setCacheManager(CacheManager cacheManager) {
+		this.cacheManager = cacheManager;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public void preLoad() {
+		if(cacheManager != null || systemPackageDao != null){
+			List<String> packages = null;
+			try {
+				packages = systemPackageDao.getSystemPackage();
+				cacheManager.getCache(cacheName).put(key, packages);
+			} catch (Exception e) {
+				//e.printStackTrace();
+			}
+		}
+	}
+
+	@Override
+	public void refresh() {
+		if(cacheManager != null){
+			cacheManager.getCache(cacheName).removeAll();
+			preLoad();
+		}
+	}
+
+}

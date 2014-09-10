@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 2012-1-3 14:53:46 by Hibernate Tools 3.4.0.CR1 -->
+<hibernate-mapping>
+	<class name="com.bbkmobile.iqoo.console.index.dao.IndexModelApps"
+		table="t_index_model_apps">
+		<id name="id" type="java.lang.Integer">
+			<column name="id" />
+			<generator class="identity" />
+		</id>
+		<property name="show_order"></property>
+		<property name="createTime" type="timestamp">
+            <column name="createTime" length="19" >
+            </column>
+        </property>
+		<many-to-one name="model"
+			class="com.bbkmobile.iqoo.console.index.dao.IndexModelSubTitle"
+			column="sub_id" outer-join="true" fetch="select" />
+			
+		<many-to-one name="appInfo"
+			class="com.bbkmobile.iqoo.console.dao.appinfo.AppInfo"
+			column="app_id" outer-join="true" fetch="join" />
+	</class>
+</hibernate-mapping>

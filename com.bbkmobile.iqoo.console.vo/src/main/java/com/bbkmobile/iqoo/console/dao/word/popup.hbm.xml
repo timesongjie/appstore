@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 2012-1-3 14:53:46 by Hibernate Tools 3.4.0.CR1 -->
+<hibernate-mapping>
+	<class name="com.bbkmobile.iqoo.console.dao.word.PopupWord"
+		table="t_word_popup" dynamic-insert="true" dynamic-update="true">
+		<id name="id" type="java.lang.Long">
+			<column name="id" />
+			<generator class="identity" />
+		</id>
+		<property name="word" type="java.lang.String"></property>
+		<property name="type" type="java.lang.Character"></property>
+		<property name="createDate" type="java.util.Date"></property>
+	</class>
+</hibernate-mapping>

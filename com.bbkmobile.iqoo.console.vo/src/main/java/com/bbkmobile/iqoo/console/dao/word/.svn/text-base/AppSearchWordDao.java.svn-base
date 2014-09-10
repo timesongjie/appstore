@@ -1,0 +1,24 @@
+package com.bbkmobile.iqoo.console.dao.word;
+
+import java.util.List;
+
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+
+public interface AppSearchWordDao {
+
+	public void addAppSearchWord(AppSearchWord word)throws Exception;
+	public void addAppSearchWord(List<AppSearchWord> words)throws Exception;
+	
+	public int count(AppSearchWord word,AppInfo appInfo)throws Exception;
+	public List<AppSearchWord> list(AppSearchWord word,AppInfo appInfo,PageVO vo,String orderBy)throws Exception;
+	public List<AppSearchWord> list(AppSearchWord word,AppInfo appInfo,PageVO vo)throws Exception;
+	public List<AppSearchWord> list(AppSearchWord word,AppInfo appInfo)throws Exception;
+	
+	
+	public void delete(Integer []ids)throws Exception;
+	public void delete(Integer id)throws Exception;
+	
+	public List list()throws Exception;
+
+}

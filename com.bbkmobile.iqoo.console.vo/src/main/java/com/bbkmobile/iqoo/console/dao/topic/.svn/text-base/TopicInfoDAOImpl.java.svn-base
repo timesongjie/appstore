@@ -1,0 +1,1129 @@
+package com.bbkmobile.iqoo.console.dao.topic;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import org.hibernate.Criteria;
+import org.hibernate.Hibernate;
+import org.hibernate.HibernateException;
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Restrictions;
+import org.hibernate.transform.Transformers;
+import org.springframework.orm.hibernate3.HibernateCallback;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.console.activity.dao.ModelActivity;
+import com.bbkmobile.iqoo.console.constants.Constants;
+import com.bbkmobile.iqoo.console.constants.UtilTool;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+import com.bbkmobile.iqoo.console.dao.appinfo.RequestParameter;
+import com.bbkmobile.iqoo.console.dao.modelmgr.Model;
+import com.bbkmobile.iqoo.console.dao.modelmgr.ConsoleConstant;
+
+public class TopicInfoDAOImpl extends HibernateDaoSupport implements TopicInfoDAO {
+    
+ //begin:手机接口@haiyan
+    
+    //根据系列获取专题
+	 /*修改人：zhangyi （推荐的专题按照show_order排序，未推荐的专题按照add_date排序）*/
+    @SuppressWarnings("unchecked")
+    public List<ModelTopic> getModelTopicsBySeries(Model model) throws Exception {
+        Short seriesId = (short)0;
+        if (null != model) {
+            seriesId = model.getSeries_id();
+        }
+        Short recommend = (short)1;
+    //    List<TopicInfo> list = new ArrayList<TopicInfo>();
+        /*
+        List<ModelTopic> modelTopics = getHibernateTemplate().find(
+                "from ModelTopic where series_id=? order by show_order", seriesId);
+        */
+       
+        List<ModelTopic>modelTopics =  getHibernateTemplate().find("from ModelTopic where series_id=? and recommend=? order by show_order",seriesId,recommend);
+		recommend = 0;
+		modelTopics.addAll(getHibernateTemplate().find("from ModelTopic where series_id=? and recommend=? order by  topicInfo.add_date desc",seriesId,recommend));
+		/*
+        if (null != modelTopics && modelTopics.size() > 0) {
+            for (ModelTopic modelTopic : modelTopics) {
+                list.add(modelTopic.getTopicInfo());
+            }
+        }
+        */
+        return modelTopics;
+        /*
+        return (List<TopicInfo>) getHibernateTemplate().find(
+                "from TopicInfo where id in (select topicInfo.id from ModelTopic where series_id=?)",
+                seriesId);
+        */
+    }
+    
+    @SuppressWarnings("unchecked")
+    public List<TopicInfo> getTopicsBySeries(Model model) throws Exception {
+        Short seriesId = (short)0;
+        if (null != model) {
+            seriesId = model.getSeries_id();
+        }
+        Short recommend = (short)1;
+        List<TopicInfo> list = new ArrayList<TopicInfo>();
+        /*
+        List<ModelTopic> modelTopics = getHibernateTemplate().find(
+                "from ModelTopic where series_id=? order by show_order", seriesId);
+        */
+       
+        List<ModelTopic>modelTopics =  getHibernateTemplate().find("from ModelTopic where series_id=? and recommend=? order by show_order",seriesId,recommend);
+		recommend = 0;
+		modelTopics.addAll(getHibernateTemplate().find("from ModelTopic where series_id=? and recommend=? order by  topicInfo.add_date desc",seriesId,recommend));
+		
+        if (null != modelTopics && modelTopics.size() > 0) {
+            for (ModelTopic modelTopic : modelTopics) {
+                list.add(modelTopic.getTopicInfo());
+            }
+        }
+        
+        return list;
+        /*
+        return (List<TopicInfo>) getHibernateTemplate().find(
+                "from TopicInfo where id in (select topicInfo.id from ModelTopic where series_id=?)",
+                seriesId);
+        */
+    }
+ 
+    public int countTopicAppsByIdWihtFilterModel(final TopicInfo topicInfo,final RequestParameter requestParameter, final Model model) throws Exception{
+        try {
+
+            Criteria criteria = getSession().createCriteria(TopicApp.class);
+
+            criteria.add(Restrictions.eq("topicInfo", topicInfo));
+
+            Criteria app_criteria = criteria.createCriteria("appInfo", Criteria.LEFT_JOIN);
+
+            if (null != model) {
+
+                app_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", model.getSdkVersion()),
+                        Restrictions.isNull("minSdkVersion")));
+
+                app_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", model.getSdkVersion()),
+                        Restrictions.isNull("maxSdkVersion")));
+                /*
+                String CPU_ABI = model.getCPU_ABI();
+                if (CPU_ABI != null) {
+                    String sql = "(CPU_ABI is null";
+                    String cpuabis[] = CPU_ABI.split(",");
+                    for (int i = 0; i < cpuabis.length; i++) {
+                        String cpuabi = cpuabis[i];
+                        sql = sql + " or CPU_ABI like '%," + cpuabi + ",%'";
+                    }
+                    sql = sql + ")";
+                    app_criteria.add(Restrictions.sqlRestriction(sql));
+                }
+                */
+                app_criteria.add(Restrictions
+                        .sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + model.getId()
+                                + ",%'))"));
+
+            } else {
+                app_criteria.add(Restrictions.eq("appStatus", (short) 0));
+            }
+            int totalRows = ((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult()).intValue(); // 是否为null
+            return totalRows;
+
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+    
+    public List<TopicApp> getTopicAppsByIdWihtFilterModel(final TopicInfo topicInfo, final RequestParameter requestParameter, final Model model) throws Exception{
+        try{
+            //Session session=getSession();
+            //session.clear();
+            @SuppressWarnings({ "unchecked", "rawtypes" })
+            List<TopicApp> list = this.getHibernateTemplate().executeFind(
+                    new HibernateCallback() {
+                        public Object doInHibernate(Session session)
+                                throws HibernateException {
+                            Criteria criteria = session.createCriteria(TopicApp.class);
+  
+                            criteria.add(Restrictions.eq("topicInfo", topicInfo));
+                         
+                            Criteria app_criteria = criteria.createCriteria("appInfo", 
+                                    Criteria.LEFT_JOIN);
+                            
+                            if(null!=model){
+
+                                app_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", model.getSdkVersion()),
+                                        Restrictions.isNull("minSdkVersion")));
+            
+                                app_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", model.getSdkVersion()),
+                                        Restrictions.isNull("maxSdkVersion")));
+                                /*
+                                String CPU_ABI=model.getCPU_ABI();
+                                if(CPU_ABI!=null){
+                                    String sql="(CPU_ABI is null";
+                                    String cpuabis[]=CPU_ABI.split(","); 
+                                    for(int i=0; i<cpuabis.length; i++)
+                                    {
+                                        String cpuabi=cpuabis[i];
+                                        sql=sql+" or CPU_ABI like '%,"+cpuabi+",%'";                          
+                                    }
+                                    sql=sql+")";
+                                    app_criteria.add(Restrictions.sqlRestriction(sql)); 
+                                }
+                                */
+                                
+                                app_criteria.add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + model.getId() + ",%'))"));         
+                            
+                            }
+                            else{
+                                app_criteria.add(Restrictions.ne("appStatus", (short) 12));
+                            }
+                            
+                            app_criteria.setFirstResult((requestParameter.getPage_index() - 1)
+                                    * requestParameter.getApps_per_page());
+                            app_criteria.setMaxResults(requestParameter.getApps_per_page() + 1);
+                            
+                            criteria.addOrder(Order.asc("show_order"));
+                            List<TopicApp> result=criteria.list(); 
+                            return result;
+                        }
+                    });
+        
+            if(null!=list && list.size()>0){
+                return list;
+            }else{
+                return null;
+            }   
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    
+    public TopicInfo getModelTopicById(long id) throws Exception{
+        String sql="select id,topic_name,topic_describe from t_topic_info where id=" + id;
+        @SuppressWarnings("unchecked")
+        List<TopicInfo> topicInfos = getSession().createSQLQuery(sql)
+                .addScalar("id", Hibernate.LONG)
+                .addScalar("topic_name", Hibernate.STRING)
+                .addScalar("topic_describe", Hibernate.STRING)
+                .setResultTransformer(Transformers.aliasToBean(TopicInfo.class)).list();
+        if(null!=topicInfos && topicInfos.size()>0){
+            return topicInfos.get(0);
+        }else{
+            return null;
+        }
+        
+    }
+    //end:手机接口
+    
+    @SuppressWarnings("unchecked")
+    public List<TopicInfo> getTopicInfoList() throws Exception {
+    	
+     //   return getHibernateTemplate().find("from TopicInfo order by id ASC");
+    	
+    	List<ConsoleConstant>  constantList=getHibernateTemplate().find("from ConsoleConstant where value=? and type=1","phone");
+		short phone=0;
+		if(null!=constantList && constantList.size()==1)
+		{
+			phone=constantList.get(0).getId();
+		}
+		List<TopicInfo> topicList=getHibernateTemplate().find("from TopicInfo where topic_type=1");
+		if(null!=topicList && topicList.size()>0)
+		{
+			for(TopicInfo topic : topicList)
+			{
+				List<TopicIcon> icon=getHibernateTemplate().find("from TopicIcon where topicInfo.id=? and modelScreen.id=?",topic.getId(),phone);
+				if(null!=icon && icon.size()==1)
+				{
+					topic.setTopic_icon(icon.get(0).getIcon_url());
+				}
+			}
+		}
+		 return topicList;
+        
+    }
+
+
+    public boolean addTopicInfo(TopicInfo topic) throws Exception {
+        boolean result=false;
+        if(null != topic)
+        {
+            topic.setAdd_date(new Date());
+            if(null==topic.getRecommend()){
+                topic.setRecommend('0');
+            }
+            getHibernateTemplate().save(topic);
+            result=true;
+        }
+        return result;
+    }
+    
+    public boolean saveTopicImage(File file, String path) throws Exception {
+        try{
+            //fileName = UtilTool.changeFileName(fileName);
+            java.io.InputStream input = new java.io.FileInputStream(file); 
+            java.io.OutputStream output = new java.io.FileOutputStream(path); 
+            byte buffer[] = new byte[8192]; 
+            int count = 0; 
+            while((count = input.read(buffer)) > 0) 
+            {
+                output.write(buffer, 0, count); 
+            } 
+            input.close();
+            output.close();
+        }catch (Exception e) {
+            // TODO: handle exception
+            throw e;
+        }
+        return true;
+    }
+
+    public TopicInfo findTopicInfoById(Long id) throws Exception {
+        // TODO Auto-generated method stub
+        try{
+            List<ConsoleConstant>  constantList=getHibernateTemplate().find("from ConsoleConstant where value=? and type=1","phone");
+            short phone=0;
+            if(null!=constantList && constantList.size()==1)
+            {
+                phone=constantList.get(0).getId();
+            }
+            
+            TopicInfo topic= (TopicInfo)getHibernateTemplate().find("from TopicInfo where id=?",id).get(0);
+            
+            List<TopicIcon> icon=getHibernateTemplate().find("from TopicIcon where topicInfo.id=? and modelScreen.id=?",topic.getId(),phone);
+            if(null!=icon && icon.size()==1)
+            {
+                topic.setTopic_icon(icon.get(0).getIcon_url());
+            }
+            return topic;
+            
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    
+    public boolean updateTopicInfo(TopicInfo topic) throws Exception{
+        try{
+      //      topic.setModify_date(new Date());
+            if(null==topic.getRecommend()){
+                topic.setRecommend('0');
+            }
+            String queryString ="update TopicInfo set topic_name=?,topic_describe=?,modify_date=? where id=?";  
+            Session session=getSession();
+            Query queryObject=session.createQuery(queryString);
+            queryObject.setString(0, topic.getTopic_name());
+            queryObject.setString(1, topic.getTopic_describe());
+            queryObject.setTimestamp(2, new Date());
+            queryObject.setLong(3, topic.getId());
+            queryObject.executeUpdate();
+            
+            updateFocusPic(topic); //同时修改“焦点图”中的专题
+            
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    
+    private void updateFocusPic(TopicInfo topic) throws Exception{//修改专题的同时，修改焦点图
+    	 List<ConsoleConstant>  constantList=getHibernateTemplate().find("from ConsoleConstant where value=? and type=1","phone");
+         short phone=0;
+         if(null!=constantList && constantList.size()==1)
+         {
+             phone=constantList.get(0).getId();
+         }
+         List<TopicIcon> icon=getHibernateTemplate().find("from TopicIcon where topicInfo.id=? and modelScreen.id=?",topic.getId(),phone);
+         if(null!=icon && icon.size()==1)
+         {
+             topic.setTopic_icon(icon.get(0).getIcon_url());
+         }
+
+    	String queryString ="update FocusPic set name=?,img=?  where object_id=? and type=?";  
+        Session session=getSession();
+        Query queryObject=session.createQuery(queryString);
+        queryObject.setString(0, topic.getTopic_name());
+        queryObject.setString(1, topic.getTopic_icon());
+        queryObject.setLong(2, topic.getId());
+        queryObject.setShort(3, (short) 1);
+        queryObject.executeUpdate();
+    }
+
+    public boolean deleteTopicImage(String path) throws Exception{
+        try{
+            File file = new File(path);
+            file.delete();         
+        }catch (Exception e) {
+            // TODO: handle exception
+            throw e;
+        }
+        return true;
+    }
+    
+    public boolean deleteTopicInfoByID(Long[] ids) throws Exception {
+        // TODO Auto-generated method stub
+        try{
+        	List<TopicIcon> iconList=null;
+        	String queryString1 ="from TopicIcon where topicInfo.id=?";
+        	String queryString2 ="delete TopicIcon where topicInfo.id=?";
+        	String queryString3 ="delete TopicApp where topicInfo.id=?";
+        	String queryString4 ="delete ModelTopic where topicInfo.id=?";
+            String queryString5 ="delete TopicInfo where id=?";            
+            String queryString7 ="delete FocusPic where object_id=? and type=?";       
+            String queryString8 ="delete FocusRank where object_id=? and type=?";
+            Session session=getSession();
+            Query queryObj=null;
+            for(Long id:ids){ 
+            	 iconList=this.getHibernateTemplate().find(queryString1,id);
+            	 if(null!=iconList && iconList.size()>0)
+            	 {
+            		//1.先删除图片文件 2.再删除数据库t_topic_icon广告图片表中相应的数据 3. 删除t_topic_app表中对应的数据 4.删除t_model_topic对应的数据
+ 	        		// 5.删除广告信息t_topic_info
+            		 //1.先删除图片文件
+            		 for(TopicIcon icon : iconList)
+            		 {
+            			 String iconURL=icon.getIcon_url();	  
+            			 deleteDirFilesLikeName(UtilTool.getDownloadPath(iconURL.substring(0,iconURL.lastIndexOf("/"))),iconURL.substring(iconURL.lastIndexOf("/")+1,iconURL.lastIndexOf(".")));
+            		 }
+            		 //2.再删除数据库t_topic_icon广告图片表中相应的数据
+            		 queryObj=session.createQuery(queryString2);
+            		 queryObj.setLong(0, id);
+                     queryObj.executeUpdate();
+            	 }
+            	//3.删除t_topic_app表中对应的数据
+                queryObj=session.createQuery(queryString3);
+                queryObj.setLong(0, id);
+                queryObj.executeUpdate();   
+                
+              //4.删除t_model_topic对应的数据
+                queryObj=session.createQuery(queryString4);
+                queryObj.setLong(0, id);
+                queryObj.executeUpdate();
+                
+              //6.删除汇热门推荐中对应的专题
+                String queryString6 ="delete HubHotContent where object_id=? and type=?";     
+                queryObj=session.createQuery(queryString6);
+                queryObj.setLong(0, id);
+                queryObj.setCharacter(1, '3');
+                queryObj.executeUpdate();
+                
+              //5.删除广告信息t_topic_info
+                queryObj=session.createQuery(queryString5);
+                queryObj.setLong(0, id);
+                queryObj.executeUpdate();
+                
+                //7 删除“焦点图”中对应的专题
+                queryObj=session.createQuery(queryString7);
+                queryObj.setLong(0, id);
+                queryObj.setShort(1, (short) 1);
+                queryObj.executeUpdate();
+                
+                //7 删除“焦点图排期”中对应的专题
+                queryObj=session.createQuery(queryString8);
+                queryObj.setLong(0, id);
+                queryObj.setShort(1, (short) 1);
+                queryObj.executeUpdate();
+                
+            }
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+        
+    }
+
+    public boolean updateRecommend(Long id, Character recommend) throws Exception {
+        // TODO Auto-generated method stub
+        try{
+            String queryString ="update TopicInfo set recommend=? where id=?";
+            Session session=getSession();
+            Query queryObj=session.createQuery(queryString);
+            queryObj.setCharacter(0, recommend);
+            queryObj.setLong(1, id);
+            queryObj.executeUpdate();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<TopicApp> findTopicAppByTopicId(final int start, final Long topic_id) throws Exception {
+		// TODO Auto-generated method stub
+		// TODO Auto-generated method stub
+        List<TopicApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                    	session.flush();
+                    	session.clear();
+                        Criteria criteria = session.createCriteria(TopicApp.class);
+                        Criteria topicApp_criteria = criteria.createCriteria("topicInfo", Criteria.LEFT_JOIN);              
+ 						topicApp_criteria.add(Restrictions.eq("id", topic_id));
+ 						criteria.setFirstResult(start);
+                        criteria.setMaxResults(Constants.APPS_PER_MAX_PAGE);
+                        criteria.addOrder(Order.asc("show_order"));
+                        List<TopicApp> result=criteria.list();  
+                        return result;
+                    }
+                });
+ 
+		 return list;
+	}
+
+
+	@Override
+	public void addAppForTopic(Long topicId, Long[] appIds, String adminName)
+			throws Exception {
+		// TODO Auto-generated method stub
+		try{
+		    int order=findMaxOrderForTopicApp(topicId);
+			for(Long app_id:appIds)
+			{
+					TopicApp topicApp=new TopicApp();
+					topicApp.setAppInfo(getHibernateTemplate().load(AppInfo.class, app_id));
+					topicApp.setShow_order(++order);
+					topicApp.setSet_time(new Date());
+					topicApp.setSet_admin(adminName);
+					topicApp.setTopicInfo(getHibernateTemplate().load(TopicInfo.class, topicId));
+					getHibernateTemplate().save(topicApp);	
+			}
+			updateTopicAppsCount(topicId);
+		}catch(Exception e){
+			throw e;
+		}
+	}
+	
+	//topic表字段appCount和app_id的更新:zhangyi
+		private void updateTopicAppsCount(Long topic_id) throws Exception{
+			List<TopicApp> apps = getHibernateTemplate().find("from TopicApp where topic_id=?",topic_id);
+			Long app_id;
+			if(null!=apps){
+				Integer app_count = apps.size();
+				if(1==app_count){
+					app_id = apps.get(0).getAppInfo().getId();
+				}else{
+					app_id =null;
+				}					
+				String queryString ="update TopicInfo set app_id=?,app_count=? where id=?";  
+				String queryString1="update FocusPic set app_id=?,app_count=? where object_id=? and type=?"; //更新“焦点图”的专题信息
+	            Session session=getSession();
+	            Query queryObject=session.createQuery(queryString);
+	            Query queryObject1=session.createQuery(queryString1);
+	            if(null==app_id){
+	            	queryObject.setString(0, null);
+	            	queryObject1.setString(0, null);
+	            }else{
+	            	queryObject.setLong(0,app_id);
+	            	queryObject1.setLong(0,app_id);
+	            }
+	            queryObject.setInteger(1, app_count);
+	            queryObject.setLong(2, topic_id);
+	            queryObject.executeUpdate();
+	            
+	            queryObject1.setInteger(1, app_count);
+	            queryObject1.setLong(2, topic_id);
+	            queryObject1.setShort(3, (short) 1);
+	            queryObject1.executeUpdate();
+	            		
+			}
+		}
+		
+
+	public int findMaxOrderForTopicApp(Long topic_id)
+	{
+		int result=0;
+		Session session =getSession();
+		Query query=null;
+		
+		String sql1="select * from t_topic_app where topic_id="+topic_id;
+		query=session.createSQLQuery(sql1);
+		if(null!=query.list()&&query.list().size()>0)
+		{
+			String sql2="select max(show_order) from t_topic_app where topic_id="+topic_id;
+			query=session.createSQLQuery(sql2);
+			result=(Integer)query.uniqueResult();
+		}
+		return result;
+	}
+
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public Integer countTopicAppByTopicId(final Long topic_id) throws Exception {
+		// TODO Auto-generated method stub
+		List<TopicApp> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                    	session.flush();
+                    	session.clear();
+                        Criteria criteria = session.createCriteria(TopicApp.class);
+                        Criteria topicApp_criteria = criteria.createCriteria("topicInfo", Criteria.LEFT_JOIN);
+//                        adApp_criteria.setFirstResult(0);
+//                        adApp_criteria.setMaxResults(2);
+ 						topicApp_criteria.add(Restrictions.eq("id", topic_id));
+                        List<TopicApp> result=criteria.list();  
+                        return result;
+                    }
+                });
+ 
+		 return list==null?0 : list.size();
+	}
+
+
+	@Override
+	public void deleteTopicAppSetId(Long[] ids,TopicInfo topic) throws Exception {
+		// TODO Auto-generated method stub
+		String queryString ="delete from TopicApp where id=?";
+		Session session=getSession();
+		for(Long id : ids){
+		Query queryObj=session.createQuery(queryString);
+		queryObj.setLong(0, id);
+		queryObj.executeUpdate();
+		}
+		updateTopicAppsCount(topic.getId());
+	}
+
+
+	@Override
+	public void updateAppOrderForToic(String[] str) throws Exception {
+		// TODO Auto-generated method stub
+		Session session=getSession();
+		String sql="update TopicApp set show_order=? where id=?";
+		for(int i=0; i<str.length; i++)
+		{
+			if(null!=str[i]&&str[i].length()>0)
+			{
+				String order[]=str[i].split(",");
+				if(null!=order&&order.length==2)
+				{
+					Query query=session.createQuery(sql);
+					query.setInteger(0, Integer.parseInt(order[1]));
+					query.setLong(1, Long.parseLong(order[0]));
+					query.executeUpdate();
+				}
+			}
+		}
+	}
+
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<TopicInfo> getAllPhoneTopic() throws Exception {
+		// TODO Auto-generated method stub
+		return getHibernateTemplate().find("from TopicInfo");
+	}
+
+
+	/*修改人：zhangyi   排列顺序：推荐的专题按照show_order排序，未推荐的专题按照add_date倒序排序*/
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ModelTopic> getModelTopicBySeriesId(Short seriesId, Short type) throws Exception {
+		// TODO Auto-generated method stub
+		Short recommend = 1;
+		List<ModelTopic> modelTopics = new ArrayList<ModelTopic>();
+		try{
+			modelTopics =  getHibernateTemplate().find("from ModelTopic where series_id=? and type=? and recommend=? order by show_order",seriesId,type,recommend);
+			recommend = 0;
+			modelTopics.addAll(getHibernateTemplate().find("from ModelTopic where series_id=? and type=? and recommend=? order by  topicInfo.add_date desc",seriesId,type,recommend));
+		}catch(Exception e){
+			throw e;
+		}
+		return modelTopics;
+	}
+
+
+	public int findMaxOrderForSeries(int seriesId)
+	{
+		int result=0;
+		Session session =getSession();
+		Query query=null;
+		
+		String sql1="select * from t_model_topic where series_id="+seriesId;
+		query=session.createSQLQuery(sql1);
+		if(null!=query.list()&&query.list().size()>0)
+		{
+			String sql2="select max(show_order) from t_model_topic where series_id="+seriesId;
+			query=session.createSQLQuery(sql2);
+			result=(Integer)query.uniqueResult();
+		}
+		return result;
+	}
+	
+	@Override
+	public boolean isInitSeriesTopicSet(Short series_id)
+	{
+		boolean b=false;
+		List list=getHibernateTemplate().find("from ModelTopic where series_id=? and type=?",series_id,(short)1);
+		if(null!=list&&list.size()>0)
+		{
+			b=true;
+		}
+		return b;
+	}
+	
+	@Override
+	public void addTopicForSeries(Short series_id, Long[] topic_ids,
+			short type, String admin_name) throws Exception {
+		// TODO Auto-generated method stub
+		try{
+		    int order=findMaxOrderForSeries(series_id);  	
+			for(Long topic_id:topic_ids)
+			{
+					ModelTopic seriesTopic=new ModelTopic();
+					TopicInfo topicInfo=getHibernateTemplate().load(TopicInfo.class, topic_id);
+					seriesTopic.setTopicInfo(topicInfo);
+					seriesTopic.setSeries_id(series_id);
+					seriesTopic.setShow_order(++order);
+					seriesTopic.setType(type);
+					seriesTopic.setRecommend((short) 0);  
+					seriesTopic.setSet_time(new Date());
+					seriesTopic.setSet_admin(admin_name);
+					getHibernateTemplate().save(seriesTopic);
+				
+			}
+		
+		}catch(Exception e){
+			throw e;
+		}
+	}
+
+
+	@Override
+	public void updateTopicSetForSeries(List<ModelTopic> commonTopic, Short seriesId) throws Exception {
+		// TODO Auto-generated method stub
+		List list=getHibernateTemplate().find("from ModelTopic where series_id=?",seriesId);
+		if(null!=list&&list.size()>0)
+		{
+			String queryString ="update ModelTopic set type=? where series_id=?";
+            Session session=getSession();
+            Query queryObj=session.createQuery(queryString);
+            queryObj.setShort(0, (short)1);
+            queryObj.setShort(1, seriesId);
+            queryObj.executeUpdate();
+		}
+		else
+		{
+			for(ModelTopic topic : commonTopic)
+			{
+				ModelTopic series_topic=new ModelTopic();
+				series_topic.setSeries_id(seriesId);
+				series_topic.setSet_admin(topic.getSet_admin());
+				series_topic.setSet_time(new Date());
+				series_topic.setShow_order(topic.getShow_order());
+				series_topic.setTopicInfo(topic.getTopicInfo());
+				series_topic.setRecommend(topic.getRecommend());
+				series_topic.setType((short)1);
+				getHibernateTemplate().save(series_topic);
+			}
+		}
+	}
+
+
+	@Override
+	public List<ModelTopic> findSeriesTopicByProperty(String property,
+			Object value) {
+		// TODO Auto-generated method stub
+		return getHibernateTemplate().find("from ModelTopic where "+property+"="+value);
+	}
+
+
+	@Override
+	public void deleteTopicSetById(Short seriesId, Long[] topic_ids) throws Exception {
+		// TODO Auto-generated method stub
+try{
+			if(seriesId==0)
+			{
+				String queryString ="delete ModelTopic where topicInfo.id=?";
+				Session session=getSession();
+				for(Long topic_id : topic_ids){
+				Query queryObj=session.createQuery(queryString);
+				queryObj.setLong(0, topic_id);
+				queryObj.executeUpdate();
+				}
+			}
+			else
+			{
+				String queryString ="delete ModelTopic where topicInfo.id=? and series_id=?";
+				Session session=getSession();
+				for(Long topic_id : topic_ids){
+				Query queryObj=session.createQuery(queryString);
+				queryObj.setLong(0, topic_id);
+				queryObj.setInteger(1, seriesId);
+				queryObj.executeUpdate();
+				}
+				List list=getHibernateTemplate().find("from ModelTopic where series_id=?",seriesId);
+				if(null==list || list.size()==0)
+				{
+					List<ModelTopic> commonTopic=getHibernateTemplate().find("from ModelTopic where series_id=0");
+					if(null!=commonTopic && commonTopic.size()>0)
+					{
+						for(ModelTopic topic : commonTopic)
+						{
+							ModelTopic series_topic=new ModelTopic();
+							series_topic.setSeries_id(seriesId);
+							series_topic.setSet_admin(topic.getSet_admin());
+							series_topic.setSet_time(new Date());
+							series_topic.setShow_order(topic.getShow_order());
+							series_topic.setTopicInfo(topic.getTopicInfo());
+							series_topic.setRecommend(topic.getRecommend());
+							series_topic.setType((short)0);
+							getHibernateTemplate().save(series_topic);
+						}
+					}
+				}
+			}
+			
+		}catch(Exception e){
+			throw e;
+		}
+	}
+
+
+	@Override
+	public void updateTopicOrderForSeries(String[] str) throws Exception {
+		// TODO Auto-generated method stub
+		Session session=getSession();
+		Query query=null;
+		ModelTopic modelTopic=null;
+		
+		String sql="update ModelTopic set show_order=? where type=0 and topicInfo.id=?";
+		String sql2="update ModelTopic set show_order=? where id=?";
+		for(int i=0; i<str.length; i++)
+		{
+			if(null!=str[i]&&str[i].length()>0)
+			{
+				String order[]=str[i].split(",");
+				if(null!=order&&order.length==2)
+				{
+					modelTopic=this.getHibernateTemplate().load(ModelTopic.class, Long.parseLong(order[0]));
+					
+					if(modelTopic.getSeries_id().shortValue()==0)
+					{
+						query=session.createQuery(sql);
+						query.setInteger(0, Integer.parseInt(order[1]));
+						query.setLong(1, modelTopic.getTopicInfo().getId());
+						query.executeUpdate();
+					}
+					else
+					{
+						query=session.createQuery(sql2);
+						query.setInteger(0, Integer.parseInt(order[1]));
+						query.setLong(1, Long.parseLong(order[0]));
+						query.executeUpdate();
+					}	
+				}
+			}
+		}
+		session.clear();
+	}
+
+
+	@Override
+	public List<TopicIcon> getTopicImgByTopicId(Long topicId) throws Exception {
+		// TODO Auto-generated method stub
+		Session session=getSession();
+		String sql="from TopicIcon where topicInfo.id=? order by modelScreen.id";
+		Query query=session.createQuery(sql);
+		query.setLong(0, topicId);
+		return query.list();
+	}
+
+
+	@Override
+	public TopicInfo getTopicById(Long id) throws Exception {
+		// TODO Auto-generated method stub
+		return this.getHibernateTemplate().load(TopicInfo.class, id);
+	}
+
+
+	@Override
+	public void saveTopicImages(File file, String fileName, String dir)
+			throws Exception {
+		// TODO Auto-generated method stub
+		try{
+			//	 File oldFile=new File(dir);
+				
+				deleteDirFilesLikeName(dir,fileName.substring(0,fileName.lastIndexOf("_")));
+				 
+				 java.io.InputStream input = new java.io.FileInputStream(file); 
+				  java.io.OutputStream output = new java.io.FileOutputStream(dir+fileName); 
+				 byte buffer[] = new byte[8192]; 
+				 int count = 0; 
+				 while((count = input.read(buffer)) > 0) 
+				 {
+				  output.write(buffer, 0, count); 
+				 } 
+				  input.close();
+				  output.close();
+			}catch (Exception e) {
+				// TODO: handle exception
+				throw e;
+			}
+	}
+	
+	//删除某目录下文件名字包含指定字符的文件
+	public void deleteDirFilesLikeName(String dir, String likeName){
+		File file = new File(dir);
+		if(file.exists()){
+			if(file.isDirectory())
+			{
+				File[] files = file.listFiles();
+				for(int i = 0; i < files.length; i++){
+					deleteFilesLikeName(files[i], likeName);
+				}
+			}
+		//	deleteFilesLikeName(file, likeName);
+		} else {
+		}
+	}
+	
+	//删除文件名包含指定字符的文件
+	public void deleteFilesLikeName(File file, String likeName)
+	{
+		if(file.isFile()){
+			//是文件
+			String temp="";
+			if(file.getName().contains("."))
+			{
+				temp= file.getName().substring(0,file.getName().lastIndexOf("."));
+			}
+			else
+			{
+				temp=file.getName();
+			}
+			if(temp.indexOf(likeName) != -1){
+				file.delete();
+			}
+		} else {
+			//是目录
+//			File[] files = file.listFiles();
+//			for(int i = 0; i < files.length; i++){
+//				deleteFilesLikeName(files[i], likeName);
+//			}
+		}
+
+	}
+
+
+	@Override
+	public void saveImgForTopic(Long topicId, String iconUrl,String fileName, String screen)
+			throws Exception {
+		// TODO Auto-generated method stub
+		String sql="delete from TopicIcon where topicInfo.id=? and icon_url like '%"+fileName.substring(0, fileName.lastIndexOf("_"))+"%'";
+		Session session=getSession();
+		Query query=session.createQuery(sql);
+		query.setLong(0, topicId);
+		query.executeUpdate();
+		TopicIcon topic_icon=new TopicIcon();
+		topic_icon.setTopicInfo(this.getHibernateTemplate().load(TopicInfo.class, topicId));
+		topic_icon.setIcon_url(iconUrl);
+		topic_icon.setModelScreen(this.getHibernateTemplate().load(ConsoleConstant.class, Short.parseShort(screen)));
+		topic_icon.setSet_time(new Date());
+		getHibernateTemplate().save(topic_icon);
+	}
+
+	@Override
+	public void addTopicForNewSeries(Short id) throws Exception {
+		// TODO Auto-generated method stub
+		List<ModelTopic> commonTopic=getHibernateTemplate().find("from ModelTopic where series_id=0");
+		if(null!=commonTopic && commonTopic.size()>0)
+		{
+			for(ModelTopic topic : commonTopic)
+			{
+				ModelTopic series_topic=new ModelTopic();
+				series_topic.setSeries_id(id);
+				series_topic.setSet_admin(topic.getSet_admin());
+				series_topic.setSet_time(new Date());
+				series_topic.setShow_order(topic.getShow_order());
+				series_topic.setTopicInfo(topic.getTopicInfo());
+				series_topic.setType((short)0);
+				getHibernateTemplate().save(series_topic);
+			}
+		}
+	}
+
+	@Override
+	public boolean addPhoneTopic(TopicInfo topic) throws Exception {
+		// TODO Auto-generated method stub
+		boolean result=false;
+		if(null!=topic)
+		{
+			topic.setAdd_date(new Date());
+			topic.setTopic_type('1');
+			topic.setShow_order(0);
+			topic.setRecommend('1');
+			getHibernateTemplate().save(topic);
+			getSession().evict(topic);
+			result=true;
+		}
+		return result;
+	}
+	
+	@Override
+	public TopicInfo getPhoneTopicByName(String topicName) throws Exception {
+		// TODO Auto-generated method stub
+		Session session=getSession();
+		String sql="from TopicInfo where topic_name=?";
+		Query query=session.createQuery(sql);
+		query.setString(0, topicName);
+		if(null!=query.list()&&query.list().size()==1)
+		{
+			return (TopicInfo)query.list().get(0);
+		}
+		return null;
+	}
+	
+	public String getTopicImgUrlByIdWithScreen(Long topicId, String cs) throws Exception {
+        // TODO Auto-generated method stub
+        String screenName="phone";
+        if("1".equals(cs))
+        {
+            screenName="pc";
+        }
+        List<TopicIcon> topicImg=getHibernateTemplate().find("from TopicIcon where topicInfo.id=? and modelScreen.type=1 and modelScreen.value=?",topicId,screenName);
+        if(null!=topicImg && topicImg.size()==1)
+        {
+            return topicImg.get(0).getIcon_url();
+        }
+        return null;
+    }
+
+	/*推荐专题和取消推荐专题 zhangyi*/
+	@Override
+	public boolean updateRecommend(Short seriesId, Long id) throws Exception {
+		// TODO Auto-generated method stub
+		if(seriesId==0){			
+			String queryString ="update ModelTopic set recommend=? where type=? and topicInfo.id=?";
+			Session session=getSession();
+	        Query queryObj=session.createQuery(queryString);
+	        queryObj.setShort(0, (short)1);
+	        queryObj.setShort(1, (short)0);
+	        queryObj.setLong(2, id);
+	        queryObj.executeUpdate();     
+		}else{
+			String queryString ="update ModelTopic set recommend=? where series_id=? and topicInfo.id=?";
+	        Session session=getSession();
+	        Query queryObj=session.createQuery(queryString);
+	        queryObj.setShort(0, (short)1);
+	        queryObj.setShort(1, seriesId);
+	        queryObj.setLong(2, id);
+	        queryObj.executeUpdate();
+		}
+		return true;
+	}
+
+	@Override
+	public boolean updateCancelRecommend(Short seriesId, Long id) throws Exception {
+		// TODO Auto-generated method stub
+		if(seriesId==0){
+			String queryString ="update ModelTopic set recommend=? where type=? and topicInfo.id=?";
+			Session session=getSession();
+	        Query queryObj=session.createQuery(queryString);
+	        queryObj.setShort(0, (short)0);
+	        queryObj.setShort(1, (short)0);
+	        queryObj.setLong(2, id);
+	        queryObj.executeUpdate();
+		}else{
+			String queryString ="update ModelTopic set recommend=? where series_id=? and topicInfo.id=?";
+	        Session session=getSession();
+	        Query queryObj=session.createQuery(queryString);
+	        queryObj.setShort(0, (short)0);
+	        queryObj.setShort(1, seriesId);
+	        queryObj.setLong(2, id);
+	        queryObj.executeUpdate();
+		}
+		return true;
+	}
+
+	@Override
+	public boolean findTopicByAppInfoId(Long app_id, TopicInfo topic) {
+		// TODO Auto-generated method stub
+		List<TopicApp> topic_list = getHibernateTemplate().find("from TopicApp where topicInfo.id=? and  appInfo.id=?",topic.getId(),app_id);
+		if(topic_list!=null&&topic_list.size()>0){
+			return true;
+		}
+		return false;
+	}
+	
+	@Override
+	public int countTopicInfo(TopicInfo topic) throws Exception{
+	    
+	    Criteria criteria = getSession()
+                .createCriteria(TopicInfo.class);
+        if (topic.getId() != null) {
+            criteria.add(Restrictions.eq("id", topic.getId()));
+        }
+        if (!UtilTool.checkStringNull(topic.getTopic_name())) {
+            criteria.add(Restrictions.like("topic_name", "%"
+                    +topic.getTopic_name() + "%"));
+        }       
+        int totalRows =((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult()).intValue();  //是否为null
+        return totalRows;
+	}
+	
+	public void updateRamarkTag( List<TopicInfo> list_topic, Short series_id) throws Exception{   //判断哪些广告已经被添加了
+		if(null!=list_topic&&list_topic.size()>0){
+			for(int i=0;i<list_topic.size();i++){
+				List<ModelTopic> list_model = getHibernateTemplate().find("from ModelTopic where series_id=? and  topic_id=?",series_id,list_topic.get(i).getId());
+				if(list_model!=null&&list_model.size()>0){
+					list_topic.get(i).setTag("1");
+				}
+			}
+		}		
+	}
+	
+	/*
+	 * 根据条件查找广告：zhangyi
+	 */
+	@Override
+	public List<TopicInfo> search(PageVO page,final TopicInfo topic,final String advSortWayy,Short series_id) throws Exception{
+		final Integer startRecord = page.getCurrentPageNum() * page.getNumPerPage() - page.getNumPerPage() ;
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		List<TopicInfo> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session.createCriteria(TopicInfo.class);
+						 if (null != topic.getId()) {
+					            criteria.add(Restrictions.eq("id", topic.getId()));
+					        }
+						 if (!UtilTool.checkStringNull(topic.getTopic_name())) {
+					            criteria.add(Restrictions.like("topic_name", "%"
+					                    +topic.getTopic_name() + "%"));
+					        }       
+					    criteria.addOrder(Order.desc("id"));
+						criteria.setFirstResult(startRecord);
+						criteria.setMaxResults(Constants.APPS_PER_PAGE);
+						List<TopicInfo> result = criteria.list();
+						return result;
+					}
+				});		
+		List<ConsoleConstant>  constantList=getHibernateTemplate().find("from ConsoleConstant where value=? and type=1","phone");
+		short phone=0;
+		if(null!=constantList && constantList.size()==1)
+		{
+			phone=constantList.get(0).getId();
+		}
+		if(null!=list && list.size()>0)
+		{
+			for(TopicInfo ad : list)
+			{
+				List<TopicIcon> icon=getHibernateTemplate().find("from TopicIcon where topicInfo.id=? and modelScreen.id=?",ad.getId(),phone);
+				if(null!=icon && icon.size()==1)
+				{
+					ad.setTopic_icon(icon.get(0).getIcon_url());
+				}
+			}
+		}
+	//	ramarkTag(list,series_id);
+		return list;
+	}
+
+}

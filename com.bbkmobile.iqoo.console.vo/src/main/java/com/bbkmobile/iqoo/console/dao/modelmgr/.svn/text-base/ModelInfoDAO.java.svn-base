@@ -1,0 +1,46 @@
+package com.bbkmobile.iqoo.console.dao.modelmgr;
+
+import java.io.File;
+import java.util.List;
+
+public interface ModelInfoDAO {
+    
+    List<Model> getModelInfo() throws Exception;     //获取所有机型
+	
+	boolean addModel(Model model) throws Exception;   //添加机型
+
+	boolean saveModelImage(File file, String path, String dir) throws Exception;
+	
+	boolean deleteModelImage(String path) throws Exception;
+
+	Model findModelById(Short id) throws Exception;
+
+	boolean updateModel(Model model) throws Exception;   //修改机型信息
+
+	boolean deleteModelByID(Short[] ids) throws Exception;   //删除机型
+
+	boolean updateShowOrder(Short id, int order) throws Exception; //更新
+	
+	List<Series> getSeriesList() throws Exception;
+	
+	Series getSeriesWithName(String seriesName) throws Exception;
+	
+	Model findModelByMdName(String md_name) throws Exception;
+
+	 List<ConsoleConstant> getDrawableList() throws Exception; 
+
+	List<ConsoleConstant> getSdkList() throws Exception;
+	
+	List<ConsoleConstant> getPlatformList() throws Exception;
+	
+	public List<ConsoleConstant> getPcDrawableList() throws Exception;
+
+	List<ConsoleConstant> getAllDrawableList() throws Exception;
+
+	void updateModelIcon(Model model) throws Exception;
+
+	String findModelByScreenIds(String model, Short[] screenIds) throws Exception;
+
+	int findScreenId(String drawableDpi) throws Exception;
+
+}

@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 139
+/repositories/IqooSourceCode/!svn/ver/9734/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/interfaces/userfeedback/business
+END
+ErrorReportService.java
+K 25
+svn:wc:ra_dav:version-url
+V 163
+/repositories/IqooSourceCode/!svn/ver/9734/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/interfaces/userfeedback/business/ErrorReportService.java
+END
+ErrorReportServiceImpl.java
+K 25
+svn:wc:ra_dav:version-url
+V 167
+/repositories/IqooSourceCode/!svn/ver/9734/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/interfaces/userfeedback/business/ErrorReportServiceImpl.java
+END
+UserFeedbackService.java
+K 25
+svn:wc:ra_dav:version-url
+V 164
+/repositories/IqooSourceCode/!svn/ver/9734/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/interfaces/userfeedback/business/UserFeedbackService.java
+END
+UserFeedbackServiceImpl.java
+K 25
+svn:wc:ra_dav:version-url
+V 168
+/repositories/IqooSourceCode/!svn/ver/9912/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/interfaces/userfeedback/business/UserFeedbackServiceImpl.java
+END

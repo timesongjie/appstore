@@ -1,0 +1,1014 @@
+package com.bbkmobile.iqoo.console.dao.userfeedback;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.hibernate.Criteria;
+import org.hibernate.Hibernate;
+import org.hibernate.HibernateException;
+import org.hibernate.Query;
+import org.hibernate.SQLQuery;
+import org.hibernate.Session;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Restrictions;
+import org.hibernate.jdbc.Work;
+import org.springframework.orm.hibernate3.HibernateCallback;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.common.logging.Lg;
+import com.bbkmobile.iqoo.console.constants.Constants;
+import com.bbkmobile.iqoo.console.constants.LgType;
+import com.bbkmobile.iqoo.console.constants.UtilTool;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppComment;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfoDAO;
+import com.bbkmobile.iqoo.console.dao.appinfo.BaiduAppComment;
+import com.bbkmobile.iqoo.console.dao.appinfo.RequestParameter;
+import com.bbkmobile.iqoo.console.dao.keyword.CensorWord;
+import com.bbkmobile.iqoo.console.dao.keyword.KeywordInfoDAO;
+import com.bbkmobile.iqoo.console.dao.login.UserInfo;
+import com.bbkmobile.iqoo.explorer.logcache.UpgradeQueryLogCache;
+
+public class UserFeedbackDAOImpl extends HibernateDaoSupport implements
+		UserFeedbackDAO {
+
+	private KeywordInfoDAO keywordInfoDAO;
+
+	private AppInfoDAO appInfoDAO;
+
+	public boolean addUserFeedBack(UserFeedback userFeedback) throws Exception {
+		userFeedback.setPost_date(new Date());
+		getHibernateTemplate().save(userFeedback);
+		return true;
+	}
+
+	/*
+	 * 如果查询类型从 应用类型提交 则type_flag为ture，如果从标题栏提交则为false
+	 * 主要解决：当应用类型提交查询类型时，标题栏应用状态显示为全部类型。当从标题栏提交查询类型时，应用类型为“请选择”，两者不同步。
+	 */
+	boolean type_flag = false;
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public List<AppComment> getAllAppCommentList(final AppComment appComment)
+			throws Exception {
+		List<AppComment> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(AppComment.class);
+
+						Criteria app_criteria = criteria.createCriteria( // 关联appInfo
+								"appInfo", Criteria.LEFT_JOIN);
+
+						// 应用类型查询
+						if (null != appComment.getAppInfo().getAppType()
+								.getId()
+								&& 0 != appComment.getAppInfo().getAppType()
+										.getId()) {
+							app_criteria.add(Restrictions.eq("appType",
+									appComment.getAppInfo().getAppType()));
+							appComment.getAppInfo().setType(0); // 标题栏类型置为
+																// 全部分类，下面从标题栏查询就不会执行了
+							type_flag = true; // 查询类型从 应用类型提交
+						}
+						// 从标题栏类型查询
+						if ((appComment.getAppInfo().getType() != 0)) {
+							appComment.getAppInfo().getAppType()
+									.setId(appComment.getAppInfo().getType());
+							app_criteria.add(Restrictions.eq("appType",
+									appComment.getAppInfo().getAppType()));
+							type_flag = false; // 查询类型从 标题提交
+
+						}
+
+						// 状态查询
+						if (null != appComment.getComment_status()
+								&& !appComment.getComment_status().equals(
+										Constants.COMMENT_REVIEW_ALL)) {
+							criteria.add(Restrictions.eq("comment_status",
+									appComment.getComment_status()));
+						}
+
+						// 应用名称查询
+						if (null != appComment.getAppInfo().getAppCnName()
+								&& !UtilTool.checkStringNull(appComment
+										.getAppInfo().getAppCnName())) {
+							app_criteria.add(Restrictions.like("appCnName", "%"
+									+ appComment.getAppInfo().getAppCnName()
+									+ "%"));
+						}
+						// 评论时间段查询
+						if (null != appComment.getFrom_date()) {
+							criteria.add(Restrictions.between("comment_date",
+									appComment.getFrom_date(),
+									appComment.getTo_date()));
+						}
+
+						List<AppComment> result = criteria.list();
+						return result;
+					}
+				});
+		return list;
+
+	}
+
+	public int countAppCommentRecords(final AppComment appComment)
+			throws Exception {
+		int result = 0;
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		List<AppComment> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(AppComment.class);
+
+						Criteria app_criteria = criteria.createCriteria( // 关联appInfo
+								"appInfo", Criteria.LEFT_JOIN);
+
+						// 应用类型查询
+						if (null != appComment.getAppInfo().getAppType()
+								.getId()
+								&& 0 != appComment.getAppInfo().getAppType()
+										.getId() && type_flag) { // type_flag为ture
+																	// 则查询类型从
+																	// 应用类型提交
+							app_criteria.add(Restrictions.eq("appType",
+									appComment.getAppInfo().getAppType()));
+							appComment.getAppInfo().setType(0); // 标题栏类型置为
+																// 全部分类，下面从标题栏查询就不会执行了
+						}
+						// 从标题栏类型查询
+						if ((appComment.getAppInfo().getType() != 0)) {
+							app_criteria.add(Restrictions.eq("appType",
+									appComment.getAppInfo().getAppType()));
+						}
+						// 状态查询
+
+						if (null != appComment.getComment_status()
+								&& !appComment.getComment_status().equals(
+										Constants.COMMENT_REVIEW_ALL)) {
+							criteria.add(Restrictions.eq("comment_status",
+									appComment.getComment_status()));
+						}
+
+						// 应用名称查询
+						if (null != appComment.getAppInfo().getAppCnName()
+								&& !UtilTool.checkStringNull(appComment
+										.getAppInfo().getAppCnName())) {
+
+							app_criteria.add(Restrictions.like("appCnName", "%"
+									+ appComment.getAppInfo().getAppCnName()
+									+ "%"));
+						}
+						// 评论时间段查询
+						if (null != appComment.getFrom_date()) {
+							criteria.add(Restrictions.between("comment_date",
+									appComment.getFrom_date(),
+									appComment.getTo_date()));
+						}
+
+						List<AppComment> result = criteria.list();
+						return result;
+					}
+				});
+		if (null != list) {
+			result = list.size();
+		}
+		return result;
+	}
+
+	public List<AppComment> getAppCommentList(final int start,
+			final AppComment appComment) throws Exception {
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		List<AppComment> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(AppComment.class);
+
+						Criteria app_criteria = criteria.createCriteria( // 关联appInfo
+								"appInfo", Criteria.LEFT_JOIN);
+
+						// 应用类型查询
+						if (null != appComment.getAppInfo().getAppType()
+								.getId()
+								&& 0 != appComment.getAppInfo().getAppType()
+										.getId() && type_flag) { // type_flag为ture
+																	// 则查询类型从
+																	// 应用类型提交
+							app_criteria.add(Restrictions.eq("appType",
+									appComment.getAppInfo().getAppType()));
+							appComment.getAppInfo().setType(0); // 标题栏类型置为
+																// 全部分类，下面从标题栏查询就不会执行了
+
+						}
+						// 从标题栏类型查询
+						if ((appComment.getAppInfo().getType() != 0)) { // 标题栏：分类
+							appComment.getAppInfo().getAppType()
+									.setId(appComment.getAppInfo().getType());
+							app_criteria.add(Restrictions.eq("appType",
+									appComment.getAppInfo().getAppType()));
+						}
+						// 状态查询
+
+						if (null != appComment.getComment_status()
+								&& !appComment.getComment_status().equals(
+										Constants.COMMENT_REVIEW_ALL)) {
+							criteria.add(Restrictions.eq("comment_status",
+									appComment.getComment_status()));
+						}
+
+						// 应用名称查询
+						if (null != appComment.getAppInfo().getAppCnName()
+								&& !UtilTool.checkStringNull(appComment
+										.getAppInfo().getAppCnName())) {
+							app_criteria.add(Restrictions.like("appCnName", "%"
+									+ appComment.getAppInfo().getAppCnName()
+									+ "%"));
+						}
+						// 评论时间段查询
+						if (null != appComment.getFrom_date()) {
+							criteria.add(Restrictions.between("comment_date",
+									appComment.getFrom_date(),
+									appComment.getTo_date()));
+						}
+
+						criteria.setFirstResult(start);
+						criteria.setMaxResults(10);
+						List<AppComment> result = criteria.list();
+						return result;
+					}
+				});
+		return list;
+	}
+
+	public boolean deleteCommentReviewRecordByID(Long[] ids) throws Exception {
+		try {
+			String queryString = "delete CommentReviewRecords where comment_id=?";
+			Session session = getSession();
+			for (Long id : ids) {
+				Query queryObj = session.createQuery(queryString);
+				queryObj.setLong(0, id);
+				queryObj.executeUpdate();
+			}
+			return true;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	public boolean deleteAppCommentByID(Long[] ids) throws Exception {
+		try {
+			String queryString = "delete AppComment where id=?";
+			Session session = getSession();
+			for (Long id : ids) {
+				Query queryObj = session.createQuery(queryString);
+				queryObj.setLong(0, id);
+				queryObj.executeUpdate();
+			}
+			return true;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	public boolean isForbidComment(RequestParameter requestParameter)
+			throws Exception {
+		if (null != requestParameter.getImei()
+				&& !requestParameter.getImei().equals("")) {
+			String sql = "select imei from t_comment_forbid where imei=?";
+			List list = getSession().createSQLQuery(sql).setString(0, requestParameter.getImei()).list();
+			if (null != list && list.size() > 0) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// 保存手机发送的用户评论
+	public String saveComment(RequestParameter requestParameter)
+			throws Exception {
+
+		String result = "1";
+		Long app_id_long = requestParameter.getIdlong();
+		String target = requestParameter.getTarget();
+
+		String user_name = requestParameter.getUser_name().trim();
+		String user_id = requestParameter.getUser_id();
+		String login_type_str = requestParameter.getLogin_type();
+		Character login_type = null;
+		if (null != login_type_str && !"".equals(login_type_str)) {
+			if (login_type_str.equals(Constants.TAG_PHONE_NUM)) {
+				login_type = '2';
+				user_name = user_name.substring(0, 3) + "****"
+						+ user_name.substring(7, user_name.length());
+
+			} else if (login_type_str.equals(Constants.TAG_EMAIL)) {
+				login_type = '3';
+			} else if (login_type_str.equals(Constants.TAG_NAME)) {
+				login_type = '1';
+			}
+		} else{
+		    if(null != user_name && !"".equals(user_name)){   
+		        if(user_name.matches("^1[0-9]{10}")){
+		            user_name = user_name.substring(0, 3) + "****"
+		                    + user_name.substring(7, user_name.length());
+		        }
+		    }
+		}
+
+		if (app_id_long < 0 || (null != target && "baidu".equals(target))) { // 保存百度app评论
+			BaiduAppComment appComment = new BaiduAppComment();
+			appComment.setApp_id(app_id_long);
+			appComment.setUser_name(user_name); // user_name
+			appComment.setUser_id(user_id);
+			appComment.setLogin_type(login_type);
+			appComment.setModel(requestParameter.getModel());
+			appComment.setUser_ip(requestParameter.getIp());
+			appComment.setUser_imei(requestParameter.getImei());
+			appComment.setComment_date(new Date());
+
+			String content = requestParameter.getContent();
+			// System.out.println("content=" + content);
+			// \s 匹配的是任意的空白符，包括空格，制表符(Tab)，换行符，中文全角空格
+			// content = content.replaceAll("\\s{1,}", " ");
+			content = content.replaceAll("[ \\f\\t\\v]{1,}", " "); // 去掉空格
+			content = content.replaceAll("\\n{1,}", "\n"); // 去掉多余换行符号
+			List<CensorWord> censorWords = keywordInfoDAO
+					.getHitCensorWoreList(content);
+
+			char comment_status = Constants.COMMENT_REVIEW_NO;
+			if (null != censorWords) {
+				String filterSwitch = ""; // 过滤替换
+				for (CensorWord censorWord : censorWords) {
+					int grade = censorWord.getGrade();
+					if (Constants.CENSORWORD_GRADE_BANNED == grade) {
+						result = Constants.COMMENT_IS_ILLEGAL; // 代表有违禁内容，禁止显示
+						// 禁评当天
+						saveForbidComment(requestParameter);
+						return result;
+					} else if (Constants.CENSORWORD_GRADE_MOD == grade) { // 待审核
+						comment_status = Constants.COMMENT_REVIEW_MOD;
+						break;
+					} else if (Constants.CENSORWORD_GRADE_FILTER == grade) { // 替换
+						comment_status = Constants.COMMENT_REVIEW_FILTER;
+						filterSwitch = filterSwitch
+								+ censorWord.getWord().trim() + "|";
+					}
+				}
+				if (Constants.COMMENT_REVIEW_FILTER == comment_status) { // 去掉字符串中最后的"|"符号
+					filterSwitch = filterSwitch.substring(0,
+							filterSwitch.length() - 1);
+					content = content.replaceAll(filterSwitch, "**");
+				}
+			}
+			appComment.setComment_status(comment_status); // 未审核
+			appComment.setComment(content);
+			appComment.setScore(requestParameter.getScore());
+
+			getHibernateTemplate().save(appComment);
+			return result;
+		}
+
+		AppInfo appInfo = appInfoDAO.findAppById(app_id_long); // 不要select *
+		// Float score_float = Float.parseFloat(score);
+
+		if (null != appInfo) {
+			AppComment appComment = new AppComment();
+			appComment.setAppInfo(appInfo);
+			appComment.setUser_name(user_name); // user_name
+			appComment.setUser_id(user_id);
+			appComment.setLogin_type(login_type);
+			appComment.setModel(requestParameter.getModel());
+			appComment.setUser_ip(requestParameter.getIp());
+			appComment.setUser_imei(requestParameter.getImei());
+			appComment.setComment_date(new Date());
+			appComment.setAppversion(requestParameter.getAppVersion());
+			appComment.setAppversioncode(requestParameter.getAppVersionCode());
+
+			String content = requestParameter.getContent();
+			// System.out.println("content=" + content);
+			// \s 匹配的是任意的空白符，包括空格，制表符(Tab)，换行符，中文全角空格
+			// content = content.replaceAll("\\s{1,}", " ");
+			content = content.replaceAll("[ \\f\\t\\v]{1,}", " "); // 去掉空格
+			content = content.replaceAll("\\n{1,}", "\n"); // 去掉多余换行符号
+			List<CensorWord> censorWords = keywordInfoDAO
+					.getHitCensorWoreList(content);
+
+			char comment_status = Constants.COMMENT_REVIEW_NO;
+			if (null != censorWords) {
+				String filterSwitch = ""; // 过滤替换
+				for (CensorWord censorWord : censorWords) {
+					int grade = censorWord.getGrade();
+					if (Constants.CENSORWORD_GRADE_BANNED == grade) {
+						result = Constants.COMMENT_IS_ILLEGAL; // 代表有违禁内容，禁止显示
+						// 禁评当天
+						saveForbidComment(requestParameter);
+						return result;
+					} else if (Constants.CENSORWORD_GRADE_MOD == grade) { // 待审核
+						comment_status = Constants.COMMENT_REVIEW_MOD;
+						break;
+					} else if (Constants.CENSORWORD_GRADE_FILTER == grade) { // 替换
+						comment_status = Constants.COMMENT_REVIEW_FILTER;
+						filterSwitch = filterSwitch
+								+ censorWord.getWord().trim() + "|";
+					}
+				}
+				if (Constants.COMMENT_REVIEW_FILTER == comment_status) { // 去掉字符串中最后的"|"符号
+					filterSwitch = filterSwitch.substring(0,
+							filterSwitch.length() - 1);
+					content = content.replaceAll(filterSwitch, "**");
+				}
+			}
+			appComment.setComment_status(comment_status); // 未审核
+			appComment.setComment(content);
+			appComment.setScore(requestParameter.getScore());
+
+			getHibernateTemplate().save(appComment);
+			appInfoDAO.saveAppInfoForSaveComment(appInfo,
+					requestParameter.getScore());
+			updateCommentGrade(app_id_long, requestParameter.getScore()); // 评论等级统计
+		}
+		return result;
+	}
+
+	public boolean saveForbidComment(RequestParameter requestParameter)
+			throws Exception {
+		ForbidComment forbidComment = new ForbidComment();
+		forbidComment.setImei(null == requestParameter.getImei() ? "0" : requestParameter.getImei());
+		forbidComment.setForbid_status(Constants.COMMENT_FORBID_1);
+		forbidComment.setAdd_date(new Date());
+		ForbidCommentReason forbidCommentSeason = new ForbidCommentReason();
+		forbidCommentSeason.setUser("vivo");
+		forbidCommentSeason.setForbid_opinion(requestParameter.getContent());
+		forbidComment.setForbidCommentSeason(forbidCommentSeason);
+		getHibernateTemplate().save(forbidComment);
+		return true;
+	}
+
+	public boolean deleteForbidCommentsWithTimed() throws Exception {
+		Lg.info(LgType.APPINFO, "删除禁评开始....");
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		Calendar day = Calendar.getInstance();
+		day.add(Calendar.DATE, -1);
+		String yesterday = sdf.format(day.getTime());
+		String sql = "";
+
+		sql = "delete from t_comment_forbid where forbid_status=1";
+		getSession().createSQLQuery(sql).executeUpdate();
+
+		sql = "delete from t_comment_forbid where forbid_status=2 and add_date<'"
+				+ yesterday + "'";
+		getSession().createSQLQuery(sql).executeUpdate();
+		Lg.info(LgType.APPINFO, "成功删除禁评信息");
+		return true;
+	}
+
+	/*
+	 * public String saveComment(RequestParameter requestParameter) throws
+	 * Exception{
+	 * 
+	 * String result="1"; Long app_id_long = (long) requestParameter.getId();
+	 * String target = requestParameter.getTarget();
+	 * 
+	 * String user_name = requestParameter.getUser_name(); String user_id =
+	 * requestParameter.getUser_id(); String login_type_str =
+	 * requestParameter.getLogin_type(); Character login_type = null;
+	 * if(null!=login_type_str && !"".equals(login_type_str)){ if
+	 * (login_type_str.equals(Constants.TAG_PHONE_NUM)) { login_type = '2';
+	 * user_name = user_name.substring(0, 3) + "****" + user_name.substring(7,
+	 * user_name.length());
+	 * 
+	 * } else if (login_type_str.equals(Constants.TAG_EMAIL)) { login_type =
+	 * '3'; } else if (login_type_str.equals(Constants.TAG_NAME)) { login_type =
+	 * '1'; } }
+	 * 
+	 * if (app_id_long < 0 || (null != target && "baidu".equals(target))) { //
+	 * 保存百度app评论 BaiduAppComment appComment = new BaiduAppComment();
+	 * appComment.setApp_id(app_id_long); appComment.setUser_name(user_name);
+	 * //user_name appComment.setUser_id(user_id);
+	 * appComment.setLogin_type(login_type);
+	 * appComment.setModel(requestParameter.getModel());
+	 * appComment.setUser_ip(requestParameter.getIp());
+	 * appComment.setUser_imei(requestParameter.getImei());
+	 * appComment.setComment_date(new Date());
+	 * 
+	 * List<CensorWord> censorWords = keywordInfoDAO.getCensorWoreList(); String
+	 * bannedString = ""; // 禁止字符串 String modString = ""; // 审核字符串 String
+	 * filterString = ""; // 过滤字符串 String filterSwitch = ""; //过滤替换 for
+	 * (CensorWord censorWord : censorWords) { if (censorWord.getGrade() ==
+	 * Constants.CENSORWORD_GRADE_BANNED) { // grade等级：1-禁止 2-审核 3-替换
+	 * bannedString = bannedString + ".*" + censorWord.getWord().trim() + ".*|";
+	 * } else if (censorWord.getGrade() == Constants.CENSORWORD_GRADE_MOD) {
+	 * modString = modString + ".*" + censorWord.getWord().trim() + ".*|"; }
+	 * else if(censorWord.getGrade() == Constants.CENSORWORD_GRADE_FILTER){
+	 * filterString = filterString + ".*" + censorWord.getWord().trim() + ".*|";
+	 * filterSwitch = filterSwitch + censorWord.getWord().trim() + "|"; } }
+	 * 
+	 * // 去掉字符串中最后的"|"符号 if (!"".endsWith(bannedString)) { bannedString =
+	 * bannedString.substring(0, bannedString.length() - 1); } if
+	 * (!"".endsWith(modString)) { modString = modString.substring(0,
+	 * modString.length() - 1); } if (!"".endsWith(filterString)) { filterString
+	 * = filterString.substring(0, filterString.length() - 1); filterSwitch =
+	 * filterSwitch.substring(0, filterSwitch.length() - 1); }
+	 * 
+	 * String content = requestParameter.getContent();
+	 * 
+	 * if (content.matches(bannedString)) {
+	 * //appComment.setComment_status(Constants.COMMENT_REVIEW_BANNED); //
+	 * 4代表有违禁内容，禁止显示 //不保存到数据库 result = Constants.COMMENT_BANNED_HINT; return
+	 * result; } else if (content.matches(modString)) {
+	 * appComment.setComment_status(Constants.COMMENT_REVIEW_MOD); // 待审核
+	 * appComment.setComment(requestParameter.getContent()); } else if
+	 * (content.matches(filterString)) {
+	 * appComment.setComment_status(Constants.COMMENT_REVIEW_FILTER); // 替换
+	 * appComment
+	 * .setComment(requestParameter.getContent().trim().replaceAll(filterSwitch,
+	 * "**")); } else {
+	 * appComment.setComment_status(Constants.COMMENT_REVIEW_NO); // 未审核
+	 * appComment.setComment(requestParameter.getContent()); }
+	 * getHibernateTemplate().save(appComment); return result; }
+	 * 
+	 * 
+	 * AppInfo appInfo = appInfoDAO.findAppById(app_id_long); //Float
+	 * score_float = Float.parseFloat(score);
+	 * 
+	 * if(null != appInfo) { AppComment appComment = new AppComment();
+	 * appComment.setAppInfo(appInfo); appComment.setUser_name(user_name);
+	 * //user_name appComment.setUser_id(user_id);
+	 * appComment.setLogin_type(login_type); appComment
+	 * .setModel(requestParameter.getModel());
+	 * appComment.setUser_ip(requestParameter.getIp());
+	 * appComment.setUser_imei(requestParameter.getImei());
+	 * appComment.setComment_date(new Date());
+	 * appComment.setAppversion(requestParameter.getAppVersion());
+	 * appComment.setAppversioncode(requestParameter.getAppVersionCode());
+	 * 
+	 * List<CensorWord> censorWords = keywordInfoDAO.getCensorWoreList(); String
+	 * bannedString = ""; // 禁止字符串 String modString = ""; // 审核字符串 String
+	 * filterString = ""; // 过滤字符串 String filterSwitch = ""; //过滤替换 for
+	 * (CensorWord censorWord : censorWords) { if (censorWord.getGrade() ==
+	 * Constants.CENSORWORD_GRADE_BANNED) { // grade等级：1-禁止 2-审核 3-替换
+	 * bannedString = bannedString + ".*" + censorWord.getWord().trim() + ".*|";
+	 * } else if (censorWord.getGrade() == Constants.CENSORWORD_GRADE_MOD) {
+	 * modString = modString + ".*" + censorWord.getWord().trim() + ".*|"; }
+	 * else if(censorWord.getGrade() == Constants.CENSORWORD_GRADE_FILTER){
+	 * filterString = filterString + ".*" + censorWord.getWord().trim() + ".*|";
+	 * filterSwitch = filterSwitch + censorWord.getWord().trim() + "|"; } }
+	 * 
+	 * // 去掉字符串中最后的"|"符号 if (!"".endsWith(bannedString)) { bannedString =
+	 * bannedString.substring(0, bannedString.length() - 1); } if
+	 * (!"".endsWith(modString)) { modString = modString.substring(0,
+	 * modString.length() - 1); } if (!"".endsWith(filterString)) { filterString
+	 * = filterString.substring(0, filterString.length() - 1); filterSwitch =
+	 * filterSwitch.substring(0, filterSwitch.length() - 1); }
+	 * 
+	 * String content = requestParameter.getContent();
+	 * 
+	 * boolean isSaveComment = true; //System.out.println("content="+content);
+	 * //System.out.println("bannedString="+bannedString); if
+	 * (content.matches(bannedString)) {
+	 * //appComment.setComment_status(Constants.COMMENT_REVIEW_BANNED); //
+	 * 4代表有违禁内容，禁止显示 //不保存到数据库 result = Constants.COMMENT_BANNED_HINT;
+	 * isSaveComment = false; } else if (content.matches(modString)) {
+	 * appComment.setComment_status(Constants.COMMENT_REVIEW_MOD); // 待审核
+	 * appComment.setComment(requestParameter.getContent());
+	 * appComment.setScore(requestParameter.getScore());
+	 * //getHibernateTemplate().save(appComment);
+	 * //appInfoDAO.saveAppInfoForSaveComment
+	 * (appInfo,requestParameter.getScore()); } else if
+	 * (content.matches(filterString)) {
+	 * appComment.setComment_status(Constants.COMMENT_REVIEW_FILTER); // 替换
+	 * appComment
+	 * .setComment(requestParameter.getContent().trim().replaceAll(filterSwitch,
+	 * "**")); appComment.setScore(requestParameter.getScore());
+	 * //getHibernateTemplate().save(appComment);
+	 * //appInfoDAO.saveAppInfoForSaveComment
+	 * (appInfo,requestParameter.getScore()); } else {
+	 * appComment.setComment_status(Constants.COMMENT_REVIEW_NO); // 未审核
+	 * appComment.setComment(requestParameter.getContent());
+	 * appComment.setScore(requestParameter.getScore());
+	 * //getHibernateTemplate().save(appComment);
+	 * //appInfoDAO.saveAppInfoForSaveComment
+	 * (appInfo,requestParameter.getScore()); } if(isSaveComment){
+	 * getHibernateTemplate().save(appComment);
+	 * appInfoDAO.saveAppInfoForSaveComment
+	 * (appInfo,requestParameter.getScore()); updateCommentGrade(app_id_long,
+	 * requestParameter.getScore()); //评论等级统计 } } return result; }
+	 */
+
+	private boolean updateCommentGrade(Long app_id, Float score)
+			throws Exception {
+		String sql = "";
+		int grade = 0;
+		if (5 == score) {
+			grade = 5;
+		} else if (4 == score) {
+			grade = 4;
+		} else if (3 == score) {
+			grade = 3;
+		} else if (2 == score) {
+			grade = 2;
+		} else if (1 == score) {
+			grade = 1;
+		}
+		if (0 != grade) {
+			if (isExistCommentGrade(app_id)) {
+				sql = "update t_comment_grade set score" + grade + "=score"
+						+ grade + "+1 where app_id=" + app_id;
+			} else {
+				sql = "insert into t_comment_grade(app_id,score" + grade
+						+ ") value(" + app_id + ",1)";
+			}
+			getSession().createSQLQuery(sql).executeUpdate();
+		}
+		return true;
+	}
+
+	private boolean isExistCommentGrade(Long app_id) throws Exception {
+		String sql = "select id from t_comment_grade where app_id=" + app_id;
+		Integer id = (Integer) getSession().createSQLQuery(sql).uniqueResult();
+		if (null != id) {
+			return true;
+		} else {
+			return false;
+		}
+
+	}
+
+	// 根据id查询用户评论
+	public AppComment findAppCommentById(Long appComment_id) throws Exception {
+
+		return getHibernateTemplate().load(AppComment.class, appComment_id);
+
+	}
+
+	public Integer countForbidComments(ForbidComment forbidComment)
+			throws Exception {
+		try {
+			Criteria criteria = getSession()
+					.createCriteria(ForbidComment.class);
+			if (null != forbidComment.getImei()
+					&& !forbidComment.getImei().equals("")) {
+				// criteria.add(Restrictions.like("imei",
+				// "%"+forbidComment.getImei()+"%"));
+				criteria.add(Restrictions.eq("imei", forbidComment.getImei()));
+			}
+
+			if (null != forbidComment.getForbid_status()
+					&& !forbidComment.getForbid_status().equals("")
+					&& 0 != forbidComment.getForbid_status()) {
+				criteria.add(Restrictions.eq("forbid_status",
+						forbidComment.getForbid_status()));
+			}
+			Integer totalRows = ((Integer) criteria.setProjection(
+					Projections.rowCount()).uniqueResult()).intValue();
+			if (null == totalRows) {
+				totalRows = 0;
+			}
+			return totalRows;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	public List<ForbidComment> getForbidComments(
+			final ForbidComment forbidComment) throws Exception {
+		try {
+			@SuppressWarnings("unchecked")
+			List<ForbidComment> list = this.getHibernateTemplate().executeFind(
+					new HibernateCallback() {
+						public Object doInHibernate(Session session)
+								throws HibernateException {
+							Criteria criteria = session
+									.createCriteria(ForbidComment.class);
+
+							if (null != forbidComment.getImei()
+									&& !forbidComment.getImei().equals("")) {
+								// criteria.add(Restrictions.like("imei",
+								// "%"+forbidComment.getImei()+"%"));
+								criteria.add(Restrictions.eq("imei",
+										forbidComment.getImei()));
+							}
+
+							if (null != forbidComment.getForbid_status()
+									&& !forbidComment.getForbid_status()
+											.equals("")
+									&& 0 != forbidComment.getForbid_status()) {
+								criteria.add(Restrictions.eq("forbid_status",
+										forbidComment.getForbid_status()));
+							}
+
+							criteria.addOrder(Order.desc("add_date"));
+							criteria.setFirstResult(forbidComment
+									.getStartPosition());
+							criteria.setMaxResults(Constants.APPS_PER_PAGE_20);
+							List<ForbidComment> result = criteria.list();
+							return result;
+						}
+					});
+
+			if (null != list && list.size() > 0) {
+				return list;
+			} else {
+				return null;
+			}
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	public ForbidComment getForbidComment(final ForbidComment forbidComment)
+			throws Exception {
+		@SuppressWarnings("unchecked")
+		List<ForbidComment> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(ForbidComment.class);
+
+						if (null != forbidComment.getImei()
+								&& !forbidComment.getImei().equals("")) {
+							criteria.add(Restrictions.eq("imei",
+									forbidComment.getImei()));
+						}
+
+						if (null != forbidComment.getForbid_status()
+								&& !forbidComment.getForbid_status().equals("")
+								&& 0 != forbidComment.getForbid_status()) {
+							criteria.add(Restrictions.eq("forbid_status",
+									forbidComment.getForbid_status()));
+						}
+
+						List<ForbidComment> result = criteria.list();
+						return result;
+					}
+				});
+
+		if (null != list && list.size() > 0) {
+			return list.get(0);
+		} else {
+			return null;
+		}
+	}
+
+	public boolean deleteForbidComments(ForbidComment forbidComment, String ids)
+			throws Exception {
+		if (null != ids && !ids.equals("")) {
+			String queryString = "delete ForbidComment where id=?";
+			Query queryObj = getSession().createQuery(queryString);
+			String app_ids[] = ids.split(",");
+			for (int i = 0; i < app_ids.length; i++) {
+				queryObj.setInteger(0, Integer.parseInt(app_ids[i]));
+				queryObj.executeUpdate();
+			}
+		}
+		return true;
+	}
+
+	public boolean saveForbidCommnet(AppComment appComment,
+			Short forbid_status, String ids, UserInfo user) throws Exception {
+		if (null != appComment.getUser_imei()
+				&& !appComment.getUser_imei().trim().equals("")) {
+			ForbidComment forbidComment = new ForbidComment();
+			forbidComment.setImei(appComment.getUser_imei());
+			forbidComment.setForbid_status(forbid_status);
+			forbidComment.setAdd_date(new Date());
+			ForbidCommentReason forbidCommentSeason = new ForbidCommentReason();
+			forbidCommentSeason.setUser(user.getName());
+			forbidCommentSeason.setForbid_opinion(appComment.getComment());
+			forbidComment.setForbidCommentSeason(forbidCommentSeason);
+			getHibernateTemplate().save(forbidComment);
+		}
+		return true;
+	}
+
+	public boolean saveDownloadAppStatusLog(RequestParameter requestParameter)
+			throws Exception {
+		long elapsedtime = 0;
+		short related = -1;
+		short updated = -1;
+		short cs = -1;
+		long imei = 0;
+
+		if (null != requestParameter.getElapsedtime()
+				&& !requestParameter.getElapsedtime().equals("")) {
+			elapsedtime = Long.parseLong(requestParameter.getElapsedtime());
+		}
+		if (null != requestParameter.getRelated()
+				&& !requestParameter.getRelated().equals("")) {
+			related = Short.parseShort(requestParameter.getRelated());
+		}
+		if (null != requestParameter.getUpdate()
+				&& !requestParameter.getUpdate().equals("")) {
+			updated = Short.parseShort(requestParameter.getUpdate());
+		}
+		if (null != requestParameter.getCsStr()
+				&& !requestParameter.getCsStr().equals("")) {
+			cs = Short.parseShort(requestParameter.getCsStr());
+		}
+		if (null != requestParameter.getImei()
+				&& !requestParameter.getImei().equals("")) {
+			imei = Long.parseLong(requestParameter.getImei());
+		}
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		Calendar day = Calendar.getInstance();
+		String date = sdf.format(day.getTime()).replace("-", "");
+
+		String sql = "";
+		if (null != requestParameter.getType()) {
+			if (requestParameter.getType().equals("complete")) {
+				sql = "insert into t_app_download_complete_log_"
+						+ date
+						+ "(imei,model,ip,cfrom,app_id,module_id,related,updated,elapsedtime,cs,version) "
+						+ "value(" + imei + ",'" + requestParameter.getModel()
+						+ "',INET_ATON('" + requestParameter.getIp() + "'),"
+						+ requestParameter.getCfrom() + ","
+						+ Long.parseLong(requestParameter.getIdStr()) + ",'"
+						+ requestParameter.getModule_id() + "'," + related
+						+ "," + updated + "," + elapsedtime + "," + cs + ",'"
+						+ requestParameter.getVersion() + "')";
+			} else if (requestParameter.getType().equals("cancel")) {
+				sql = "insert into t_app_download_log_"
+						+ date
+						+ "(imei,model,ip,cfrom,app_id,module_id,related,updated,elapsedtime,cs,version,status) "
+						+ "value(" + imei + ",'" + requestParameter.getModel()
+						+ "',INET_ATON('" + requestParameter.getIp() + "'),"
+						+ requestParameter.getCfrom() + ","
+						+ Long.parseLong(requestParameter.getIdStr()) + ",'"
+						+ requestParameter.getModule_id() + "'," + related
+						+ "," + updated + "," + elapsedtime + "," + cs + ",'"
+						+ requestParameter.getVersion() + "','" + "2'" + ")";
+
+			} else {
+				Lg.info(LgType.USERFEEDBACK,
+						"saveDownloadAppStatusLog时为空:status="
+								+ requestParameter.getType() + ",id="
+								+ requestParameter.getIdStr() + ",target="
+								+ requestParameter.getTarget() + ",cfrom="
+								+ requestParameter.getCfrom() + ",module_id="
+								+ requestParameter.getModule_id() + ",related="
+								+ requestParameter.getRelated() + ",update="
+								+ requestParameter.getUpdate() + ",appVersion="
+								+ requestParameter.getAppVersion() + ",model="
+								+ requestParameter.getModel() + ",cs="
+								+ requestParameter.getCsStr() + ",imei="
+								+ requestParameter.getImei());
+			}
+		}
+
+		if (Constants.USE_LOGCACHE) {
+			UpgradeQueryLogCache.getIns().add(sql);
+		} else {
+			getSession().createSQLQuery(sql).executeUpdate();
+		}
+		return true;
+	}
+
+	public KeywordInfoDAO getKeywordInfoDAO() {
+		return this.keywordInfoDAO;
+	}
+
+	public void setKeywordInfoDAO(KeywordInfoDAO keywordInfoDAO) {
+		this.keywordInfoDAO = keywordInfoDAO;
+	}
+
+	public AppInfoDAO getAppInfoDAO() {
+		return this.appInfoDAO;
+	}
+
+	public void setAppInfoDAO(AppInfoDAO appInfoDAO) {
+		this.appInfoDAO = appInfoDAO;
+	}
+
+	@Override
+	public List<Object[]> getSystemLogList(final int start,
+			final String  ...params) throws Exception {
+		final String tableName  = params[0];
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		List<Object[]> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						String sql =
+								"SELECT * "
+//								"SELECT t.id,t.imei,t.model,t.ip,t.add_date as date,t.cfrom,"
+//								+ "t.app_id as appId,t.module_id as moduleId,t.elapsedtime,t.related,t.updated,t.cs,t.version"
+								+ " FROM "
+								+ tableName;
+								if(params.length == 2){
+									sql += (" WHERE IMEI = '" + params[1] + "'");
+								}
+								sql +=  " ORDER BY ID DESC LIMIT "
+								+ start
+								+ ",10";
+						List<Object[]> logs = new ArrayList<Object[]>(1);
+						try {
+							logs = querySQL(sql);
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+//						List<AppDownloadLog> logs = new ArrayList<AppDownloadLog>();
+//						try {
+//							Connection conn = session.connection();
+//							Statement sm = conn.createStatement();
+//							ResultSet rs = sm.executeQuery(sql);
+//							while (rs.next()) {
+//								ResultSetMetaData rsmd = rs.getMetaData();
+//
+//								AppDownloadLog log = new AppDownloadLog();
+//								log.setId(rs.getInt(1));
+//								log.setImei(rs.getString(2));
+//								log.setModel(rs.getString(3));
+//								log.setIp(rs.getString(4));
+//								log.setDate(rs.getTimestamp(5));
+//								log.setCfrome(rs.getString(6));
+//								log.setAppId(rs.getInt(7));
+//								Object obj = rs.getObject(8);
+//								if (obj != null && !"null".equals(obj)) {
+//									log.setModuleId(Integer.valueOf(obj
+//											.toString()));
+//								}
+//								log.setElapsedTime(rs.getInt(9));
+//								log.setRelated(rs.getInt(10));
+//								log.setUpdated(rs.getInt(11));
+//								log.setCs(rs.getString(12));
+//								log.setVersion(rs.getString(13));
+//								logs.add(log);
+//							}
+//						} catch (SQLException e) {
+//							// TODO Auto-generated catch block
+//							e.printStackTrace();
+//						}
+						return logs;
+					}
+				});
+		return list;
+	}
+
+	@Override
+	public int countSystemLogs(String  ...params) throws Exception {
+		String tableName = params[0];
+		StringBuffer sql = new StringBuffer("SELECT COUNT(*) as count FROM "+ tableName);
+		if(params.length == 2){
+			sql.append(" WHERE IMEI = '").append(params[1]).append("'");
+		}
+		Session session = getSession();
+		if (session != null) {
+			SQLQuery query = session
+					.createSQLQuery(sql.toString());
+			return (Integer) query.addScalar("count", Hibernate.INTEGER)
+					.uniqueResult();
+		}
+		return 0;
+	}
+
+	private List<Object[]> querySQL(final String sql) throws Exception{
+		final List<Object[]> resultList = new ArrayList<Object[]>();
+		try{
+			 getSession().doWork(new Work() {
+				@Override
+				public void execute(Connection connection) throws SQLException {
+					PreparedStatement statement = null;
+					ResultSet rs = null;
+					statement = connection.prepareStatement(sql);
+					rs = statement.executeQuery();
+					ResultSetMetaData rsmd = rs.getMetaData();
+					int columnCount = rsmd.getColumnCount();
+					Object[] columnNames = new Object[columnCount];
+					for(int i=0; i<columnCount; i++){
+						columnNames[i] = rsmd.getColumnName(i+1);
+					}
+					resultList.add(columnNames);
+					while(rs.next()){
+						Object[] objects = new Object[columnCount];
+						for (int i = 0; i < columnCount; i++) {
+							objects[i] = rs.getObject(i+1);
+						}
+						resultList.add(objects);
+					}
+				}
+			});
+			
+		}catch(Exception e){
+			throw e;
+		}
+		return resultList;
+	}
+}

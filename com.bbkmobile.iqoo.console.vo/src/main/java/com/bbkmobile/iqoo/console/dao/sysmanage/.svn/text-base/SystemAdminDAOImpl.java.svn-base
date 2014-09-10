@@ -1,0 +1,209 @@
+package com.bbkmobile.iqoo.console.dao.sysmanage;
+
+import java.util.List;
+
+import org.hibernate.Criteria;
+import org.hibernate.HibernateException;
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Restrictions;
+import org.springframework.orm.hibernate3.HibernateCallback;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.common.logging.Lg;
+import com.bbkmobile.iqoo.console.constants.LgType;
+import com.bbkmobile.iqoo.console.constants.UtilTool;
+import com.bbkmobile.iqoo.console.dao.login.BbkAdminUser;
+import com.bbkmobile.iqoo.console.dao.review.DeveloperPersonalInfo;
+import com.bbkmobile.iqoo.console.menu.dao.BbkAdminMenu;
+
+
+public class SystemAdminDAOImpl extends HibernateDaoSupport implements SystemAdminDAO {
+
+	@Override
+	public List<BbkAdminMenu> findByProperty(String propertyName, Object value)
+			throws Exception {
+		// TODO Auto-generated method stub
+		//此方法通过属性名来查找相应的记录
+		try {
+			String queryString = "from BbkAdminMenu as model where model."
+					+ propertyName + "= ? order by model.menuOrder asc";
+			Query queryObject = getSession().createQuery(queryString);
+			queryObject.setParameter(0, value);
+			return queryObject.list();
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	@Override
+	public void save(BbkAdminUser pojo) throws Exception {
+		// TODO Auto-generated method stub
+		try {
+			Session session = getSession();
+			session.save(pojo);
+			Lg.info(LgType.SYSTEM_MANAGE,"添加用户"+pojo.getAdmUserName()+"成功。");
+		} catch (RuntimeException re) {
+			Lg.error(LgType.SYSTEM_MANAGE,"添加用户"+pojo.getAdmUserName()+"失败。", re);
+			throw re;
+		}
+	}
+
+	@Override
+	public List<BbkAdminUser> findAllAdmin(final int startRecord) throws Exception {
+		// TODO Auto-generated method stub
+		
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		List<BbkAdminUser> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(BbkAdminUser.class);
+						criteria.addOrder(Order.asc("admUserId"));
+						criteria.setFirstResult(startRecord);
+						criteria.setMaxResults(10);
+						List<BbkAdminUser> result = criteria.list();
+						return result;
+					}
+				});
+		if(null!=list)
+		{
+			return list;
+		}
+		return null;
+//		try {
+//			String queryString = "from BbkAdminUser";
+//			Query queryObject = getSession().createQuery(queryString);
+//			return queryObject.list();
+//		} catch (RuntimeException re) {
+//			Lg.error(LgType.SYSTEM_MANAGE,"find all failed", re);
+//			throw re;
+//		}
+	}
+	
+	@Override
+	public int countAllAdminUser() throws Exception {
+		// TODO Auto-generated method stub
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		List<BbkAdminUser> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(BbkAdminUser.class);
+						
+						List<BbkAdminUser> result = criteria.list();
+						return result;
+					}
+				});
+		if(null!=list)
+		{
+			return list.size();
+		}
+		return 0;
+	}
+
+	@Override
+	public List<BbkAdminMenu> findInMenuID(String menuIDs)
+			throws Exception {
+		// TODO Auto-generated method stub
+		try{
+			String querySql = "from BbkAdminMenu m where m.menuId in (" + menuIDs +")";
+			Query queryObj = getSession().createQuery(querySql);
+			return queryObj.list();
+		}catch(Exception e){
+			Lg.error(LgType.SYSTEM_MANAGE, "查询用户菜单失败。", e);
+			throw e;
+		}
+	}
+
+	@Override
+	public void deleteAdminByID(Integer id) throws Exception {
+		// TODO Auto-generated method stub
+		try {
+			Session session = getSession();	
+			//1.先删除管理员日志
+			String querySql="delete from BbkAdminLog log where log.bbkAdminUser.admUserId=?";
+			Query queryObj = session.createQuery(querySql);
+			queryObj.setInteger(0, id);
+			queryObj.executeUpdate();
+			//2.再删除管理员
+			querySql = "delete from BbkAdminUser u where u.admUserId=?";
+			queryObj = session.createQuery(querySql);
+			queryObj.setInteger(0, id);
+			queryObj.executeUpdate();
+		} catch (Exception re) {
+			throw re;
+		}
+	}
+
+	@Override
+	public BbkAdminUser findAdminById(Integer id) throws Exception {
+		// TODO Auto-generated method stub
+		return this.getHibernateTemplate().load(BbkAdminUser.class, id);
+	}
+
+	@Override
+	public boolean updateAdminPrivilege(Integer id, String newPris)
+			throws Exception {
+		// TODO Auto-generated method stub
+		try {
+			BbkAdminUser bbkAdminUser=this.getHibernateTemplate().load(BbkAdminUser.class, id);
+			bbkAdminUser.setAdmUserPower(newPris);
+			this.getHibernateTemplate().update(bbkAdminUser);
+		} catch (Exception re) {
+			throw re;
+		}
+		return true;
+	}
+
+	@Override
+	public BbkAdminUser findAdminByName(String name) throws Exception {
+		// TODO Auto-generated method stub
+		String sql="from BbkAdminUser where admUserName=?";
+		Session session=getSession();
+		Query query=session.createQuery(sql);
+		query.setString(0, name);
+		return (null!=query.list()&&query.list().size()==1)?(BbkAdminUser)query.list().get(0):null;
+	}
+
+	@Override
+	public void updateAdminInfo(SystemAdminVO systemAdmin) throws Exception {
+		// TODO Auto-generated method stub
+		String sql="update BbkAdminUser set admUserTrueName=?,admUserDep=? where admUserId=?";
+		Session session=getSession();
+		Query query=session.createQuery(sql);
+		query.setString(0, systemAdmin.getTrueName());
+		query.setString(1, systemAdmin.getDept());
+		query.setInteger(2, systemAdmin.getId());
+		query.executeUpdate();
+	}
+
+	@Override
+	public void updateAdminPwd(SystemAdminVO systemAdmin) throws Exception {
+		// TODO Auto-generated method stub
+		String sql="update BbkAdminUser set admUserPass=? where admUserId=?";
+		Session session=getSession();
+		Query query=session.createQuery(sql);
+		query.setString(0, systemAdmin.getPwd());
+		query.setInteger(1, systemAdmin.getId());
+		query.executeUpdate();
+	}
+
+	@Override
+	public boolean validateAdminPwd(SystemAdminVO systemAdmin) throws Exception {
+		// TODO Auto-generated method stub
+	//	String sql="from BbkAdminUser where  admUserId=? and admUserPass=?";
+		BbkAdminUser bbkAdminUser=null;
+		bbkAdminUser=this.getHibernateTemplate().load(BbkAdminUser.class, systemAdmin.getId());
+		if(null!=bbkAdminUser&&bbkAdminUser.getAdmUserPass().equals(systemAdmin.getPwd()))
+		{
+			return true;
+		}
+		return false;
+		
+	}
+}

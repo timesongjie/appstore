@@ -1,0 +1,97 @@
+package com.bbkmobile.iqoo.console.dao.contentmanage;
+
+import java.util.List;
+
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+import com.bbkmobile.iqoo.console.dao.appinfo.RequestParameter;
+import com.bbkmobile.iqoo.console.dao.modelmgr.Model;
+
+public interface AppHubSetDAO {
+
+	boolean addHubSetByHubType(Long[] ids, int hub_type, String adminName) throws Exception;
+
+	boolean deleteHubSetByAppId(Long[] ids) throws Exception;
+
+	List<AppHubSet> findAllHubSet() throws Exception;
+
+	Integer countHubSetByHubType(int hubType) throws Exception;
+
+	List<AppHubSet> findHubSetByHubType(int hubType, int startRecord) throws Exception;
+
+	boolean updateShowOrderForHubSet(String[] str) throws Exception;
+
+	//汇手机接口@haiyan
+	int countAppHubSetsWithFilterModel(RequestParameter requestParameter, Model model) throws Exception; 
+	
+    List<AppHubSet> getAppHubSetsWithFilterModel(final RequestParameter requestParameter, final Model model) throws Exception;
+    
+    AppHubInfo findAppHubInfoByEnName(String enName) throws Exception;
+    
+    List<AppHubSet> getAppHubSetBySeriesId(Model model) throws Exception;
+    
+    int countHotAppHubSetsWithFilterModel(final short recommend, final RequestParameter requestParameter, final Model model) throws Exception;
+    List<AppHubSet> getHotAppHubSetsWithFilterModel(final short recommend, final RequestParameter requestParameter, final Model model) throws Exception;
+    
+    public int countHotHubApps(final short recommend, final RequestParameter requestParameter,
+            final Model model) throws Exception;
+    public List<AppHubSet> getHotHubApps(final short recommend, final RequestParameter requestParameter, final Model model)
+            throws Exception;
+    
+    List<AppHubSet> getSearchHubAppsWithFilterModel(final RequestParameter requestParameter, final Model model)
+            throws Exception;
+    
+    int countSearchHubAppsWithFilterModel(final RequestParameter requestParameter, final Model model)
+            throws Exception;  
+    
+    public List<HubHotContent> getHubHotContentsWithFilterModel(final RequestParameter requestParameter, final Model model)
+            throws Exception ;
+    //end 
+    public Integer countAllHubHotContents(final HubHotContent hubHotContent) throws Exception;
+    public List<HubHotContent> getAllHubHotContents(final HubHotContent hubHotContent, final PageVO page) throws Exception;
+    public HubHotContent getHubHotContent(final HubHotContent hubHotContent) throws Exception;
+    public void addHubHotContents(HubHotContent hubHotContent,Long ids[]) throws Exception;
+    public void deleteHubHotContent(HubHotContent hubHotContent,String idsStr) throws Exception;
+    public void updateHubHotContentShowOrder(HubHotContent hubHotContent,String idsStr) throws Exception;
+    public void addHubHotContentSeries(HubHotContent hubHotContent) throws Exception;
+    
+	List<AppHubInfo> getAllPhoneHub() throws Exception;
+
+	void savePhoneHub(AppHubInfo appHubInfo) throws Exception;
+
+	AppHubInfo getAppHubById(Integer id) throws Exception;
+
+	void updateAppHub(AppHubInfo appHubInfo) throws Exception;
+
+	void deletePhoneHubByID(int[] ids) throws Exception;
+
+	List<AppHubSet> findAppByHubId(Integer hub_id, Short series_id, String appSortWay) throws Exception;
+
+	Integer countHubApp(AppHubInfo appHubInfo, AppInfo app) throws Exception;
+
+	List<AppInfo> getHubByHub(AppHubInfo appHubInfo, AppInfo app,
+			int startRecord) throws Exception;
+
+
+	AppHubInfo findHubById(Integer hubId) throws Exception;
+
+	void addHubAppForSeries(Integer hubId, Short seriesId, Long[] appIds,
+			short defaultType, String adminName) throws Exception;
+
+	boolean isInitSeriesHubSet(Integer hub_id, Short series_id) throws Exception;
+
+	List<AppHubSet> findHubSetByProperty(String property, String property2,Integer hub_id,
+			short series_id);
+
+	void saveHubSetForSeries(Integer hubId, Short seriesId, List<AppHubSet> list) throws Exception;
+
+	void deleteHubSetByAppId(Integer hubId, Short seriesId, Long[] appIds) throws Exception;
+
+	void updateHubSetOrderForSeries(String[] str) throws Exception;
+
+	void updateRecommend(char recommend, Long[] ids) throws Exception;
+
+	void addHubSetForNewSeries(Short id) throws Exception;
+
+	boolean findTopicByAppInfoId(Long app_id, AppHubSet appHubSet) throws Exception;
+}

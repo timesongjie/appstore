@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 2011-12-28 16:55:07 by Hibernate Tools 3.4.0.CR1 -->
+<hibernate-mapping package="com.bbkmobile.iqoo.console.dao.apptype">
+	<class name="PersonalType" table="t_type_personal"
+		dynamic-update="true">
+		<id name="id" type="java.lang.Integer">
+			<column name="id" />
+			<generator class="identity" />
+		</id>
+		<property name="name" type="string">
+			<column name="name" length="20" unique="true">
+			</column>
+		</property>
+		<property name="icon" type="string">
+			<column name="icon" length="100">
+			</column>
+		</property>
+		<property name="status" type="char">
+			<column name="status">
+			</column>
+		</property>
+		<property name="tag" type="char">
+			<column name="tag">
+			</column>
+		</property>
+		<property name="addTime" type="java.util.Date">
+			<column name="addtime"></column>
+		</property>
+		<property name="order">
+			<column name="orderSort"></column>
+		</property>
+	</class>
+</hibernate-mapping>

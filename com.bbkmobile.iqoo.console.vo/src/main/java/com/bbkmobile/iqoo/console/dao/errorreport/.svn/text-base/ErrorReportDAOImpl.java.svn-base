@@ -1,0 +1,373 @@
+package com.bbkmobile.iqoo.console.dao.errorreport;
+
+import java.util.Date;
+import java.util.List;
+
+import org.hibernate.Criteria;
+import org.hibernate.HibernateException;
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Restrictions;
+import org.springframework.orm.hibernate3.HibernateCallback;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.console.constants.UtilTool;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+import com.bbkmobile.iqoo.console.dao.keyword.KeywordInfoDAO;
+import com.bbkmobile.iqoo.console.dao.modelmgr.ConsoleConstant;
+
+public class ErrorReportDAOImpl extends HibernateDaoSupport implements
+		ErrorReportDAO {
+
+	private KeywordInfoDAO keywordInfoDAO;
+	boolean type_flag = false;
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public List<ErrorReport> getAllReportList(final ErrorReport errorReport)
+			throws Exception {
+		List<ErrorReport> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(ErrorReport.class);
+
+						Criteria app_criteria = criteria.createCriteria(
+								"appInfo", Criteria.LEFT_JOIN);
+
+						if (null != errorReport.getError_type()
+								&& '0' != errorReport.getError_type()) {
+							criteria.add(Restrictions.eq("error_type",
+									errorReport.getError_type()));
+						}
+
+						if (null != errorReport.getAppInfo().getAppType()
+								.getId()
+								&& 0 != errorReport.getAppInfo().getAppType()
+										.getId()) {
+							app_criteria.add(Restrictions.eq("appType",
+									errorReport.getAppInfo().getAppType()));
+							errorReport.getAppInfo().setType(0);
+							type_flag = true;
+						}
+
+						if ((errorReport.getAppInfo().getType() != 0)) {
+							errorReport.getAppInfo().getAppType()
+									.setId(errorReport.getAppInfo().getType());
+							app_criteria.add(Restrictions.eq("appType",
+									errorReport.getAppInfo().getAppType()));
+							type_flag = false;
+
+						}
+
+						if (null != errorReport.getAppInfo().getAppCnName()
+								&& !UtilTool.checkStringNull(errorReport
+										.getAppInfo().getAppCnName())) {
+							app_criteria.add(Restrictions.like("appCnName", "%"
+									+ errorReport.getAppInfo().getAppCnName()
+									+ "%"));
+						}
+
+						if (null != errorReport.getFrom_date()) {
+							criteria.add(Restrictions.between("report_date",
+									errorReport.getFrom_date(),
+									errorReport.getTo_date()));
+						}
+						criteria.addOrder(Order.desc("report_date"));
+						List<ErrorReport> result = criteria.list();
+						return result;
+					}
+				});
+		return list;
+
+	}
+
+	public int countReportRecords(final ErrorReport errorReport)
+			throws Exception {
+		/*
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		
+		List<ErrorReport> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(ErrorReport.class);
+
+						Criteria app_criteria = criteria.createCriteria(
+								"appInfo", Criteria.LEFT_JOIN);
+						if (null != errorReport.getError_type()
+								&& '0' != errorReport.getError_type()) {
+							criteria.add(Restrictions.eq("error_type",
+									errorReport.getError_type()));
+						}
+
+						if (null != errorReport.getAppInfo().getAppType()
+								.getId()
+								&& 0 != errorReport.getAppInfo().getAppType()
+										.getId() && type_flag) {
+							app_criteria.add(Restrictions.eq("appType",
+									errorReport.getAppInfo().getAppType()));
+							errorReport.getAppInfo().setType(0); 
+						}
+
+						if ((errorReport.getAppInfo().getType() != 0)) {
+							app_criteria.add(Restrictions.eq("appType",
+									errorReport.getAppInfo().getAppType()));
+						}
+
+						if (null != errorReport.getAppInfo().getAppCnName()
+								&& !UtilTool.checkStringNull(errorReport
+										.getAppInfo().getAppCnName())) {
+
+							app_criteria.add(Restrictions.like("appCnName", "%"
+									+ errorReport.getAppInfo().getAppCnName()
+									+ "%"));
+						}
+
+						if (null != errorReport.getFrom_date()) {
+							criteria.add(Restrictions.between("report_date",
+									errorReport.getFrom_date(),
+									errorReport.getTo_date()));
+						}
+						criteria.addOrder(Order.desc("report_date"));
+						List<ErrorReport> result = criteria.list();
+						return result;
+					}
+				});
+		if (null != list) {
+			result = list.size();
+		}
+		
+		return result;
+		*/
+
+        Criteria criteria = getSession()
+                .createCriteria(ErrorReport.class);
+
+        Criteria app_criteria = criteria.createCriteria(
+                "appInfo", Criteria.LEFT_JOIN);
+        if (null != errorReport.getError_type()
+                && '0' != errorReport.getError_type()) {
+            criteria.add(Restrictions.eq("error_type",
+                    errorReport.getError_type()));
+        }
+
+        if (null != errorReport.getAppInfo().getAppType()
+                .getId()
+                && 0 != errorReport.getAppInfo().getAppType()
+                        .getId() && type_flag) {
+            app_criteria.add(Restrictions.eq("appType",
+                    errorReport.getAppInfo().getAppType()));
+            errorReport.getAppInfo().setType(0); 
+        }
+
+        if ((errorReport.getAppInfo().getType() != 0)) {
+            app_criteria.add(Restrictions.eq("appType",
+                    errorReport.getAppInfo().getAppType()));
+        }
+
+        if (null != errorReport.getAppInfo().getAppCnName()
+                && !UtilTool.checkStringNull(errorReport
+                        .getAppInfo().getAppCnName())) {
+
+            app_criteria.add(Restrictions.like("appCnName", "%"
+                    + errorReport.getAppInfo().getAppCnName()
+                    + "%"));
+        }
+
+        if (null != errorReport.getFrom_date()) {
+            criteria.add(Restrictions.between("report_date",
+                    errorReport.getFrom_date(),
+                    errorReport.getTo_date()));
+        }
+        //criteria.addOrder(Order.desc("report_date"));
+       
+        int totalRows =((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult()).intValue();  //是否为null
+
+        return totalRows;
+	
+	}
+
+	public List<ErrorReport> getReportList(final int start,
+			final ErrorReport errorReport) throws Exception { 
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		List<ErrorReport> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(ErrorReport.class);
+
+						Criteria app_criteria = criteria.createCriteria(
+								"appInfo", Criteria.LEFT_JOIN);
+						if (null != errorReport.getError_type()
+								&& '0' != errorReport.getError_type()) {
+							criteria.add(Restrictions.eq("error_type",
+									errorReport.getError_type())); 
+						}
+
+						if (null != errorReport.getAppInfo().getAppType()
+								.getId()
+								&& 0 != errorReport.getAppInfo().getAppType()
+										.getId() && type_flag) {
+							app_criteria.add(Restrictions.eq("appType",
+									errorReport.getAppInfo().getAppType()));
+							errorReport.getAppInfo().setType(0);
+
+						}
+
+						if ((errorReport.getAppInfo().getType() != 0)) {
+							errorReport.getAppInfo().getAppType()
+									.setId(errorReport.getAppInfo().getType());
+							app_criteria.add(Restrictions.eq("appType",
+									errorReport.getAppInfo().getAppType()));
+						}
+
+						if (null != errorReport.getAppInfo().getAppCnName()
+								&& !UtilTool.checkStringNull(errorReport
+										.getAppInfo().getAppCnName())) {
+							app_criteria.add(Restrictions.like("appCnName", "%"
+									+ errorReport.getAppInfo().getAppCnName()
+									+ "%"));
+						}
+
+						if (null != errorReport.getFrom_date()) {
+							criteria.add(Restrictions.between("report_date",
+									errorReport.getFrom_date(),
+									errorReport.getTo_date()));
+						}
+						criteria.addOrder(Order.desc("report_date"));
+						criteria.setFirstResult(start);
+						criteria.setMaxResults(10);
+						List<ErrorReport> result = criteria.list();
+						return result;
+					}
+				});
+		  
+		return list;
+	}
+
+	public boolean deleteReportByID(Long[] ids) throws Exception {
+		try {
+			String queryString = "delete ErrorReport where id=?";
+			Session session = getSession();
+			for (Long id : ids) {
+				Query queryObj = session.createQuery(queryString);
+				queryObj.setLong(0, id);
+				queryObj.executeUpdate();
+			}
+			return true;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	public boolean saveErrorReport(AppInfo appInfo, String user_name,
+			String model, String content, String client_ip, String imei,
+			String errCode, Character type) throws Exception {
+
+		boolean result = false;
+		ErrorReport errorReport = new ErrorReport();
+		if (null != appInfo) {
+		    
+			List list=getHibernateTemplate().find("from ConsoleConstant where type=? and value=?",Short.parseShort(type.toString()),errCode);
+			if(null!=list && list.size()>0){
+				ConsoleConstant constant=(ConsoleConstant)list.get(0);
+				errorReport.setError_content(constant.getDescribe());
+			}else{
+				errorReport.setError_content(content);
+			}
+			
+			errorReport.setAppInfo(appInfo);
+			errorReport.setUser(user_name); // user_name
+			errorReport.setModel(model);
+			
+			errorReport.setUser_ip(client_ip);
+			errorReport.setUser_imei(imei);
+
+			errorReport.setReport_date(new Date());
+
+			errorReport.setError_code(errCode);
+			errorReport.setError_type(type);
+
+			getHibernateTemplate().save(errorReport);
+			result = true;
+		}
+		return result;
+	}
+	
+	public boolean saveAppInstallSucessLog(ErrorReport errorReport, String target,String elapsedtime,String appVersion) throws Exception {
+	    try {
+            String table_name = "";
+            if (null != target && target.equals("baidu")) {
+                table_name = "t_app_baidu_install_log";
+            } else {
+                if (errorReport.getApp_id()<0){    
+                    table_name = "t_app_baidu_install_log";
+                }else{
+                    table_name = "t_app_install_log";
+                }
+            }
+            
+            String sql = "insert into " +table_name+"(imei,model,ip,app_id,elapsedtime,version) " + "value('"
+                    + errorReport.getUser_imei() + "','" + errorReport.getModel() + "','"
+                    + errorReport.getUser_ip() + "','" + errorReport.getApp_id()  + "','"
+                    + elapsedtime + "','" + appVersion  + "')";
+            getSession().createSQLQuery(sql).executeUpdate();;
+            return true;
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+	
+
+	// 根据id查询用户评论
+	public ErrorReport findErrorReportById(Long report_id) throws Exception {
+
+		return getHibernateTemplate().load(ErrorReport.class, report_id);
+
+	}
+
+	public KeywordInfoDAO getKeywordInfoDAO() {
+		return this.keywordInfoDAO;
+	}
+
+	public void setKeywordInfoDAO(KeywordInfoDAO keywordInfoDAO) {
+		this.keywordInfoDAO = keywordInfoDAO;
+	}
+
+    @Override
+    public boolean saveBaiduErrorReport(Long app_id, String user_name, String model, String content, String client_ip,
+            String imei, String errCode, Character type) throws Exception {
+        boolean result = false;
+        BaiduErrorReport errorReport = new BaiduErrorReport();
+
+        List list=getHibernateTemplate().find("from ConsoleConstant where type=? and value=?",Short.parseShort(type.toString()),errCode);
+        if(null!=list && list.size()>0){
+            ConsoleConstant constant=(ConsoleConstant)list.get(0);
+            errorReport.setError_content(constant.getDescribe());
+        }else{
+            errorReport.setError_content(content);
+        }
+        errorReport.setApp_id(app_id);
+        errorReport.setUser(user_name); // user_name
+        errorReport.setModel(model);
+        
+        errorReport.setUser_ip(client_ip);
+        errorReport.setUser_imei(imei);
+
+        errorReport.setReport_date(new Date());
+
+        errorReport.setError_code(errCode);
+        errorReport.setError_type(type);
+
+        getHibernateTemplate().save(errorReport);
+        result = true;
+   
+        return result;
+    }
+
+}

@@ -1,0 +1,21 @@
+package com.bbkmobile.iqoo.console.dao.apptype;
+
+import java.util.List;
+
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.common.vo.CommonResultAppInfo;
+
+public interface PersonalTypeAppDao {
+
+	public int addPersonalTypeApps(List<PersonalTypeApp> apps)throws Exception;
+	public List<PersonalTypeApp> list(PersonalTypeApp app)throws Exception;
+	public List<PersonalTypeApp> list(PersonalTypeApp app,PageVO page,String orderBy)throws Exception;
+	public int count(PersonalTypeApp app)throws Exception;
+	
+	
+	public int deletePersonalTypeApps(Integer []id)throws Exception;
+	public int deletePersonalTypeApps(Integer typeId,Integer []appIds)throws Exception;
+	public void updatePersonalTypeApps(List<PersonalTypeApp> apps)throws Exception;
+	
+	public List<CommonResultAppInfo> listForInterface(PersonalTypeApp app,PageVO page,String orderBy)throws Exception;
+}

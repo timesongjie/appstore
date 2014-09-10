@@ -1,0 +1,169 @@
+package com.bbkmobile.iqoo.console.index.dao;
+
+import java.math.BigInteger;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import org.hibernate.Criteria;
+import org.hibernate.Session;
+import org.hibernate.criterion.Restrictions;
+import org.hibernate.transform.Transformers;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+
+public class AMustConsoleDaoImpl extends HibernateDaoSupport implements AMustConsoleDao{
+
+	@Override
+	public void addAMust(IndexModelSubTitle amust) throws Exception {
+		if(amust != null){
+			getHibernateTemplate().save(amust);
+		}
+	}
+
+	@Override
+	public void deleteAMusts(int[] ids) throws Exception {
+		String sql = " delete from t_index_model_subtitle where id = ? ";
+		String sql2 = " delete from t_index_model_apps where sub_id = ?";
+		if(ids != null && ids.length >0){
+			Session session = getSession();
+			for(int id :ids){
+				session.createSQLQuery(sql).setInteger(0, id).executeUpdate();
+				session.createSQLQuery(sql2).setInteger(0, id).executeUpdate();
+			}
+		}
+	}
+	@Override
+	public void updateAMust(IndexModelSubTitle[] amust) throws Exception {
+		if(amust != null && amust.length >0 ){
+			String sql = "update  t_index_model_subtitle set show_order = ? where id = ?";
+			Session session = getSession();
+			for(IndexModelSubTitle subTitle : amust){
+				if(subTitle != null){
+					session.createSQLQuery(sql)
+					.setInteger(0, subTitle.getShow_order())
+					.setInteger(1, subTitle.getId()).executeUpdate();
+				}
+			}
+		}
+	}
+	@Override
+	public void updateAMust(IndexModelSubTitle amust) throws Exception {
+		if(amust != null && amust.getId() != null){
+			IndexModelSubTitle orgin = getHibernateTemplate().load(IndexModelSubTitle.class, amust.getId());
+			if(orgin != null){
+				if(amust.getSubTitle() != null){
+					orgin.setSubTitle(amust.getSubTitle());
+				}
+				if(amust.getStatus() != null){
+					orgin.setStatus(amust.getStatus());
+				}
+			}
+		}
+	}
+	@Override
+	public void updateAMust(int amust) throws Exception {
+			IndexModelSubTitle orgin = getHibernateTemplate().load(IndexModelSubTitle.class, amust);
+			if(orgin != null){
+				if(orgin.getStatus() == '0'){
+					orgin.setStatus('1');
+				}else{
+					orgin.setStatus('0');
+				}
+			}
+	}
+	@Override
+	public void updateIndexModelApps(IndexModelApps [] apps) throws Exception {
+		String sql = "update t_index_model_apps set show_order = ? where id = ?";
+		if(apps != null && apps.length >0){
+			Session session = getSession();
+			for(IndexModelApps app : apps){
+				if(app != null){
+					session.createSQLQuery(sql).setInteger(0, app.getShow_order()).setInteger(1, app.getId()).executeUpdate();
+				}
+			}
+		}
+		
+	}
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<IndexModelSubTitle> selectAll(Map<String,Object> params) throws Exception {
+		if(params == null || params.size() != 2){
+			return Collections.EMPTY_LIST;
+		}
+		String sql = "select t.id,t.tag, "
+				+ " t.subtitle as subTitle,t.status as status,"
+				+ " t.show_order as show_order,t.createTime as createTime "
+				+ " from t_index_model_subtitle t,t_index_model t2 "
+				+ " where t2.id = t.model_id and t2.title = ? and t.tag = ? order by t.show_order ";
+		return getSession().createSQLQuery(sql)
+				.addScalar("id").addScalar("tag")
+				.addScalar("subTitle").addScalar("status")
+				.addScalar("show_order").addScalar("createTime")
+				.setString(0, params.get(AMustConsoleDao.TITLE_KEY).toString())
+				.setCharacter(1, (Character)params.get(AMustConsoleDao.TAG_KEY)).setResultTransformer(Transformers.aliasToBean(IndexModelSubTitle.class)).list();
+	}
+
+	@Override
+	public IndexModelSubTitle getAppInfos(IndexModelSubTitle subTitle)
+			throws Exception {
+		Session session = getSession();
+		Criteria criteria = session.createCriteria(IndexModelSubTitle.class,"subTitle");
+		if(subTitle != null){
+			criteria.add(Restrictions.eq("subTitle.id", subTitle.getId()));
+		}
+		@SuppressWarnings("unchecked")
+		List<IndexModelSubTitle> list = criteria.list();
+		if(list != null && list.size() > 0 ){
+			return list.get(0);
+		}
+		return null;
+	}
+
+	@Override
+	public void addIndexModelApps(IndexModelApps[] apps) throws Exception {
+		if(apps != null && apps.length >0 ){
+			for(IndexModelApps app : apps){
+				addIndexModelApp(app);
+			}
+		}
+	}
+
+	@Override
+	public void addIndexModelApp(IndexModelApps apps) throws Exception {
+		if(apps != null){
+			getHibernateTemplate().save(apps);
+		}
+		
+	}
+
+	@Override
+	public int maxAppCount(int subtitle_id) throws Exception {
+		String sql = "SELECT max(show_order) FROM t_index_model_apps t where t.sub_id =  ? ";
+		Object obj = getSession().createSQLQuery(sql).setInteger(0, subtitle_id).uniqueResult();
+		if(obj != null){
+			if(obj instanceof BigInteger){
+				BigInteger big = (BigInteger)obj;
+				return big.intValue();
+			}else{
+				return (Integer)obj;
+			}
+		}
+		return 0;
+	}
+	@Override
+	public void deleteIndexModelApps(IndexModelApps[] apps)throws Exception{
+		if(apps != null && apps.length >0){
+			String sql = "delete from t_index_model_apps  where  sub_id = ? and  app_id = ?";
+			Session session =  getSession();
+			for(IndexModelApps app : apps){
+				if(app != null ){
+					session.createSQLQuery(sql)
+					 	.setInteger(0, app.getModel().getId())
+					 	.setLong(1, app.getAppInfo().getId()).executeUpdate();
+				}
+			}
+		}
+	}
+
+}

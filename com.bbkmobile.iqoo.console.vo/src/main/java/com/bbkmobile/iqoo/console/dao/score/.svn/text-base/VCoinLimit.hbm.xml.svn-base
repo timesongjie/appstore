@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping>
+    <class name="com.bbkmobile.iqoo.console.dao.score.VCoinLimit" table="t_v_coin_limit">
+        <id name="id" type="java.lang.Long">
+            <column name="id" />
+            <generator class="identity" />
+        </id>     
+        <property name="value_limit" type="java.lang.Integer">
+            <column name="value_limit"  not-null="true">
+            </column>
+        </property>
+        <property name="modify_date" type="timestamp">
+            <column name="modify_date" length="19" >
+            </column>
+        </property>
+    
+    </class>
+</hibernate-mapping>

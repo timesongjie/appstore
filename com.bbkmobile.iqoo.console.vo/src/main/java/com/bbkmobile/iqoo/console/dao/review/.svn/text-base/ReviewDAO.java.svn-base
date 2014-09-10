@@ -1,0 +1,44 @@
+/**
+ * ReviewDAO.java
+ * com.bbkmobile.iqoo.console.dao.review
+ *
+ * Function： TODO 
+ *
+ *   ver     date      		author
+ * ──────────────────────────────────
+ *   		 2012-1-5 		dengkehai
+ *
+ * Copyright (c) 2012, TNT All Rights Reserved.
+ */
+
+package com.bbkmobile.iqoo.console.dao.review;
+
+import java.util.List;
+
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+
+/**
+ * ClassName:ReviewDAO Function: TODO ADD FUNCTION
+ * 
+ * @author dengkehai
+ * @version
+ * @since Ver 1.1
+ * @Date 2012-1-5 下午6:00:51
+ * 
+ */
+public interface ReviewDAO {
+	int countAllRecords(AppInfo appInfo) throws Exception;
+
+	List<AppInfo> findByProperty(int start, AppInfo appInfo) throws Exception;
+
+	List<ReviewRecords> findReviewRecord(AppInfo appInfo) throws Exception;
+
+	AppInfo findAppById(Long app_id) throws Exception;
+
+	boolean updateForInitReview(Long app_id) throws Exception;
+
+	boolean updateForReview(ReviewRecords review, Integer userId) throws Exception;
+
+	List<AppInfo> findAllReviewAppType() throws Exception;
+
+}

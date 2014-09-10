@@ -1,0 +1,144 @@
+package com.bbkmobile.iqoo.console.dao.appdiscount;
+
+import java.util.Date;
+import java.util.List;
+
+import org.hibernate.Criteria;
+import org.hibernate.HibernateException;
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.criterion.Restrictions;
+import org.springframework.orm.hibernate3.HibernateCallback;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+
+public class AppDiscountDAOImpl extends HibernateDaoSupport implements AppDiscountDAO {
+   
+    public int countAppDiscountInfoRecords(final AppDiscountInfo appDiscountInfo) throws Exception {
+        int result = 0;
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<AppDiscountInfo> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(AppDiscountInfo.class);             
+                        
+                        if ((appDiscountInfo.getAppInfo().getType() != 0)) {
+                            Criteria app_criteria = criteria.createCriteria(
+                                    "appInfo", Criteria.LEFT_JOIN);
+                            appDiscountInfo.getAppInfo().getAppType().setId(appDiscountInfo.getAppInfo().getType());
+                            app_criteria.add(Restrictions.eq("appType", appDiscountInfo.getAppInfo()
+                                    .getAppType()));
+                        }
+                     
+                        List<AppDiscountInfo> result = criteria.list();
+                        return result;
+                    }
+                });
+        if (null != list) {
+            result = list.size();
+        }
+        return result;
+    }
+    
+    public List<AppDiscountInfo> getAppDiscountInfoList(final int start, final AppDiscountInfo appDiscountInfo) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<AppDiscountInfo> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(AppDiscountInfo.class); 
+                        if ((appDiscountInfo.getAppInfo().getType() != 0)) {
+                            Criteria app_criteria = criteria.createCriteria(
+                                    "appInfo", Criteria.LEFT_JOIN);
+                            appDiscountInfo.getAppInfo().getAppType().setId(appDiscountInfo.getAppInfo().getType());
+                            app_criteria.add(Restrictions.eq("appType", appDiscountInfo.getAppInfo()
+                                    .getAppType()));
+                        }                      
+                        criteria.setFirstResult(start);
+                        criteria.setMaxResults(10);
+                        List<AppDiscountInfo> result = criteria.list();
+                        return result;
+                    }
+                });
+        return list;
+    }
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    public List<AppDiscountInfo> getAllAppDiscountInfoList(final AppDiscountInfo appDiscountInfo) throws Exception {
+        List<AppDiscountInfo> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(AppDiscountInfo.class); 
+                        List<AppDiscountInfo> result = criteria.list();
+                        return result;
+                    }
+                });
+        return list;
+        
+    }
+    
+    public boolean deleteAppDiscountInfoByID(Long[] ids) throws Exception {
+        try{
+            String queryString ="delete AppDiscountInfo where id=?";
+            Session session=getSession();
+            for(Long id:ids){
+                Query queryObj=session.createQuery(queryString);
+                queryObj.setLong(0, id);
+                queryObj.executeUpdate();               
+            }
+            return true;
+        }catch(Exception e){
+          throw e;
+        }
+    }
+    
+    public boolean addAppDiscountInfo(Long[] ids)
+            throws Exception {    
+        Session session=getSession();
+        Date add_date=new Date();
+        for(int i=0; i<ids.length; i++)
+        {
+            AppInfo appInfo=getHibernateTemplate().load(AppInfo.class, ids[i]);
+            AppDiscountInfo appDiscountInfo = new AppDiscountInfo();
+            appDiscountInfo.setAppInfo(appInfo);
+            appDiscountInfo.setAdd_date(add_date);
+      
+            session.save(appDiscountInfo);
+        }
+        return true;
+    }
+    
+    public boolean updateDiscount(Long id, int discount) throws Exception {
+        try{
+            String queryString ="update AppDiscountInfo set discount=? where id=?";
+            Session session=getSession();
+            Query queryObj=session.createQuery(queryString);
+            queryObj.setInteger(0, discount);
+            queryObj.setLong(1, id);
+            queryObj.executeUpdate();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    
+    public boolean updateAppInfoDiscount() throws Exception {
+        try{
+            Session session = getSession();
+            Query query = null;
+            String sql="update t_app_info,t_app_discount set t_app_info.discount=t_app_discount.discount where t_app_info.id=t_app_discount.appInfo_id";
+            query = session.createSQLQuery(sql);
+            query.executeUpdate();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }        
+    }
+	
+}

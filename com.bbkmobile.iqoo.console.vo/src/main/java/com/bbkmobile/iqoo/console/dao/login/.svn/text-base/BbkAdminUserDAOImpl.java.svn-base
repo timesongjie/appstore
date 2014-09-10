@@ -1,0 +1,153 @@
+package com.bbkmobile.iqoo.console.dao.login;
+
+import java.util.List;
+
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.common.logging.Lg;
+import com.bbkmobile.iqoo.console.constants.LgType;
+
+/**
+ */
+
+public class BbkAdminUserDAOImpl extends HibernateDaoSupport implements BbkAdminUserDAO {
+
+	public void save(BbkAdminUser pojo)  throws Exception{
+		try {
+			Session session = getSession();
+			Transaction tran = session.beginTransaction();
+			session.save(pojo);
+			tran.commit();
+			Lg.info(LgType.LOGIN,"添加用户"+pojo.getAdmUserName()+"成功。");
+		} catch (RuntimeException re) {
+			Lg.error(LgType.LOGIN,"添加用户"+pojo.getAdmUserName()+"失败。", re);
+			throw re;
+		}
+	}
+
+	public void delete(BbkAdminUser persistentInstance)throws Exception {
+		try {
+			Session session = getSession();
+			Transaction tran = session.beginTransaction();
+			session.delete(persistentInstance);
+			tran.commit();
+			Lg.info(LgType.LOGIN,"删除用户(用户ID:"+persistentInstance.getAdmUserId()+")成功。");
+		} catch (Exception re) {
+			Lg.error(LgType.LOGIN,"删除用户(用户ID:"+persistentInstance.getAdmUserId()+")失败。", re);
+			throw re;
+		}
+	}
+	
+	public void deleteByID(Integer id)throws Exception{
+		try {
+			Session session = getSession();
+			Transaction tran = session.beginTransaction();
+			
+			String querySql = "delete from BbkAdminUser u where u.admUserId=?";
+			Query queryObj = session.createQuery(querySql);
+			queryObj.setInteger(0, id);
+			queryObj.executeUpdate();
+			
+			tran.commit();
+			
+			Lg.info(LgType.LOGIN,"删除用户(用户ID:"+id+")成功。");
+		} catch (Exception re) {
+			Lg.error(LgType.LOGIN,"删除用户(用户ID:"+id+")失败。", re);
+			throw re;
+		};
+	}
+
+	public BbkAdminUser findById(java.lang.Integer id) throws Exception {
+		try {
+			BbkAdminUser instance = (BbkAdminUser) getSession().get(
+					"com.bbkmobile.iqoo.sms.auth.login.dao.BbkAdminUser", id);
+			return instance;
+		} catch (Exception re) {
+			Lg.error(LgType.LOGIN,"查询用户信息失败。", re);
+			throw re;
+		}
+	}
+
+	public List findAll() throws Exception{
+		Lg.debug(LgType.LOGIN,"finding all BbkAdminUser instances");
+		try {
+			String queryString = "from BbkAdminUser";
+			Query queryObject = getSession().createQuery(queryString);
+			return queryObject.list();
+		} catch (RuntimeException re) {
+			Lg.error(LgType.LOGIN,"find all failed", re);
+			throw re;
+		}
+	}
+	
+	
+	
+	public Boolean exists(BbkAdminUser user) throws Exception{
+		
+		try {
+			Lg.debug(BbkAdminUserDAOImpl.class, "BbkAdminUserDAOImpl in");
+			String queryString = "from BbkAdminUser as model where model.admUserName=? and model.admUserPass=?";
+			Query queryObj = getSession().createQuery(queryString);
+			queryObj.setString(0, user.getAdmUserName());
+			queryObj.setString(1, user.getAdmUserPass());
+			
+			List ls = queryObj.list();
+			
+			
+			Lg.debug(BbkAdminUserDAOImpl.class, "BbkAdminUserDAOImpl out");
+			
+			return (ls.size()>=1)?Boolean.TRUE:Boolean.FALSE;
+			
+		} catch (RuntimeException re) {
+			Lg.error(LgType.LOGIN,"exists failed", re);
+			throw re;
+		}
+	}
+	
+	public BbkAdminUser findByNameAndPwd(String name, String pwd) throws Exception{
+		try {
+			String queryString = "from BbkAdminUser as model where model.admUserName=? and model.admUserPass=?";
+			Query queryObj = getSession().createQuery(queryString);
+			queryObj.setString(0, name);
+			queryObj.setString(1, pwd);
+			
+			List ls = queryObj.list();
+			
+			Lg.debug(BbkAdminUserDAOImpl.class, "findByNameAndPwd out");
+			
+			return (BbkAdminUser)ls.get(0);
+			
+		} catch (RuntimeException re) {
+			Lg.error(LgType.LOGIN,"findByNameAndPwd fialed", re);
+			throw re;
+		}
+	}
+	
+	public void updateUser(BbkAdminUser user) throws Exception{
+		try {
+			String queryString = "update BbkAdminUser as m set m.admUserPass = ?, m.admUserTrueName = ?, m.admUserDep = ? where m.admUserId = ?";
+			Session session = getSession();
+			
+			Transaction tran = session.beginTransaction();
+			
+			Query queryObj = session.createQuery(queryString);
+			queryObj.setString(0, user.getAdmUserPass());
+			queryObj.setString(1, user.getAdmUserTrueName());
+			queryObj.setString(2, user.getAdmUserDep());
+			queryObj.setInteger(3, user.getAdmUserId());
+			
+			queryObj.executeUpdate();
+			
+			tran.commit();
+			
+			Lg.debug(BbkAdminUserDAOImpl.class, "findByNameAndPwd out");
+			
+		} catch (RuntimeException re) {
+			Lg.error(LgType.LOGIN,"更新用户信息失败。", re);
+			throw re;
+		}
+	}
+}

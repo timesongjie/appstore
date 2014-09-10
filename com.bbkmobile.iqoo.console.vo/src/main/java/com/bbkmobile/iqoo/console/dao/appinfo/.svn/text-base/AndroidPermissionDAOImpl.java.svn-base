@@ -1,0 +1,47 @@
+package com.bbkmobile.iqoo.console.dao.appinfo;
+
+import java.util.List;
+
+import org.hibernate.Criteria;
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
+import org.hibernate.criterion.Restrictions;
+import org.springframework.orm.hibernate3.HibernateCallback;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+public class AndroidPermissionDAOImpl extends HibernateDaoSupport implements AndroidPermissionDAO {
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public Long exist(final String permission) throws Exception {
+		List<AndroidPermission> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session) throws HibernateException {
+						Criteria criteria = session.createCriteria(AndroidPermission.class);
+						criteria.add(Restrictions.eq("permission", permission));
+						List<AndroidPermission> result = criteria.list();
+						return result;
+					}
+				});
+		Long id = null;
+		if(list.size() > 0){
+			id = list.get(0).getId();
+		}
+		
+		return id;
+	}
+
+	@Override
+	public Long save(AndroidPermission permission) throws Exception {
+		Long id = null;
+		id = (Long)getHibernateTemplate().save(permission);
+		return id;
+	}
+
+	@Override
+	public List<AndroidPermission> list(String permissionStr) throws Exception {
+		String sql = " from AndroidPermission where id in("+permissionStr+")";
+		return this.getHibernateTemplate().find(sql);
+	}
+
+}

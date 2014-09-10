@@ -1,0 +1,41 @@
+K 25
+svn:wc:ra_dav:version-url
+V 130
+/repositories/IqooSourceCode/!svn/ver/6328/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/errorreport
+END
+ErrorReport.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 150
+/repositories/IqooSourceCode/!svn/ver/6328/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/errorreport/ErrorReport.hbm.xml
+END
+ErrorReportDAO.java
+K 25
+svn:wc:ra_dav:version-url
+V 150
+/repositories/IqooSourceCode/!svn/ver/3806/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/errorreport/ErrorReportDAO.java
+END
+BaiduErrorReport.java
+K 25
+svn:wc:ra_dav:version-url
+V 152
+/repositories/IqooSourceCode/!svn/ver/2383/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/errorreport/BaiduErrorReport.java
+END
+ErrorReportDAOImpl.java
+K 25
+svn:wc:ra_dav:version-url
+V 154
+/repositories/IqooSourceCode/!svn/ver/3806/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/errorreport/ErrorReportDAOImpl.java
+END
+BaiduErrorReport.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 155
+/repositories/IqooSourceCode/!svn/ver/6328/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/errorreport/BaiduErrorReport.hbm.xml
+END
+ErrorReport.java
+K 25
+svn:wc:ra_dav:version-url
+V 147
+/repositories/IqooSourceCode/!svn/ver/3158/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/errorreport/ErrorReport.java
+END

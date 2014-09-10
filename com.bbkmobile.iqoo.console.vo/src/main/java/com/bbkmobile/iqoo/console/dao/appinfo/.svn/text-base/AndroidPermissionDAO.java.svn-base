@@ -1,0 +1,11 @@
+package com.bbkmobile.iqoo.console.dao.appinfo;
+
+import java.util.List;
+
+public interface AndroidPermissionDAO {
+
+	public Long save(AndroidPermission permission) throws Exception ;
+	public Long exist(String permission) throws Exception ;
+	
+	public List<AndroidPermission> list(String permissionStr)throws Exception;
+}

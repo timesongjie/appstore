@@ -1,0 +1,22 @@
+package com.bbkmobile.iqoo.console.dao.quartz;
+
+import java.util.Date;
+import java.util.List;
+
+
+public interface QuartzDAO {
+
+	List<ReportJob> selectTasksByEnabled(char enabled) throws Exception;
+	
+	boolean updateQuartzTask(ReportJob rj,char enabled) throws Exception;
+	
+	List<ReportJob> findTaskByTime(String reportJobTime) throws Exception;
+
+	boolean updateAppStatus(List<ReportJob> rj) throws Exception;
+
+	boolean deleteReportJob(List<ReportJob> jobs) throws Exception;
+
+	boolean updateOnSaleDate(Long appId, Date task_time, String cron_expression) throws Exception;
+
+	boolean deleteReportJobByApp(Long app_id) throws Exception;
+}

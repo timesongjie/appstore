@@ -1,0 +1,151 @@
+package com.bbkmobile.iqoo.console.dao.quartz;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+
+public class QuartzDAOImpl extends HibernateDaoSupport implements QuartzDAO {
+
+	/**
+	 * 查找出定时任务
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ReportJob> selectTasksByEnabled(char enabled) throws Exception{
+		// TODO Auto-generated method stub
+		try{
+			String queryString ="from ReportJob where enabled ="+enabled;
+			
+			return getHibernateTemplate().find(queryString);
+			
+		}catch(Exception e){
+			throw e;
+		}
+	}
+
+	/**
+	 * 修改定时任务的状态，改为
+	 */
+	@Override
+	public boolean updateQuartzTask(ReportJob rj,char enabled) throws Exception {
+		// TODO Auto-generated method stub
+		try{
+			String queryString ="update ReportJob set enabled=? where id=?";
+			Session session=getSession();
+			Query queryObj=session.createQuery(queryString);
+			queryObj.setCharacter(0, enabled);
+			queryObj.setLong(1, rj.getId());
+			queryObj.executeUpdate();
+			return true;
+		}catch(Exception e){
+			throw e;
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ReportJob> findTaskByTime(final String reportJobTime)
+			throws Exception {
+		// TODO Auto-generated method stub
+		
+		
+		try{
+//			Long id=Long.parseLong(reportJobId);
+			String queryString ="from ReportJob where cron_expression=? and enabled=?";
+			Session session=getSession();
+			Query queryObj=session.createQuery(queryString);
+			queryObj.setString(0, reportJobTime);
+			queryObj.setCharacter(1, '0');
+			return queryObj.list();
+		}catch(Exception e){
+			throw e;
+		}
+	}
+
+	@Override
+	public boolean updateAppStatus(List<ReportJob> rj) throws Exception {
+		// TODO Auto-generated method stub
+		
+		try{
+			for(ReportJob job : rj)
+			{
+				String queryString="";
+				if(job.getApp_status()==0)
+				{
+					queryString ="update AppInfo set appStatus=?,onSaleDate=? where id=?";
+					Session session=getSession();
+					Query queryObj=session.createQuery(queryString);
+
+					queryObj.setShort(0, job.getApp_status());
+					queryObj.setTimestamp(1, job.getTask_time());
+					queryObj.setLong(2, job.getAppInfo().getId());
+					queryObj.executeUpdate();
+				}
+				else if(job.getApp_status()==10)
+				{
+					queryString ="update AppInfo set appStatus=?,offSaleDate=? where id=?";
+					Session session=getSession();
+					Query queryObj=session.createQuery(queryString);
+					queryObj.setShort(0, job.getApp_status());
+					queryObj.setTimestamp(1, job.getTask_time());
+					queryObj.setLong(2, job.getAppInfo().getId());
+					queryObj.executeUpdate();
+				}
+							
+				updateQuartzTask(job,'2');					//执行完定时任务后，将定时任务状态改为2，表示已经执行完毕
+			}
+			return true;
+		}catch(Exception e){
+			throw e;
+		}
+		
+	}
+
+	@Override
+	public boolean deleteReportJob(List<ReportJob> jobs) throws Exception {
+		// TODO Auto-generated method stub
+		for(ReportJob job : jobs)
+		{
+			ReportJob reportJob=getHibernateTemplate().load(ReportJob.class, job.getId());
+			getHibernateTemplate().delete(reportJob);
+		}
+		return true;
+	}
+
+	@Override
+	public boolean updateOnSaleDate(Long app_id, Date task_time, String cron_expression) throws Exception {
+		// TODO Auto-generated method stub
+		AppInfo appInfo =getHibernateTemplate().load(AppInfo.class, app_id);
+		String queryString ="update ReportJob set task_time=?,cron_expression=?,enabled=? where appInfo=? and enabled=?";
+			Session session=getSession();
+			Query queryObj=session.createQuery(queryString);
+			queryObj.setTimestamp(0, task_time);
+			queryObj.setString(1, cron_expression);
+			queryObj.setCharacter(2, '1');
+			queryObj.setEntity(3, appInfo);
+			queryObj.setCharacter(4, '0');
+			queryObj.executeUpdate();
+			return true;
+			
+	}
+
+	@Override
+	public boolean deleteReportJobByApp(Long app_id) throws Exception {
+		// TODO Auto-generated method stub
+		AppInfo appInfo =getHibernateTemplate().load(AppInfo.class, app_id);
+		String queryString ="delete ReportJob where appInfo=? and enabled=?";
+			Session session=getSession();
+			Query queryObj=session.createQuery(queryString);
+			queryObj.setEntity(0, appInfo);
+			queryObj.setCharacter(1, '0');
+			queryObj.executeUpdate();
+			return true;
+	}
+	
+}

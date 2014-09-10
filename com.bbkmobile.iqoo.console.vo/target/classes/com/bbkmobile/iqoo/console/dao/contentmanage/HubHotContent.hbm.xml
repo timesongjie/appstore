@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping>
+	<class name="com.bbkmobile.iqoo.console.dao.contentmanage.HubHotContent"
+		table="t_hub_content">
+
+		<id name="id" type="java.lang.Integer">
+			<column name="id" />
+			<generator class="identity" />
+		</id>
+		<property name="hub_id" type="java.lang.Integer">
+			<column name="hub_id">
+			</column>
+		</property>
+		<property name="object_id" type="java.lang.Integer">
+			<column name="object_id">
+			</column>
+		</property>
+		<property name="type" type="java.lang.Character">
+			<column name="type">
+			</column>
+		</property>
+		<property name="series_id" type="java.lang.Short">
+			<column name="series_id">
+			</column>
+		</property>
+		<property name="show_order" type="java.lang.Short">
+			<column name="show_order">
+			</column>
+		</property>
+		<property name="app_package" type="string">
+			<column name="app_package" length="100">
+			</column>
+		</property>
+		<property name="min_sdkversion" type="java.lang.Short">
+			<column name="min_sdkversion">
+			</column>
+		</property>
+		<property name="max_sdkversion" type="java.lang.Short">
+			<column name="max_sdkversion">
+			</column>
+		</property>
+		<property name="cpu_abi" type="string">
+			<column name="cpu_abi" length="50">
+			</column>
+		</property>
+		<property name="app_status" type="java.lang.Short">
+			<column name="app_status">
+			</column>
+		</property>
+		<property name="filter_model" type="string">
+			<column name="filter_model" length="200">
+			</column>
+		</property>
+		<property name="filter_screen" type="string">
+			<column name="filter_screen" length="50">
+			</column>
+		</property>
+		<property name="set_date" type="timestamp">
+			<column name="set_date" length="19">
+			</column>
+		</property>
+
+	</class>
+</hibernate-mapping>

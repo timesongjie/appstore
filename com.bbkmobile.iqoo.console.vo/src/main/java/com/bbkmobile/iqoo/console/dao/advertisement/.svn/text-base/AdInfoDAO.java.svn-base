@@ -1,0 +1,118 @@
+package com.bbkmobile.iqoo.console.dao.advertisement;
+
+import java.io.File;
+import java.util.List;
+
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+import com.bbkmobile.iqoo.console.dao.appinfo.RequestParameter;
+import com.bbkmobile.iqoo.console.dao.contentmanage.RankSetup;
+
+public interface AdInfoDAO {
+
+    //begin: 手机接口@haiyan
+    //List<Advertisement> getPhoneAdInfoBySeriesWithFilterModel(final Short series_id,final Short model_id, final Integer sdkVersion, final String drawable_dpi, final String  CPU_ABI) throws Exception;
+    List<ModelAdvertisement> getModelAdvertisementBySeriesId(Short series_id) throws Exception;
+    
+    List<Advertisement> getPhoneAdInfoBySeries(Short series_id, Short model_id) throws Exception; //haiyan@根据系列获取手机广告
+    
+    List<AdvertisementApp> getAllAdvertisementAppListByAd(Advertisement advertisement, Short model_id, Integer sdkVersion, String drawable_dpi, String  CPU_ABI) throws Exception;
+    
+    Advertisement findPhoneAdByIdForFilterApps(Long id, int apps_per_page, int page_index, Short model_id, Integer sdkVersion, String drawable_dpi, String  CPU_ABI) throws Exception;
+   
+    int CountPhoneAdAppsWithModelFilter(Long id, Short model_id, Integer sdkVersion, String drawable_dpi, String  CPU_ABI) throws Exception;
+    
+    Advertisement getAdForAppsById(Long id, int apps_per_page, int page_index, Short model_id, Integer sdkVersion, String drawable_dpi, String  CPU_ABI) throws Exception;
+    
+    List<StartPage> getValidStartPages(RequestParameter requestParameter) throws Exception;
+
+    //end:手机接口
+    Integer countStartPages(StartPage startPage) throws Exception;  
+    List<StartPage> getStartPages(StartPage startPage) throws Exception;
+    StartPage getStartPageByAttr(final StartPage startPage) throws Exception;
+    boolean addStartPage(StartPage startPage) throws Exception;
+    boolean saveStartPage(StartPage startPage) throws Exception ;
+    boolean deleteStartPages(StartPage startPage, String ids) throws Exception;
+    boolean updateDefaultStartPage(StartPage startPage, String ids) throws Exception;
+    
+	List<Advertisement> getPhoneAdInfo() throws Exception;
+
+	boolean addPhoneAd(Advertisement advertisement) throws Exception;
+
+	boolean saveAdImages(File file, String file_name, String dir) throws Exception;
+	
+	boolean updateAdImages(File file, String path) throws Exception;
+
+	Advertisement findPhoneAdById(Long id) throws Exception;
+
+	boolean updatePhoneAd(Advertisement advertisement) throws Exception;
+
+	boolean deletePhoneAdByID(Long[] id) throws Exception;
+
+	boolean updateShowOrder(Long id, int order)throws Exception;
+
+	int countAdvertisementApp(Advertisement advertisement, AppInfo app) throws Exception;
+
+	List<AppInfo> getAdvertisementByAd(Advertisement advertisement,AppInfo app, int start) throws Exception;
+
+	boolean deleteAdvertisementApp(Long adId, Long appId) throws Exception;
+
+	List<AppInfo> findAppByAd(Long id) throws Exception;
+
+	boolean deleteMoreSoftSetByID(Long[] appIds, Long adId) throws Exception;
+
+	boolean addAppForAd(Long ad_id, Long app_id[]) throws Exception;
+
+	List<AppInfo> getAppByType(List<AppInfo> appInfo, int startRecord) throws Exception;
+
+	Integer countApp(List<AppInfo> appInfo) throws Exception;
+	
+	//@统计广告对应app的数量@haiyan
+    int countAdvertisementApp(Advertisement advertisement,final Short series,final Short model) throws Exception;
+    
+    //zuoshengdong
+	List<ModelAdvertisement> getModelAdBySeriesId(Short seriesId, int type) throws Exception;
+	
+	
+	void addAdForSeries(Short seriesId, Long[] adIds, int type) throws Exception;
+	
+	void deleteAdSetByAdId(Short series_id, Long[] adIds) throws Exception;
+	
+	void updateAdOrderForSeries(String[] str) throws Exception;
+	
+	void saveAdSetForSeries(Short seriesId, List<ModelAdvertisement> list) throws Exception; 
+
+	boolean isInitSeriesAdSet(Short series_id) throws Exception;
+	
+	public List<ModelAdvertisement> findAdSetByProperty(String property, Object value);
+	
+	void deleteAdSetBySeries(Short seriesId) throws Exception;
+	
+	void saveImgForAd(Long ad_id, String filePath, String screen) throws Exception;
+	
+	Advertisement getAdvertisementById(Long id) throws Exception;
+	
+	List<AdvertisementIcon> getAdImgByAdId(Long id) throws Exception;
+
+	void addCensorWord(String[] aa) throws Exception;
+
+	void addAdForNewSeries(Short id) throws Exception;
+
+	Advertisement getPhoneAdByName(String adName);
+
+	String getAdImgUrlByAd(Long adId,String cs,Float version) throws Exception;
+
+	Integer countAdAppByAdId(Long id) throws Exception;
+
+	List<AdvertisementApp> findAdAppByAdId(int start, Long id) throws Exception;
+
+	void updateAppOrderForAd(String[] str) throws Exception;
+	
+	boolean findTopicByAppInfoId(Long app_id,Advertisement advertisement) throws Exception;
+	
+	List<Advertisement> search(PageVO page,Advertisement advertisement,String advSortWayy,Short series_id) throws Exception;
+	
+	int countAdvertisement(Advertisement adv) throws Exception;
+	
+	void updateRamarkTag( List<Advertisement> list_adv, Short series_id) throws Exception;
+}

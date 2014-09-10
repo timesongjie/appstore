@@ -1,0 +1,510 @@
+/**
+ * AppTypeDAOImpl.java
+ * com.bbkmobile.iqoo.console.dao.apptype
+ *
+ * Function： TODO 
+ *
+ *   ver     date      		author
+ * ──────────────────────────────────
+ *   		 2011-12-29 		dengkehai
+ *
+ * Copyright (c) 2011, TNT All Rights Reserved.
+ */
+
+package com.bbkmobile.iqoo.console.dao.apptype;
+
+import java.math.BigInteger;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import org.hibernate.Hibernate;
+import org.hibernate.HibernateException;
+import org.hibernate.Query;
+import org.hibernate.SQLQuery;
+import org.hibernate.Session;
+import org.springframework.orm.hibernate3.HibernateCallback;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+import org.springframework.util.StringUtils;
+
+import com.bbkmobile.iqoo.console.business.search.xml.vo.CateVO;
+
+/**
+ * ClassName:AppTypeDAOImpl Function: TODO ADD FUNCTION
+ * 
+ * @author dengkehai
+ * @version
+ * @since Ver 1.1
+ * @Date 2011-12-29 上午10:27:30
+ * 
+ */
+public class AppTypeDAOImpl extends HibernateDaoSupport implements AppTypeDAO {
+
+	/**
+	 * 查询所有类型信息
+	 * 
+	 * (non-Javadoc)
+	 * 
+	 * @see com.bbkmobile.iqoo.console.dao.apptype.AppTypeDAO#findAllType()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppType> findAllType() throws Exception {
+
+		return getHibernateTemplate().find(
+				"from AppType where parentType is 0 order by typeOrder");   //null -> 0
+
+	}
+
+	public boolean updateAppTypeParentId() throws Exception 
+	{
+		Session session = getSession();
+		Query query=session.createSQLQuery("update t_app_type set parentId=0 where parentId is null");
+		query.executeUpdate();
+		return true;
+	}
+	
+	/**
+	 * 保存类型信息及上下级关系
+	 * 
+	 * (non-Javadoc)
+	 * 
+	 * @see com.bbkmobile.iqoo.console.dao.apptype.AppTypeDAO#save(com.bbkmobile.iqoo.console.dao.apptype.AppType)
+	 */
+	@Override
+	public boolean save(AppType appType) throws Exception {
+		int order = updateOrder(appType);
+		appType.setTypeOrder(order);
+		if (0 == appType.getParentId()) {
+			getHibernateTemplate().save(appType);
+		} else {
+			AppType parentType = getHibernateTemplate().load(AppType.class,
+					appType.getParentId());
+			parentType.getChildAppTypes().add(appType);
+			appType.setParentType(parentType);
+			getHibernateTemplate().update(parentType);
+		}
+		return true;
+	}
+
+	/**
+	 * 保存修改后的信息
+	 * 
+	 * (non-Javadoc)
+	 * @see com.bbkmobile.iqoo.console.dao.apptype.AppTypeDAO#update(com.bbkmobile.iqoo.console.dao.apptype.AppType)
+	 */
+	@Override
+	public boolean update(AppType appType) throws Exception {
+
+		AppType temp = findById(appType.getId()).getParentType();
+		Integer ParentId_old = null == temp ? 0 : temp.getId();
+		int order = appType.getTypeOrder();
+		if (ParentId_old != appType.getParentId()) {
+			if (appType.getIndex() == 0) {
+				appType.setRef_sortorder(0);
+			}
+			order = updateOrder(appType);
+		} else {
+			if (appType.getIndex() != 0) {
+				order = updateOrder(appType);
+			}
+		}
+		appType.setTypeOrder(order);
+		if (0 == appType.getParentId()) {
+			getHibernateTemplate().merge(appType);
+			
+		} else {
+			AppType parentType = getHibernateTemplate().load(AppType.class,
+					appType.getParentId());
+
+			appType.setParentType(parentType);
+			getHibernateTemplate().merge(appType);
+
+		}
+		return true;
+	}
+
+	/**
+	 * 删除类型信息
+	 * 
+	 * (non-Javadoc)
+	 * @see com.bbkmobile.iqoo.console.dao.apptype.AppTypeDAO#delete(java.lang.Integer)
+	 */
+	@Override
+	public boolean delete(Integer id) throws Exception {
+
+		
+		
+		AppType appType = findById(id);
+		getHibernateTemplate().delete(appType);
+		
+		return true;
+
+	}
+
+	/**
+	 * 根据父类id获取所有子类型信息
+	 * 
+	 * (non-Javadoc)
+	 * @see com.bbkmobile.iqoo.console.dao.apptype.AppTypeDAO#findSubType(java.lang.Integer)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppType> findSubType(Integer parentId) throws Exception {
+
+		return getHibernateTemplate().find(
+				"from AppType where parentType.id=? and typeStatus=0 order by typeOrder",
+				parentId);
+
+	}
+
+	/**
+	 * 根据id获取类型信息
+	 * 
+	 * (non-Javadoc)
+	 * @see com.bbkmobile.iqoo.console.dao.apptype.AppTypeDAO#findById(java.lang.Integer)
+	 */
+	@Override
+	public AppType findById(Integer id) throws Exception {
+
+		return getHibernateTemplate().load(AppType.class, id);
+
+    }
+
+    public AppType findAppTypeById(Integer id) throws Exception {
+        AppType appType = null;
+        String sql = "select * from t_app_type where id=" + id;
+        @SuppressWarnings("unchecked")
+        List<AppType> appTypes = getSession().createSQLQuery(sql).addEntity(AppType.class).list();
+        if (null != appTypes && appTypes.size() > 0) {
+            return appType = (AppType) appTypes.get(0);
+        }
+        return appType;
+    }
+
+	/**
+	 * 根据字段属性获取类型信息
+	 * 
+	 * (non-Javadoc)
+	 * @see com.bbkmobile.iqoo.console.dao.apptype.AppTypeDAO#findPropertyById(java.lang.String, java.lang.Integer)
+	 */
+	@Override
+	public Object findPropertyById(String property, Integer id)
+			throws Exception {
+
+		List list = getHibernateTemplate().find(
+				"select " + property + " from AppType where id=" + id);
+		return list.get(0);
+
+	}
+
+	/**
+	 * 获取所有无子类型的类型信息
+	 * 
+	 * (non-Javadoc)
+	 * @see com.bbkmobile.iqoo.console.dao.apptype.AppTypeDAO#findAllSelType()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppType> findAllSelType() throws Exception {
+		return getHibernateTemplate()
+				.find("from AppType where id not in(select distinct parentType.id from AppType where parentType is not 0) order by id"); //null -> 0
+		        //.find("from AppType where id not in(select distinct parentType.id from AppType where parentType is not 0) and typeStatus=0 order by id"); //null -> 0
+
+	}
+
+	@SuppressWarnings("unchecked")
+	private int updateOrder(AppType appType) throws Exception {
+		int order = 1;
+
+		if (appType.getRef_sortorder() == 0) {
+			List<AppType> list = null;
+			if (appType.getParentId() == 0) {
+				list = findAllType();
+				if (null != list && list.size() > 0) {
+					order = list.get(list.size() - 1).getTypeOrder() + 1;
+				}
+			} else {
+				list = findSubType(appType.getParentId());
+				if (null != list && list.size() > 0) {
+					order = list.get(list.size() - 1).getTypeOrder() + 1;
+				}
+			}
+		} else {
+			String hql = "update AppType set typeOrder=typeOrder+1 where parentType.id="
+					+ appType.getParentId() + " and typeOrder";
+			AppType ref_type = findById(appType.getRef_sortorder());
+
+			if (1 == appType.getIndex()) {
+				hql += ">" + ref_type.getTypeOrder();
+
+				order = ref_type.getTypeOrder() + 1;
+			} else {
+				hql += ">=" + ref_type.getTypeOrder();
+				order = ref_type.getTypeOrder();
+			}
+			final String batch_hql = hql;
+			getHibernateTemplate().execute(new HibernateCallback() {
+				public Object doInHibernate(Session session)
+						throws HibernateException, SQLException {
+					Query query = session.createQuery(batch_hql);
+					query.executeUpdate();
+					return null;
+				}
+			});
+		}
+
+		return order;
+	}
+
+	/**
+	 * 修改类型状态及其子类型状态
+	 * 
+	 * (non-Javadoc)
+	 * @see com.bbkmobile.iqoo.console.dao.apptype.AppTypeDAO#updateStatus(com.bbkmobile.iqoo.console.dao.apptype.AppType)
+	 */
+	public boolean updateStatus(AppType appType) throws Exception {
+		List<AppType> list = findSubType(appType.getId());
+		if (null != list && list.size() > 0) {
+			for (AppType type : list) {
+				type.setTypeStatus(appType.getTypeStatus());
+				getHibernateTemplate().update(type);
+				updateStatus(type);
+			}
+		}
+		return true;
+	}
+
+	public Object[] getTypeIcon(Integer type_id) throws Exception{
+	        String sql = "select icon1,icon2,icon3 from t_type_icon where type_id="+type_id;
+	        List<Object[]> list = getSession().createSQLQuery(sql).list();
+	        if(null!=list && list.size()>0){
+	            return list.get(0);
+	        }else{
+	            return null;
+	        }
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppType> findAllSubType(Integer parentId) throws Exception {
+		// TODO Auto-generated method stub
+		return getHibernateTemplate().find(
+				"from AppType where parentType.id=? and typeStatus=0 order by typeOrder",
+				parentId);
+		
+	}
+
+	@Override
+	public String getAppTypeIconById(Integer id) throws Exception {
+		// TODO Auto-generated method stub
+		AppType appType=this.getHibernateTemplate().load(AppType.class, id);
+		return appType!=null?appType.getTypeIcon():null;
+	}
+	
+	public List<AppType> getAppTypes() throws Exception{
+	    try {
+	        List<AppType> appTypes = null;
+	        appTypes = getHibernateTemplate().find("from AppType");
+	        if(null!=appTypes && appTypes.size()>0){
+	            return appTypes;
+	        }
+        } catch (Exception e) {
+            throw e;
+        }    
+	    return null;
+	}
+	
+	public boolean updateAppType(AppType appType) throws Exception{
+	    try {          
+            getHibernateTemplate().update(appType);
+            return true;
+        } catch (Exception e) {
+            throw e;   
+        }
+	}
+	
+    public boolean updateBaiduType(List<CateVO> cates) throws Exception {
+        try {
+            Session session = getSession();
+            String deleteSql = "delete from t_baidu_type where typeName != 'game'";
+            session.createSQLQuery(deleteSql).executeUpdate();
+            
+            int game_id=1;
+            String query_game = "select id from t_baidu_type where typeName = 'game'";
+            game_id = (Integer) session.createSQLQuery(query_game).uniqueResult();
+            
+            //System.out.println("game_id="+game_id);
+            
+            int i=0;
+            String insertSql = "";
+            for(CateVO cateVO:cates){
+                if("game".equals(cateVO.getType())){
+                    insertSql="insert into t_baidu_type(id,parentId,typeName,typeOrder) value("+cateVO.getId()+","+game_id+",'"+cateVO.getName()+"',"+(++i)+")";
+                }else if ("soft".equals(cateVO.getType())) {
+                    insertSql="insert into t_baidu_type(id,parentId,typeName,typeOrder) value("+cateVO.getId()+",0,'"+cateVO.getName()+"',"+(i++)+")";
+                }  
+                
+                //System.out.println("insertSql="+insertSql);
+                session.createSQLQuery(insertSql).executeUpdate();
+            }
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
+	@Override
+	public Integer countAppTypes(AppType appType) {
+		StringBuffer sql = new StringBuffer("SELECT COUNT(*) as count FROM t_app_type WHERE PARENTID = ?");
+		Session session = getSession();
+		if (session != null) {
+			SQLQuery query = session
+					.createSQLQuery(sql.toString());
+					query.setInteger(0, appType.getParentId());
+			return (Integer) query.addScalar("count", Hibernate.INTEGER)
+					.uniqueResult();
+		}
+		return 0;
+	}
+
+	@Override
+	public List<AppType> getAppTypesList(Integer start, AppType appType) {
+		StringBuffer sql = new StringBuffer("SELECT *  FROM t_app_type WHERE PARENTID = ? ORDER BY typeOrder limit ?,?");
+		Session session = getSession();
+		if (session != null) {
+			SQLQuery query = session
+					.createSQLQuery(sql.toString());
+					query.addEntity(AppType.class);
+					query.setInteger(0, appType.getParentId());
+					query.setInteger(1, start);
+					query.setInteger(2, 200);
+			return  query.list();
+		}
+		return Collections.EMPTY_LIST;
+	}
+
+	@Override
+	public boolean saveTypeIcons(AppType2 appType) throws Exception {
+		String sql = new String("INSERT INTO t_type_icon(type_id,icon1,icon2,icon3) values(?,?,?,?)");
+		Session session = getSession();
+		if(session != null){
+			SQLQuery query = session.createSQLQuery(sql);
+			query.setInteger(0,appType.getId())
+			.setString(1, appType.getTypeIcons()[0])
+			.setString(2, appType.getTypeIcons()[1])
+			.setString(3, appType.getTypeIcons()[2]);
+			query.executeUpdate();
+		}
+		return true;
+	}
+
+	@Override
+	public boolean updateOrder(Map<String, Integer> params)throws Exception {
+		StringBuffer sql = new StringBuffer("update t_app_type set typeOrder = ? where id = ?");
+		Session session = getSession();
+		Iterator<String> iterable = params.keySet().iterator();
+		while (session != null && iterable.hasNext()) {
+			String id = iterable.next();
+			SQLQuery query = session
+					.createSQLQuery(sql.toString());
+					query.setInteger(0, params.get(id));
+					query.setInteger(1, Integer.valueOf(id));
+			 query.executeUpdate();
+		}
+		return true;
+	}
+
+	@Override
+	public boolean updateAppTypeName(AppType appType) throws Exception{
+		StringBuffer sql = new StringBuffer( "update t_app_type set");
+		if(StringUtils.hasText(appType.getTypeName())){
+			sql.append(" typeName = ? ,");
+		}
+		if(StringUtils.hasText(appType.getTypeIcon())){
+			sql.append(" typeIcon = ? ,");
+		}
+		if(sql.charAt(sql.length()-1) == ','){
+			sql = new StringBuffer(sql.substring(0, sql.length()-1));
+		}
+		sql.append(" where id = ?");
+		Session session = getSession();
+		if(session != null && (StringUtils.hasText(appType.getTypeName()) || StringUtils.hasText(appType.getTypeIcon()))){
+			SQLQuery query = session
+					.createSQLQuery(sql.toString());
+					if(StringUtils.hasText(appType.getTypeName())){
+						query.setString(0, appType.getTypeName());
+					}
+					if(StringUtils.hasText(appType.getTypeIcon()) && StringUtils.hasText(appType.getTypeName())){
+						query.setString(1, appType.getTypeIcon());
+						query.setInteger(2, appType.getId());
+					}else if(StringUtils.hasText(appType.getTypeIcon()) ){
+						query.setString(0, appType.getTypeIcon());
+						query.setInteger(1, appType.getId());
+					}else{
+						query.setInteger(1,appType.getId());
+					}
+			 query.executeUpdate();
+		}
+		return true;
+	}
+	@Override
+	public boolean updateAppType2ICons(AppType2 appType)throws Exception{
+		String []icons = appType.getIconsFileName();
+		String [] sql = {"update t_type_icon set icon1 = ? where type_id = ?","update t_type_icon set icon2 = ? where type_id = ?","update t_type_icon set icon3 = ? where type_id = ?"};
+		Session session = getSession();
+		if(session != null){
+			for(int i=0; i<icons.length; i++){
+				if(StringUtils.hasText(icons[i])){ //有更改
+					SQLQuery query = session.createSQLQuery(sql[i].toString());
+					query.setString(0, icons[i]);
+					query.setInteger(1, appType.getId());
+					query.executeUpdate();
+				}
+			}
+		}
+		return true;
+	}
+	@Override
+	public boolean updateAppTypeStatus(AppType appType)throws Exception{
+		String sql = "update t_app_type set typeStatus = ? where id = ?";
+		Session session = getSession();
+		if(session != null){
+			SQLQuery query = session.createSQLQuery(sql);
+			query.setCharacter(0, appType.getTypeStatus());
+			query.setInteger(1, appType.getId());
+			query.executeUpdate();
+		}
+		return true;
+		
+	}
+
+	@Override
+	public int countAppsByAppTypeId(int id) throws Exception {
+		String sql = "select count(*) from t_app_info where apptype = ?";
+		Object obj = getSession().createSQLQuery(sql).setInteger(0, id).uniqueResult();
+		if(obj instanceof BigInteger){
+			return ((BigInteger) obj).intValue();
+		}
+		return (Integer)obj;
+	}
+
+	@Override
+	public List<String> getIcons(Integer id) throws Exception {
+		String sql = "SELECT icon1,icon2,icon3 FROM t_type_icon where t_type_icon.type_id = ?";
+		List<Object[]> icons = getSession().createSQLQuery(sql).setInteger(0, id).list();
+		if(icons != null && icons.size() == 1){
+			Object[] icon = icons.get(0);
+			List<String> list = new ArrayList<String>(3);
+			list.add(icon[0] != null ? (String)icon[0]:"");
+			list.add(icon[1] != null ? (String)icon[1]: "");
+			list.add(icon[2] != null ? (String)icon[2]: "");
+			return list;
+		}
+		return null;
+	}
+}

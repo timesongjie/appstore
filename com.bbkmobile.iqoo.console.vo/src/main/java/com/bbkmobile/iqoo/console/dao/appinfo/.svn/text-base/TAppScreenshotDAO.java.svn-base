@@ -1,0 +1,11 @@
+package com.bbkmobile.iqoo.console.dao.appinfo;
+
+import java.util.List;
+
+public interface TAppScreenshotDAO {
+
+	public Long saveAppScreenshot(TAppScreenshot appScreenshot) throws Exception;
+	public void deleteByProperty(TAppScreenshot appScreenshot) throws Exception;
+	public TAppScreenshot findByProperty(Object property, Object value) throws Exception;
+	public List<TAppScreenshot> listAppScreenshot(AppInfo appInfo) throws Exception;
+}

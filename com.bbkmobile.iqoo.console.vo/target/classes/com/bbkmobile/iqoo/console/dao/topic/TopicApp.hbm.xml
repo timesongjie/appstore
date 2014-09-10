@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 2012-1-5 17:13:51 by Hibernate Tools 3.4.0.CR1 -->
+<hibernate-mapping>
+	<class name="com.bbkmobile.iqoo.console.dao.topic.TopicApp"
+		table="t_topic_app">
+		<id name="id" type="java.lang.Long">
+			<column name="id" />
+			<generator class="identity" />
+		</id>
+		<many-to-one name="topicInfo"
+			class="com.bbkmobile.iqoo.console.dao.topic.TopicInfo" column="topic_id"
+			cascade="save-update" outer-join="true" fetch="select" lazy="false"
+			not-null="true" />
+
+		<many-to-one name="appInfo"
+			class="com.bbkmobile.iqoo.console.dao.appinfo.AppInfo" column="app_id"
+			cascade="save-update" outer-join="true" fetch="select" lazy="false"
+			not-null="true" />
+
+		<property name="show_order" type="java.lang.Integer">
+			<column name="show_order" not-null="true">
+			</column>
+		</property>
+		<property name="set_time" type="timestamp">
+			<column name="set_time" length="19">
+			</column>
+		</property>
+		<property name="set_admin" type="string">
+			<column name="set_admin" length="20">
+			</column>
+		</property>
+	</class>
+</hibernate-mapping>

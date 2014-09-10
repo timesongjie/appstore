@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping>
+    <class name="com.bbkmobile.iqoo.console.dao.keyword.CensorWord" table="t_censor_word" >
+        <id name="id" type="java.lang.Long">
+            <column name="id" />
+            <generator class="identity" />
+        </id>
+        
+        <property name="type" type="java.lang.Integer">
+            <column name="type" length="4" not-null="true">
+            </column>
+        </property>
+        
+        <property name="word" type="string">
+            <column name="word" length="60" not-null="true" >
+            </column>
+        </property>
+        
+        <property name="grade" type="java.lang.Integer">
+            <column name="grade" length="4" not-null="true">
+            </column>
+        </property>
+
+        <property name="add_date" type="timestamp">
+            <column name="add_date" length="19" not-null="true">
+            </column>
+        </property>
+        
+        <property name="modify_date" type="timestamp">
+            <column name="modify_date" length="19">
+            </column>
+        </property>
+    
+    </class>
+</hibernate-mapping>

@@ -1,0 +1,26 @@
+package com.bbkmobile.iqoo.console.dao.score;
+
+import java.util.List;
+
+public interface ScoreDAO {
+	
+    List<VCoinSetting> getVCoinSetting() throws Exception;  
+    
+    VCoinLimit getVCoinLimit() throws Exception;
+
+    VCoinSetting findVCoinSettingById(Long id) throws Exception;
+    
+    boolean modifyVCoinLimit(Long id, int value_limit) throws Exception;
+
+    boolean modifyVCoinSetting(VCoinSetting vCoinSetting) throws Exception; 
+    
+    //下载赠送V币管理
+    int countVCoinPresentInfoRecords(VCoinPresentInfo vCoinPresentInfo) throws Exception; 
+    List<VCoinPresentInfo> getVCoinPresentInfoList(int start, final VCoinPresentInfo vCoinPresentInfo) throws Exception;    
+    List<VCoinPresentInfo> getAllVCoinPresentInfoList(VCoinPresentInfo vCoinPresentInfo) throws Exception ;
+    boolean deleteVCoinPresentInfoByID(Long[] ids) throws Exception ;  
+    boolean addVCoinPresentInfo(Long[] ids) throws Exception;     
+    boolean updateVCoinLargess(Long id, int largess) throws Exception;
+    boolean updateAppInfoLargess() throws Exception;
+
+}

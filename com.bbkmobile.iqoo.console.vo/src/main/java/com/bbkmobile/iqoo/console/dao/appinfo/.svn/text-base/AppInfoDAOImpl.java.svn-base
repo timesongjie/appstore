@@ -1,0 +1,4416 @@
+/**
+ * AppInfoDAOImpl.java
+ * com.bbkmobile.iqoo.console.dao.appinfo
+ *
+ * Function：  
+ *
+ *   ver     date      		author
+ * ──────────────────────────────────
+ *   		 2012-1-3 		dengkehai
+ *
+ * Copyright (c) 2012, TNT All Rights Reserved.
+ */
+
+package com.bbkmobile.iqoo.console.dao.appinfo;
+
+import java.math.BigInteger;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
+import org.hibernate.Criteria;
+import org.hibernate.Hibernate;
+import org.hibernate.HibernateException;
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.ProjectionList;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Restrictions;
+import org.hibernate.transform.Transformers;
+import org.springframework.orm.hibernate3.HibernateCallback;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.common.logging.Lg;
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.console.action.search.SearchResultForm;
+import com.bbkmobile.iqoo.console.constants.Constants;
+import com.bbkmobile.iqoo.console.constants.LgType;
+import com.bbkmobile.iqoo.console.constants.UtilTool;
+import com.bbkmobile.iqoo.console.dao.apptype.AppType;
+import com.bbkmobile.iqoo.console.dao.errorreport.ErrorReport;
+import com.bbkmobile.iqoo.console.dao.login.UserInfo;
+import com.bbkmobile.iqoo.console.dao.modelmgr.ConsoleConstant;
+import com.bbkmobile.iqoo.console.dao.modelmgr.Model;
+import com.bbkmobile.iqoo.console.dao.quartz.ReportJob;
+import com.bbkmobile.iqoo.explorer.logcache.UpgradeQueryLogCache;
+
+/**
+ * ClassName:AppInfoDAOImpl Function:
+ * 
+ * @author dengkehai
+ * @version
+ * @since Ver 1.1
+ * @Date 2012-1-3 下午3:25:31
+ * 
+ */
+public class AppInfoDAOImpl extends HibernateDaoSupport implements AppInfoDAO {
+    
+	/**
+	 * 查询符合条件的记录的总数，为分页服务 (non-Javadoc)
+	 * 
+	 * @see com.bbkmobile.iqoo.console.dao.appinfo.AppInfoDAO#countAllRecords(com.bbkmobile.iqoo.console.dao.appinfo.AppInfo)
+	 */
+	//@SuppressWarnings("unchecked")
+	@Override
+	public int countAllRecords(final AppInfo appInfo) throws Exception {
+	    
+	    Criteria criteria = getSession()
+                .createCriteria(AppInfo.class);
+        if (null != appInfo.getAppType()
+                && null != appInfo.getAppType().getId()
+                && 0 != appInfo.getAppType().getId()) {
+            criteria.add(Restrictions.eq("appType",
+                    appInfo.getAppType()));
+        }
+        if (appInfo.getId() != null) {
+            criteria.add(Restrictions.eq("id", appInfo.getId()));
+        }
+        if (!UtilTool.checkStringNull(appInfo.getAppCnName())) {
+            criteria.add(Restrictions.like("appCnName", "%"
+                    + appInfo.getAppCnName() + "%"));
+        }
+        if (!UtilTool.checkStringNull(appInfo.getAppAuthor())) {
+            criteria.add(Restrictions.like("appAuthor", "%"
+                    + appInfo.getAppAuthor() + "%"));
+        }
+        if (!UtilTool.checkStringNull(appInfo.getAppKeyWord())) {
+            criteria.add(Restrictions.like("appKeyWord", "%"
+                    + appInfo.getAppKeyWord() + "%"));
+        }
+        //是否有补丁：zhangyi
+        if(!UtilTool.checkStringNull(appInfo.getPatchs())){
+      	  if("1".equals(appInfo.getPatchs())){
+		    	   criteria.add(Restrictions.isNotNull("patchs"));
+		    	   criteria.add(Restrictions.ne("patchs",""));
+		    	   criteria.add(Restrictions.ne("patchs","null"));
+      	  }else if("0".equals(appInfo.getPatchs())){
+		    	   criteria.add(Restrictions.or(Restrictions.or(Restrictions.isNull("patchs"),Restrictions.eq("patchs","")),Restrictions.eq("patchs","null")));
+      	  }
+	       }
+        if (!UtilTool.checkStringNull(appInfo.getDeveloper()
+                .getName())) {
+            Criteria dev_criteria = criteria.createCriteria(
+                    "developer", Criteria.LEFT_JOIN);
+            dev_criteria.add(Restrictions.like("name", "%"
+                    + appInfo.getDeveloper().getName() + "%"));
+        }
+        if (appInfo.getType() != 0) {
+            appInfo.getAppType().setId(appInfo.getType());
+            criteria.add(Restrictions.eq("appType",
+                    appInfo.getAppType()));
+        }
+        if (null != appInfo.getStatus_select()) {
+            appInfo.setAppStatus(appInfo.getStatus_select());
+            criteria.add(Restrictions.eq("appStatus", appInfo
+                    .getAppStatus()));
+        }
+        
+        if (!UtilTool.checkStringNull(appInfo.getAppPackage())) {
+            criteria.add(Restrictions.eq("appPackage",
+                    appInfo.getAppPackage()));
+        }
+        
+        if (null != appInfo.getAppStatus()
+                && appInfo.getAppStatus().shortValue() != -1) {
+            criteria.add(Restrictions.eq("appStatus",
+                    appInfo.getAppStatus()));
+        }
+        
+        if (null != appInfo.getTag()){
+			criteria.add(Restrictions.eq("tag",appInfo.getTag()));
+		}
+        
+        int totalRows =((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult()).intValue();  //是否为null
+
+        return totalRows;
+
+	}
+
+	/**
+	 * zuoshengdong 查询应用状态为上下架的记录的总数，为分页服务 (non-Javadoc)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public int countOnSaleRecords(final AppInfo appInfo) throws Exception {
+		// TODO Auto-generated method stub
+	    Criteria criteria = getSession()
+                .createCriteria(AppInfo.class);
+        if (null != appInfo.getAppType()
+                && null != appInfo.getAppType().getId()
+                && -1 != appInfo.getAppType().getId()) {
+            criteria.add(Restrictions.eq("appType",
+                    appInfo.getAppType()));
+        }
+        if (null != appInfo.getId()) {
+            criteria.add(Restrictions.eq("id", appInfo.getId()));
+        }
+        if (!UtilTool.checkStringNull(appInfo.getAppCnName())) {
+            criteria.add(Restrictions.like("appCnName", "%"
+                    + appInfo.getAppCnName() + "%"));
+        }
+        
+        if (!UtilTool.checkStringNull(appInfo.getAppPackage())) {
+            criteria.add(Restrictions.eq("appPackage",
+                    appInfo.getAppPackage()));
+        }
+        /*
+        if (appInfo.getOfficial()!='9') {
+        	criteria.add(Restrictions.eq("official",
+                    appInfo.getOfficial()));
+        }
+        */
+        if (!UtilTool.checkStringNull(appInfo.getDeveloper()
+                .getName())) {
+            Criteria dev_criteria = criteria.createCriteria(
+                    "developer", Criteria.LEFT_JOIN);
+            dev_criteria.add(Restrictions.like("name", "%"
+                    + appInfo.getDeveloper().getName() + "%"));
+        }
+        if (appInfo.getOfficial()!='\u0000') {
+        	criteria.add(Restrictions.eq("official",
+                    appInfo.getOfficial()));
+        }
+        if (null != appInfo.getOn_from_date()) {
+            criteria.add(Restrictions.between("onSaleDate",
+                    appInfo.getOn_from_date(),
+                    appInfo.getOn_to_date()));
+        }
+        if (null != appInfo.getOff_from_date()) {
+            criteria.add(Restrictions.between("offSaleDate",
+                    appInfo.getOff_from_date(),
+                    appInfo.getOff_to_date()));
+        }
+        /*
+        if (null != appInfo.getSellType()) {
+            criteria.add(Restrictions.eq("sellType",
+                    appInfo.getSellType()));
+        }*/
+        
+        if (null != appInfo.getAuto_update() && !appInfo.getAuto_update().equals("") ) {
+            criteria.add(Restrictions.eq("auto_update",
+                    appInfo.getAuto_update()));
+        }
+        
+        /*if (null != appInfo.getStatus_select()) {
+            appInfo.setAppStatus(appInfo.getStatus_select());
+            criteria.add(Restrictions.eq("appStatus", appInfo
+                    .getAppStatus()));
+        }*/
+        if (null != appInfo.getAppStatus()
+                && appInfo.getAppStatus().shortValue() != -1) {
+
+            criteria.add(Restrictions.eq("appStatus",
+                    appInfo.getAppStatus()));
+        } /*else {
+            criteria.add(
+                    Restrictions.or(Restrictions.eq("appStatus", (short) 13),
+                    Restrictions.or(Restrictions.eq("appStatus", (short) 0),
+                    Restrictions.or(Restrictions.eq("appStatus",(short) 11),
+                    Restrictions.or(Restrictions.eq("appStatus",(short) 12),
+                    Restrictions.or(Restrictions.eq("appStatus",(short) 8),
+                    Restrictions.or(Restrictions.eq("appStatus",(short) 9),
+                    Restrictions.eq("appStatus",(short) 10))))))));
+        }*/
+        if (null != appInfo.getTag()){
+			criteria.add(Restrictions.eq("tag",appInfo.getTag()));
+		}
+        int totalRows =((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult()).intValue();  //是否为null
+
+        return totalRows;
+	}
+
+	/**
+	 * 根据用户输入动态组织查询条件，查询应用列表
+	 * 
+	 * (non-Javadoc)
+	 * 
+	 * @see com.bbkmobile.iqoo.console.dao.appinfo.AppInfoDAO#findByProperty(int,
+	 *      com.bbkmobile.iqoo.console.dao.appinfo.AppInfo)
+	 */
+	@Override
+	public List<AppInfo> findByProperty(final int start, final AppInfo appInfo, final String appSortWay)
+			throws Exception {
+
+		/*
+		 * if(null == appInfo) { 
+
+		 * appInfo.getDeveloper().getId()); }
+		 */
+
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		List<AppInfo> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(AppInfo.class);
+						
+						/*
+						if (null != appInfo.getAppType()
+								&& null != appInfo.getAppType().getId()
+								&& 0 != appInfo.getAppType().getId()) {
+							criteria.add(Restrictions.eq("appType",
+									appInfo.getAppType()));
+						}
+						if (appInfo.getId() != null) {
+							criteria
+									.add(Restrictions.eq("id", appInfo.getId()));
+						}
+						if (!UtilTool.checkStringNull(appInfo.getAppCnName())) {
+							criteria.add(Restrictions.like("appCnName", "%"
+									+ appInfo.getAppCnName() + "%"));
+						}
+						if (!UtilTool.checkStringNull(appInfo.getAppAuthor())) {
+							criteria.add(Restrictions.like("appAuthor", "%"
+									+ appInfo.getAppAuthor() + "%"));
+						}
+
+						if (!UtilTool.checkStringNull(appInfo.getDeveloper()
+								.getName())) {
+							Criteria dev_criteria = criteria.createCriteria(
+									"developer", Criteria.LEFT_JOIN);
+							dev_criteria.add(Restrictions.like("name", "%"
+									+ appInfo.getDeveloper().getName() + "%"));
+						}
+						if (appInfo.getType() != 0) {
+							appInfo.getAppType().setId(appInfo.getType());
+							criteria.add(Restrictions.eq("appType",
+									appInfo.getAppType()));
+						}
+						if (null != appInfo.getStatus_select()) {
+							appInfo.setAppStatus(appInfo.getStatus_select());
+							criteria.add(Restrictions.eq("appStatus", appInfo
+									.getAppStatus()));
+						}
+						if (appInfo.getAppStatus() != null
+								&& appInfo.getAppStatus().shortValue() != -1) {
+							criteria.add(Restrictions.eq("appStatus",
+									appInfo.getAppStatus()));
+						}
+						*/
+						//是否有补丁：zhangyi
+						 if(!UtilTool.checkStringNull(appInfo.getPatchs())){
+				        	  if("1".equals(appInfo.getPatchs())){
+						    	   criteria.add(Restrictions.isNotNull("patchs"));
+						    	   criteria.add(Restrictions.ne("patchs",""));
+						    	   criteria.add(Restrictions.ne("patchs","null"));
+				        	  }else if("0".equals(appInfo.getPatchs())){
+						    	   criteria.add(Restrictions.or(Restrictions.or(Restrictions.isNull("patchs"),Restrictions.eq("patchs","")),Restrictions.eq("patchs","null")));
+				        	  }
+					       }
+						
+						if (null != appInfo.getAppType()
+				                && null != appInfo.getAppType().getId()
+				                && 0 != appInfo.getAppType().getId()) {
+				            criteria.add(Restrictions.eq("appType",
+				                    appInfo.getAppType()));
+				        }
+				        if (null != appInfo.getId()) {
+				            criteria.add(Restrictions.eq("id", appInfo.getId()));
+				        }
+				        if (!UtilTool.checkStringNull(appInfo.getAppCnName())) {
+				            criteria.add(Restrictions.like("appCnName", "%"
+				                    + appInfo.getAppCnName() + "%"));
+				        }
+				        if (!UtilTool.checkStringNull(appInfo.getAppKeyWord())) {
+				            criteria.add(Restrictions.like("appKeyWord", "%"
+				                    + appInfo.getAppKeyWord() + "%"));
+				        }
+				        if (!UtilTool.checkStringNull(appInfo.getDeveloper()
+				                .getName())) {
+				            Criteria dev_criteria = criteria.createCriteria(
+				                    "developer", Criteria.LEFT_JOIN);
+				            dev_criteria.add(Restrictions.like("name", "%"
+				                    + appInfo.getDeveloper().getName() + "%"));
+				        }
+				        
+				        if (!UtilTool.checkStringNull(appInfo.getAppPackage())) {
+				            criteria.add(Restrictions.eq("appPackage",
+				                    appInfo.getAppPackage()));
+				        }
+
+				        if (null != appInfo.getOn_from_date()) {
+				            criteria.add(Restrictions.between("onSaleDate",
+				                    appInfo.getOn_from_date(),
+				                    appInfo.getOn_to_date()));
+				        }
+				        if (null != appInfo.getOff_from_date()) {
+				            criteria.add(Restrictions.between("offSaleDate",
+				                    appInfo.getOff_from_date(),
+				                    appInfo.getOff_to_date()));
+				        }
+				        
+				        if (null != appInfo.getAuto_update() && !appInfo.getAuto_update().equals("") ) {
+				            criteria.add(Restrictions.eq("auto_update",
+				                    appInfo.getAuto_update()));
+				        }
+				        
+				        if (null != appInfo.getAppStatus()
+				                && appInfo.getAppStatus().shortValue() != -1) {
+
+				            criteria.add(Restrictions.eq("appStatus",
+				                    appInfo.getAppStatus()));
+				        }
+				        
+				        if (null != appInfo.getTag()){
+							criteria.add(Restrictions.eq("tag",appInfo.getTag()));
+						}
+						
+						if(null==appSortWay || "".equals(appSortWay))
+                        {
+                        	//默认按下载量降序排序
+                        	criteria.addOrder(Order.desc("downloadCount"));
+                        }
+                        
+                        else if("comment_up".equals(appSortWay))
+                        {
+                        	criteria.addOrder(Order.asc("avgComment"));
+                        }
+                        else if("comment_down".equals(appSortWay))
+                        {
+                        	criteria.addOrder(Order.desc("avgComment"));
+                        }
+                        else if("download_up".equals(appSortWay))
+                        {
+                        	criteria.addOrder(Order.asc("downloadCount"));
+                        }
+                        else if("download_down".equals(appSortWay))
+                        {
+                        	criteria.addOrder(Order.desc("downloadCount"));
+                        } else if("updatetime_up".equals(appSortWay))
+                        {
+                            criteria.addOrder(Order.asc("updateDate"));
+                        } else if("updatetime_down".equals(appSortWay))
+                        {
+                            criteria.addOrder(Order.desc("id"));
+                        }      						
+				//		criteria.addOrder(Order.asc("id"));
+						criteria.setFirstResult(start);
+						criteria.setMaxResults(10);
+						List<AppInfo> result = criteria.list();
+						return result;
+					}
+				});
+		return list;
+	}
+
+	/**
+	 * zuoshengdong 根据用户输入动态组织查询条件，查询应用列表(上下架状态)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppInfo> findOnSaleRecordsByProperty(final int start,
+			final AppInfo appInfo) throws Exception {
+
+		@SuppressWarnings("rawtypes")
+		List<AppInfo> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(AppInfo.class);
+
+						if (null != appInfo.getAppType()
+								&& null != appInfo.getAppType().getId()
+								&& -1 != appInfo.getAppType().getId()) {
+							criteria.add(Restrictions.eq("appType",
+									appInfo.getAppType()));
+						}
+						if (null != appInfo.getId()) {
+							criteria.add(Restrictions.eq("id", appInfo.getId()));
+						}
+						if (!UtilTool.checkStringNull(appInfo.getAppCnName())) {
+							criteria.add(Restrictions.like("appCnName", "%"
+									+ appInfo.getAppCnName() + "%"));
+						}
+						if (!UtilTool.checkStringNull(appInfo.getAppAuthor())) {
+							criteria.add(Restrictions.like("appAuthor", "%"
+									+ appInfo.getAppAuthor() + "%"));
+						}
+
+						if (!UtilTool.checkStringNull(appInfo.getDeveloper()
+								.getName())) {
+							Criteria dev_criteria = criteria.createCriteria(
+									"developer", Criteria.LEFT_JOIN);
+							dev_criteria.add(Restrictions.like("name", "%"
+									+ appInfo.getDeveloper().getName() + "%"));
+						}
+						
+						if (!UtilTool.checkStringNull(appInfo.getAppPackage())) {
+				            criteria.add(Restrictions.eq("appPackage",
+				                    appInfo.getAppPackage()));
+				        }
+						
+
+				     
+				        if (appInfo.getOfficial()!='\u0000') {
+				        	criteria.add(Restrictions.eq("official",
+				                    appInfo.getOfficial()));
+				        }
+				        
+						/*if (appInfo.getType() != 0) {
+							appInfo.getAppType().setId(appInfo.getType());
+							criteria.add(Restrictions.eq("appType",
+									appInfo.getAppType()));
+						}*/
+						if (null != appInfo.getOn_from_date()) {
+							criteria.add(Restrictions.between("onSaleDate",
+									appInfo.getOn_from_date(),
+									appInfo.getOn_to_date()));
+						}
+						if (null != appInfo.getOff_from_date()) {
+							criteria.add(Restrictions.between("offSaleDate",
+									appInfo.getOff_from_date(),
+									appInfo.getOff_to_date()));
+						}
+						/*
+						if (null != appInfo.getSellType()) {
+							criteria.add(Restrictions.eq("sellType",
+									appInfo.getSellType()));
+						}*/						
+						
+						if (null != appInfo.getAuto_update() && !appInfo.getAuto_update().equals("") ) {
+                            criteria.add(Restrictions.eq("auto_update",
+                                    appInfo.getAuto_update()));
+                        }
+						
+						/*if (null != appInfo.getStatus_select()) {
+							appInfo.setAppStatus(appInfo.getStatus_select());
+							criteria.add(Restrictions.eq("appStatus", appInfo
+									.getAppStatus()));
+						}*/
+						if (null != appInfo.getAppStatus()
+								&& appInfo.getAppStatus().shortValue() != -1) {
+							criteria.add(Restrictions.eq("appStatus",
+									appInfo.getAppStatus()));
+						}/* else {
+							criteria.add(
+									Restrictions.or(Restrictions.eq("appStatus", (short) 13),
+									Restrictions.or(Restrictions.eq("appStatus", (short) 0),
+									Restrictions.or(Restrictions.eq("appStatus",(short) 11),
+									Restrictions.or(Restrictions.eq("appStatus",(short) 12),
+									Restrictions.or(Restrictions.eq("appStatus",(short) 8),
+									Restrictions.or(Restrictions.eq("appStatus",(short) 9),
+									Restrictions.eq("appStatus",(short) 10))))))));
+						}*/
+						if (null != appInfo.getTag()){
+							criteria.add(Restrictions.eq("tag",appInfo.getTag()));
+						}
+						criteria.addOrder(Order.desc("updateDate"));
+						criteria.setFirstResult(start);
+						criteria.setMaxResults(10);
+						List<AppInfo> result = criteria.list();
+						return result;
+					}
+				});
+		return list;
+	}
+
+	/**
+	 * 根据id查询应用信息
+	 * 
+	 * (non-Javadoc)
+	 * 
+	 * @see com.bbkmobile.iqoo.console.dao.appinfo.AppInfoDAO#findAppById(java.lang.Long)
+	 */
+	@Override
+	public AppInfo findAppById(Long app_id) throws Exception {
+
+		//return getHibernateTemplate().load(AppInfo.class, app_id);
+	    
+	    AppInfo appInfo = null;
+        List<AppInfo> appInfos = getHibernateTemplate().find("from AppInfo where id =?",
+                app_id);
+        if (null != appInfos && appInfos.size() > 0) {
+            return appInfo = (AppInfo) appInfos.get(0);
+        }
+        return appInfo;
+
+	}
+
+	public AppInfo getAppInfoById(Long app_id) throws Exception {
+	    AppInfo appInfo = null;
+        String queryString = "select id,appCnName,appEnName,appVersion,appIcon,patchs,apkSize,appVersionCode,appPackage,tag,commentCount,avgComment,official from t_app_info where id="
+                + app_id;
+
+        Query query = getSession().createSQLQuery(queryString)
+                        .addScalar("id", Hibernate.LONG)
+                        .addScalar("appCnName", Hibernate.STRING)
+                        .addScalar("appEnName", Hibernate.STRING)
+                        .addScalar("appVersion", Hibernate.STRING)
+                        .addScalar("appIcon", Hibernate.STRING)
+                        .addScalar("patchs", Hibernate.STRING)
+                        .addScalar("apkSize", Hibernate.INTEGER)
+                        .addScalar("appVersionCode", Hibernate.STRING)
+                        .addScalar("appPackage", Hibernate.STRING)
+                        .addScalar("tag", Hibernate.SHORT)
+                        .addScalar("commentCount", Hibernate.INTEGER)
+                        .addScalar("avgComment", Hibernate.FLOAT)                                            
+                        .addScalar("official", Hibernate.CHARACTER)
+                        .setResultTransformer(Transformers.aliasToBean(AppInfo.class));
+        @SuppressWarnings("unchecked")
+        List<AppInfo> list = query.list();
+        if (null != list && list.size() > 0) {
+            appInfo = (AppInfo) list.get(0);
+        }
+        return appInfo;
+    }
+	
+	public AppInfo getAppInfoByPackageName(SearchResultForm requestParas) throws Exception{
+	    AppInfo appInfo = null;
+        String queryString = "select id,appCnName,appEnName,appAuthor,appVersion,appIcon,patchs,apkSize,appVersionCode,appPackage,tag,commentCount,avgComment,downloadCount,official,appStatus from t_app_info" +
+        		" where appPackage='" + requestParas.getAppPackageName() + "'" +
+                " and appCnName not like '%" + requestParas.getWord() + "%'" +
+                " and appKeyWord not like '%" + requestParas.getWord().trim() + "%'";
+
+        Query query = getSession().createSQLQuery(queryString)
+                        .addScalar("id", Hibernate.LONG)
+                        .addScalar("appCnName", Hibernate.STRING)
+                        .addScalar("appEnName", Hibernate.STRING)
+                        .addScalar("appAuthor", Hibernate.STRING)
+                        .addScalar("appVersion", Hibernate.STRING)
+                        .addScalar("appIcon", Hibernate.STRING)
+                        .addScalar("patchs", Hibernate.STRING)
+                        .addScalar("apkSize", Hibernate.INTEGER)
+                        .addScalar("appVersionCode", Hibernate.STRING)
+                        .addScalar("appPackage", Hibernate.STRING)
+                        .addScalar("tag", Hibernate.SHORT)
+                        .addScalar("commentCount", Hibernate.INTEGER)
+                        .addScalar("avgComment", Hibernate.FLOAT)     
+                        .addScalar("downloadCount", Hibernate.INTEGER)    
+                        .addScalar("official", Hibernate.CHARACTER)
+                        .addScalar("appStatus", Hibernate.SHORT)
+                        .setResultTransformer(Transformers.aliasToBean(AppInfo.class));
+        @SuppressWarnings("unchecked")
+        List<AppInfo> list = query.list();
+        if (null != list && list.size() > 0) {
+            appInfo = (AppInfo) list.get(0);
+        }
+        return appInfo;
+	}
+	
+    public AppInfo getAppInfoForListById(Long app_id) throws Exception {
+        AppInfo appInfo = null;
+        String queryString = "select id,appCnName,appEnName,appVersion,appIcon,patchs,apkSize,appVersionCode,appPackage,tag,commentCount,avgComment,official from t_app_info where id="
+                + app_id;
+
+        Query query = getSession().createSQLQuery(queryString)
+                        .addScalar("id", Hibernate.LONG)
+                        .addScalar("appCnName", Hibernate.STRING)
+                        .addScalar("appEnName", Hibernate.STRING)
+                        .addScalar("appVersion", Hibernate.STRING)
+                        .addScalar("appIcon", Hibernate.STRING)
+                        .addScalar("patchs", Hibernate.STRING)
+                        .addScalar("apkSize", Hibernate.INTEGER)
+                        .addScalar("appVersionCode", Hibernate.STRING)
+                        .addScalar("appPackage", Hibernate.STRING)
+                        .addScalar("tag", Hibernate.SHORT)
+                        .addScalar("commentCount", Hibernate.INTEGER)
+                        .addScalar("avgComment", Hibernate.FLOAT)                                            
+                        .addScalar("official", Hibernate.CHARACTER)
+                        .setResultTransformer(Transformers.aliasToBean(AppInfo.class));
+        @SuppressWarnings("unchecked")
+        List<AppInfo> list = query.list();
+        if (null != list && list.size() > 0) {
+            appInfo = (AppInfo) list.get(0);
+        }
+        return appInfo;
+    }
+	
+    public String getRemarkByAppId(Long id) throws Exception {
+        String remark = "";
+        String sql = "select app_remark from t_app_info where id=" + id;
+        @SuppressWarnings("unchecked")
+        List<Object> list = getSession().createSQLQuery(sql).addScalar("app_remark", Hibernate.STRING).list();
+        if (null != list && list.size() > 0) {
+            remark = list.get(0).toString();
+        }
+        return remark;
+    }
+	
+    public AppInfo findValidAppById(Long app_id) throws Exception {
+
+        //return getHibernateTemplate().load(AppInfo.class, app_id);
+        
+        AppInfo appInfo = null;
+        List<AppInfo> appInfos = getHibernateTemplate().find("from AppInfo where id =? and appStatus!=12",
+                app_id);
+        if (null != appInfos && appInfos.size() > 0) {
+            return appInfo = (AppInfo) appInfos.get(0);
+        }
+        return appInfo;
+
+    }
+    
+    public boolean AppIsValidForModel(Long app_id,Model model) throws Exception {
+        
+        String sql = "";
+        if(null != model){
+            sql="select id from t_app_info where id="+ app_id + " and (appStatus=0 or (appStatus=13 and filter_model not like '%," + model.getId() + ",%'))";
+        }else{
+            sql="select id from t_app_info where id="+ app_id + " and appStatus!=12";
+        }
+        
+        List list = getSession().createSQLQuery(sql).addScalar("id", Hibernate.LONG).list();
+        if (null != list && list.size() > 0) {
+            return true;
+        }
+        return false;
+
+    }
+    
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppInfo> fndAllAppInfo() throws Exception {
+		// TODO Auto-generated method stub
+		//return getHibernateTemplate().find("from AppInfo where appStatus=0 or appStatus=13");
+	    String sql="select id,appCnName from t_app_info where appStatus=0 or appStatus=13";
+        return getSession().createSQLQuery(sql).addScalar("id", Hibernate.LONG).addScalar("appCnName", Hibernate.STRING).setResultTransformer(Transformers.aliasToBean(AppInfo.class)).list();
+	}
+	
+	/**
+	 * 修改应用状态
+	 */
+	@Override
+	public boolean updateAppStatus(Long ids[], short temp) throws Exception {
+		// TODO Auto-generated method stub
+		try {
+			// SimpleDateFormat format =new
+			// SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+			if (temp == 0 || temp == 12) // 立即上架 或者 立即下架
+			{
+				String queryString = "";
+				if (temp == 0) {
+					queryString = "update AppInfo set appStatus=?,onSaleDate=? where id=?";
+					for (int i = 0; i < ids.length; i++) {
+						Session session = getSession();
+						Query queryObj = session.createQuery(queryString);
+						queryObj.setShort(0, temp);
+						queryObj.setTimestamp(1, new Timestamp(System
+								.currentTimeMillis()));
+						queryObj.setLong(2, ids[i]);
+						queryObj.executeUpdate();
+					}
+				}
+				if (temp == 12) {
+					queryString = "update AppInfo set appStatus=?,offSaleDate=? where id=?";
+					for (int i = 0; i < ids.length; i++) {
+						Session session = getSession();
+						Query queryObj = session.createQuery(queryString);
+						queryObj.setShort(0, temp);
+						queryObj.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+				//		queryObj.setString(2, null);
+						queryObj.setLong(2, ids[i]);
+						queryObj.executeUpdate();
+					}
+				}
+//				for (int i = 0; i < ids.length; i++) {
+//					Session session = getSession();
+//					Query queryObj = session.createQuery(queryString);
+//					queryObj.setShort(0, temp);
+//					queryObj.setTimestamp(1,
+//							new Timestamp(System.currentTimeMillis()));
+//					queryObj.setLong(2, ids[i]);
+//					queryObj.executeUpdate();
+//				}
+			} else if (temp == 10 || temp == 11) // 定时上架 或者定时下架
+			{
+				String queryString = "update AppInfo set appStatus=? where id=?";
+				for (int i = 0; i < ids.length; i++) {
+					Session session = getSession();
+					Query queryObj = session.createQuery(queryString);
+					queryObj.setShort(0, temp);
+					queryObj.setLong(1, ids[i]);
+					queryObj.executeUpdate();
+				}
+			} else if (temp == 8) // 取消手动上架
+			{
+
+				String queryString = "update AppInfo set appStatus=? where id=?";
+				for (int i = 0; i < ids.length; i++) {
+					Session session = getSession();
+					Query queryObj = session.createQuery(queryString);
+					queryObj.setShort(0, temp);
+					queryObj.setLong(1, ids[i]);
+					queryObj.executeUpdate();
+				}
+				updateQuartzTask(ids);
+			}
+
+			else if (temp == 101) // 取消下架 101没有含义，只是取消下架的标记
+			{
+				temp = 0;
+				String queryString = "update AppInfo set appStatus=? where id=?";
+				for (int i = 0; i < ids.length; i++) {
+					Session session = getSession();
+					Query queryObj = session.createQuery(queryString);
+					queryObj.setShort(0, temp);
+					queryObj.setLong(1, ids[i]);
+					queryObj.executeUpdate();
+				}
+				updateQuartzTask(ids);
+			}
+			return true;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	/**
+	 * 添加定时任务
+	 */
+	@Override
+	public boolean addQuartzTask(Date onsaleTime, String cronExpression,
+			Long ids[], short appStatus) throws Exception {
+		// TODO Auto-generated method stub
+		try {
+
+			for (int i = 0; i < ids.length; i++) {
+				ReportJob job = new ReportJob();
+				AppInfo appInfo = getHibernateTemplate().load(AppInfo.class,
+						ids[i]);
+				job.setApp_status(appStatus);
+				job.setAppInfo(appInfo);
+				job.setCron_expression(cronExpression);
+				job.setTask_time(onsaleTime);
+				job.setEnabled('1');
+				getHibernateTemplate().save(job);
+			}
+			return true;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	@Override
+	public boolean updateQuartzTask(Long ids[]) throws Exception {
+		// TODO Auto-generated method stub
+		try {
+
+			String queryString = "update ReportJob set enabled=? where appInfo=? and enabled=?";
+			for (int i = 0; i < ids.length; i++) {
+				Session session = getSession();
+				AppInfo appInfo = getHibernateTemplate().load(AppInfo.class,
+						ids[i]);
+				Query queryObj = session.createQuery(queryString);
+				queryObj.setCharacter(0, '3');
+				queryObj.setEntity(1, appInfo);
+				queryObj.setCharacter(2, '0');
+				queryObj.executeUpdate();
+			}
+			return true;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	/*
+	 * 找出当前应用的所有用户评论
+	 * 
+	 * @see
+	 * com.bbkmobile.iqoo.console.dao.appinfo.AppInfoDAO#findCommentByApp(com
+	 * .bbkmobile.iqoo.console.dao.appinfo.AppInfo)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppComment> findUserCommentByApp(final AppInfo appInfo,
+			final int start, final char comment_type) throws Exception {
+		// TODO Auto-generated method stub
+		@SuppressWarnings("rawtypes")
+		List<AppComment> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException, SQLException {
+						String queryString = "from AppComment where appInfo.id="+ appInfo.getId();
+						Query query = session.createQuery(queryString);
+						query.setFirstResult(start);
+						query.setMaxResults(10);
+						List<AppComment> list = query.list();
+						return list;
+					}
+				});
+		return list;
+	}
+
+	/*
+	 * 找出当前应用的所有评论（包括用户评论和错误报告）
+	 * 
+	 * @see
+	 * com.bbkmobile.iqoo.console.dao.appinfo.AppInfoDAO#findCommentByApp(com
+	 * .bbkmobile.iqoo.console.dao.appinfo.AppInfo)
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppComment> findCommentByApp(AppInfo appInfo) throws Exception {
+		// TODO Auto-generated method stub
+		try {
+
+			String queryString = "from AppComment where appInfo=?";
+			Session session = getSession();
+			Query queryObj = session.createQuery(queryString);
+			queryObj.setEntity(0, appInfo);
+			return queryObj.list();
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppClick> findClickForApp(AppInfo appInfo) throws Exception {
+		// TODO Auto-generated method stub
+		try {
+
+			String queryString = "from AppClick where appInfo=?";
+			Session session = getSession();
+			Query queryObj = session.createQuery(queryString);
+			queryObj.setEntity(0, appInfo);
+			return queryObj.list();
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppDownload> findDownloadForApp(AppInfo appInfo)
+			throws Exception {
+		// TODO Auto-generated method stub
+		try {
+
+			String queryString = "from AppDownload where appInfo=?";
+			Session session = getSession();
+			Query queryObj = session.createQuery(queryString);
+			queryObj.setEntity(0, appInfo);
+			return queryObj.list();
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	/*
+	 * 根据类型找出最新的应用设置值
+	 * 
+	 * @see
+	 * com.bbkmobile.iqoo.console.dao.appinfo.AppInfoDAO#findSetValue(com.bbkmobile
+	 * .iqoo.console.dao.appinfo.AppInfo, char)
+	 */
+	@Override
+	public AppOrderSet findSetValue(AppInfo appInfo) throws Exception {
+		// TODO Auto-generated method stub
+		try {
+
+			String queryString = "from AppOrderSet where appInfo=? and set_status=?";
+			Session session = getSession();
+			Query queryObj = session.createQuery(queryString);
+			queryObj.setEntity(0, appInfo);
+			queryObj.setCharacter(1, '1');
+			if (null != queryObj.list() && queryObj.list().size() > 0) {
+				return (AppOrderSet) queryObj.list().get(0);
+			}
+			return null;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	@Override
+	public boolean addOrderSetForApp(AppOrderSet appOrderSet, AppInfo app,
+			String adminName) throws Exception {
+		// TODO Auto-generated method stub
+		try {
+
+			String queryString = "update AppOrderSet set set_status=? where appInfo=? and set_status=?";
+			Session session = getSession();
+			Query queryObj = session.createQuery(queryString);
+			queryObj.setCharacter(0, '0');
+			queryObj.setEntity(1, app);
+			queryObj.setCharacter(2, '1');
+			queryObj.executeUpdate();
+			appOrderSet.setAppInfo(app);
+			appOrderSet.setSet_status('1');
+			SimpleDateFormat format = new SimpleDateFormat(
+					"yyyy-MM-dd HH:mm:ss");
+			appOrderSet.setSet_time(new Timestamp(System.currentTimeMillis()));
+			appOrderSet.setAdmin_name(adminName);
+			getHibernateTemplate().save(appOrderSet);
+			return true;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	@Override
+	public List<AppInfo> findAppByType(List<AppType> list_type, char sellType)
+			throws Exception {
+		// TODO Auto-generated method stub
+		List<AppInfo> allAppInfo = new ArrayList<AppInfo>();
+		for (AppType type : list_type) {
+			@SuppressWarnings("unchecked")
+			List<AppInfo> appInfo = getHibernateTemplate()
+					.find("from AppInfo where appStatus=0 and appType.id=? and sellType=?",
+							type.getId(), sellType);
+			if (null != appInfo && appInfo.size() > 0) {
+				for (AppInfo app : appInfo) {
+					allAppInfo.add(app);
+				}
+			}
+		}
+		return allAppInfo;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppInfo> finAppByProperty(final List<AppType> listType,
+			final int start) throws Exception {
+		// TODO Auto-generated method stub
+		@SuppressWarnings("rawtypes")
+		List<AppInfo> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException, SQLException {
+						String hql = "from AppInfo where appStatus=0 and appType.id";
+						if (null != listType && listType.size() > 0) {
+							if (listType.size() == 1) {
+								hql += "=" + listType.get(0).getId();
+							} else {
+								hql += " in (";
+								int i = 0;
+								for (i = 0; i < listType.size() - 1; i++) {
+									hql += listType.get(i).getId() + ",";
+								}
+								hql += listType.get(i).getId() + ")";
+							}
+						}
+						Query query = session.createQuery(hql);
+						query.setFirstResult(start);
+						query.setMaxResults(10);
+						List<AppInfo> list = query.list();
+						return list;
+					}
+				});
+		return list;
+	}
+
+	@Override
+	public List<AppInfo> findAllStatus() throws Exception {
+		try {
+			String queryString = "from AppInfo as model group by model.appStatus";
+			Query queryObject = getSession().createQuery(queryString);
+			return queryObject.list();
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	// liuhaiyan@20120405@获取所有已经上架的app应用
+	@SuppressWarnings("unchecked")
+	public List<AppInfo> findAllToSelllAppInfo() throws Exception {
+//		List<AppInfo> toSellAppInfoList = getHibernateTemplate().find(
+//				"from AppInfo where appStatus=0 or appStatus=13");
+//		return toSellAppInfoList;
+	    String sql="select id,appCnName from t_app_info where appStatus=0 or appStatus=13";
+        return getSession().createSQLQuery(sql).addScalar("id", Hibernate.LONG).addScalar("appCnName", Hibernate.STRING).setResultTransformer(Transformers.aliasToBean(AppInfo.class)).list();
+
+	}
+
+	@SuppressWarnings("unchecked")
+    public List<AppInfo> getAppsBySearchKey(String searchKey) throws Exception{
+	    String sql="select id,appCnName from t_app_info where appCnName like '%"+searchKey+"%' and (appStatus=0 or appStatus=13)";
+        return getSession().createSQLQuery(sql).addScalar("id", Hibernate.LONG).addScalar("appCnName", Hibernate.STRING).setResultTransformer(Transformers.aliasToBean(AppInfo.class)).list();
+
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppInfo> findAllOnsaleApp() throws Exception {
+		// TODO Auto-generated method stub
+		@SuppressWarnings("rawtypes")
+		List<AppInfo> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(AppInfo.class);
+
+						criteria.add(
+								Restrictions.or(Restrictions.eq("appStatus", (short) 13),
+								Restrictions.or(Restrictions.eq("appStatus", (short) 0),
+								Restrictions.or(Restrictions.eq("appStatus",(short) 8), 
+								Restrictions.or(Restrictions.eq("appStatus",(short) 9), 
+								Restrictions.or(Restrictions.eq("appStatus",(short) 10),
+								Restrictions.or(Restrictions.eq("appStatus",(short) 11),
+								Restrictions.eq("appStatus",(short) 12))))))));
+						List<AppInfo> result = criteria.list();
+						return result;
+					}
+				});
+		return list;
+	}
+
+	// liuhaiyan@20120517@获取应用截图
+	@SuppressWarnings("unchecked")
+	public List<TAppScreenshot> findAppScreenshot(AppInfo appInfo)
+			throws Exception {
+		String queryString = "from TAppScreenshot where appInfo=?";
+		Session session = getSession();
+		Query queryObj = session.createQuery(queryString);
+		queryObj.setEntity(0, appInfo);
+		return queryObj.list();
+	}
+
+	// liuhaiyan@20120517@获取应用截图
+    public AndroidPermission findAndroidPermission(Long permission_id) throws Exception {
+        // return getHibernateTemplate().load(AndroidPermission.class,
+        // permission_id);
+
+        AndroidPermission androidPermission = null;
+        List<AndroidPermission> androidPermissions = getHibernateTemplate().find("from AndroidPermission where id =?",
+                permission_id);
+        if (null != androidPermissions && androidPermissions.size() > 0) {
+            return androidPermission = (AndroidPermission) androidPermissions.get(0);
+        }
+        return androidPermission;
+
+    }
+
+	/**
+	 * 计算当前应用的所有用户评论总数
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public Integer countUserComment(final AppInfo appInfo, final int start,
+			final char comment_type) throws Exception {
+		// TODO Auto-generated method stub
+		int records = 0;
+		@SuppressWarnings("rawtypes")
+		List<AppComment> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException, SQLException {
+						String queryString = "from AppComment where comment_type="
+								+ comment_type
+								+ " and appInfo.id="
+								+ appInfo.getId();
+						Query query = session.createQuery(queryString);
+						List<AppComment> list = query.list();
+						return list;
+					}
+				});
+		if (null != list && list.size() > 0) {
+			records = list.size();
+		}
+		return records;
+	}
+
+	// liuhaiyan@20120619@获取排行榜的app列表并按机型过滤
+	public List<AppInfo> getTopAppsWithFilterModel(final int order_type,
+			final int apps_per_page, final int page_index,
+			final Short model_id, final Integer sdkVersion,
+			final String drawable_dpi, final String CPU_ABI) throws Exception {
+
+		@SuppressWarnings({ "rawtypes", "unchecked" })
+		List<AppInfo> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(AppInfo.class);
+
+						if (null != model_id) {
+							criteria.add(Restrictions.or(Restrictions.le(
+									"minSdkVersion", sdkVersion), Restrictions
+									.isNull("minSdkVersion")));
+
+							criteria.add(Restrictions.or(Restrictions.ge(
+									"maxSdkVersion", sdkVersion), Restrictions
+									.isNull("maxSdkVersion")));
+							/*
+							if(CPU_ABI!=null){
+                                String sql="(CPU_ABI is null";
+                                String cpuabis[]=CPU_ABI.split(","); 
+                                for(int i=0; i<cpuabis.length; i++)
+                                {
+                                    String cpuabi=cpuabis[i];
+                                    sql=sql+" or CPU_ABI like '%,"+cpuabi+",%'";                          
+                                }
+                                sql=sql+")";
+                                criteria.add(Restrictions.sqlRestriction(sql)); 
+                            }
+                            */
+							criteria.add(Restrictions
+									.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + model_id + ",%'))"));
+						}
+						else{
+						    criteria.add(Restrictions.ne("appStatus", (short) 12));
+	                    }
+
+						if (0 != apps_per_page && 0 != page_index) { // apps_per_page设为0表示查找所有app，便于统计app数量
+							switch (order_type) {
+							case Constants.TOP_DOWNLOADCOUNT_DESC:
+								criteria.addOrder(Order.desc("downloadCount"));
+								break;
+							case Constants.TOP_AVGCOMMENT_DESC:
+								criteria.addOrder(Order.desc("avgComment"));
+								break;
+							case Constants.TOP_ONSALEDATE_DESC:
+								criteria.addOrder(Order.desc("onSaleDate"));
+								break;
+							case Constants.TOP_DOWNLOADCOUNT_ASC:
+								criteria.addOrder(Order.asc("downloadCount"));
+								break;
+							case Constants.TOP_AVGCOMMENT_ASC:
+								criteria.addOrder(Order.asc("avgComment"));
+								break;
+							case Constants.TOP_ONSALEDATE_ASC:
+								criteria.addOrder(Order.asc("onSaleDate"));
+								break;
+
+							default:
+								break;
+							}
+
+							criteria.setFirstResult((page_index - 1)
+									* apps_per_page);
+							criteria.setMaxResults(apps_per_page);
+						}
+
+						List<AppInfo> result = criteria.list();
+						return result;
+					}
+				});
+		return list;
+	}
+	
+	// liuhaiyan@统计：按父类型id获取所有子类型app列表并按机型过滤
+    public int CountAppsByParentTypeIdWithFilterModel(final List<AppType> appTypesList, final int apps_per_page,
+            final int page_index, final int order_type, final Short model_id, final Integer sdkVersion,
+            final String drawable_dpi, final String CPU_ABI) throws Exception {
+
+        Criteria criteria = getSession().createCriteria(AppInfo.class);
+
+        criteria.add(Restrictions.in("appType", appTypesList));
+
+        if (null != model_id) {
+            criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", sdkVersion),
+                    Restrictions.isNull("minSdkVersion")));
+
+            criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", sdkVersion),
+                    Restrictions.isNull("maxSdkVersion")));
+            /*
+            if (CPU_ABI != null) {
+                String sql = "(CPU_ABI is null";
+                String cpuabis[] = CPU_ABI.split(",");
+                for (int i = 0; i < cpuabis.length; i++) {
+                    String cpuabi = cpuabis[i];
+                    sql = sql + " or CPU_ABI like '%," + cpuabi + ",%'";
+                }
+                sql = sql + ")";
+                criteria.add(Restrictions.sqlRestriction(sql));
+            }
+            */
+            criteria.add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%,"
+                    + model_id + ",%'))"));
+        } else {
+            criteria.add(Restrictions.eq("appStatus", (short) 0));
+        }
+
+        int totalRows = ((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult()).intValue(); // 是否为null
+        return totalRows;
+
+    }
+
+	// liuhaiyan@按父类型id获取所有子类型app列表并按机型过滤
+	public List<AppInfo> getAppsByParentTypeIdWithFilterModel(
+			final List<AppType> appTypesList, final int apps_per_page,
+			final int page_index, final int order_type, final Short model_id,
+			final Integer sdkVersion, final String drawable_dpi,
+			final String CPU_ABI) throws Exception {
+
+		@SuppressWarnings({ "rawtypes", "unchecked" })
+		List<AppInfo> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(AppInfo.class);
+
+						criteria.add(Restrictions.in("appType", appTypesList));
+
+						if (null != model_id) {
+							criteria.add(Restrictions.or(Restrictions.le(
+									"minSdkVersion", sdkVersion), Restrictions
+									.isNull("minSdkVersion")));
+
+							criteria.add(Restrictions.or(Restrictions.ge(
+									"maxSdkVersion", sdkVersion), Restrictions
+									.isNull("maxSdkVersion")));
+							/*
+							if(CPU_ABI!=null){
+                                String sql="(CPU_ABI is null";
+                                String cpuabis[]=CPU_ABI.split(","); 
+                                for(int i=0; i<cpuabis.length; i++)
+                                {
+                                    String cpuabi=cpuabis[i];
+                                    sql=sql+" or CPU_ABI like '%,"+cpuabi+",%'";                          
+                                }
+                                sql=sql+")";
+                                criteria.add(Restrictions.sqlRestriction(sql)); 
+                            }
+                            */
+							criteria.add(Restrictions
+									.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + model_id + ",%'))"));
+						}
+						else{
+                            criteria.add(Restrictions.ne("appStatus", (short) 12));
+                        }
+						
+						switch (order_type) {
+                            case Constants.TYPE_ONSALEDATE_ASC:
+                                criteria.addOrder(Order.asc("updateDate"));//onSaleDate
+                                break;
+                            case Constants.TYPE_ONSALEDATE_DESC:
+                                criteria.addOrder(Order.desc("updateDate"));  
+                                
+                                break;
+                            case Constants.TYPE_DOWNLOADCOUNT_ASC:
+                                criteria.addOrder(Order.asc("downloadCount"));
+                                break;
+                            case Constants.TYPE_DOWNLOADCOUNT_DESC:
+                                criteria.addOrder(Order.desc("downloadCount"));
+                                break;
+                            case Constants.TYPE_AVGCOMMENT_ASC:
+                                criteria.addOrder(Order.asc("avgComment"));
+                                break;
+                            case Constants.TYPE_AVGCOMMENT_DESC:
+                                criteria.addOrder(Order.desc("avgComment"));
+                                break;
+
+                            default:
+                                break;
+                        }
+						
+						criteria.setFirstResult((page_index - 1)
+                                * apps_per_page);
+                        criteria.setMaxResults(apps_per_page + 1);
+                        
+						List<AppInfo> result = criteria.list();
+						return result;
+					}
+				});
+		if(null!=list && list.size()>0){
+		    return list;
+		}else{
+		    return null;
+		}	
+	}
+	
+    // liuhaiyan@统计：按叶子类型id获取所有app列表并按机型过滤
+    public int CountAppsByLeafTypeIdWithFilterModel(final AppType appType, final int apps_per_page,
+            final int page_index, final int order_type, final Short model_id, final Integer sdkVersion,
+            final String drawable_dpi, final String CPU_ABI) throws Exception {
+
+        Criteria criteria = getSession().createCriteria(AppInfo.class);
+
+        criteria.add(Restrictions.eq("appType", appType));
+
+        if (null != model_id) {
+            criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", sdkVersion),
+                    Restrictions.isNull("minSdkVersion")));
+
+            criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", sdkVersion),
+                    Restrictions.isNull("maxSdkVersion")));
+            /*
+            if (CPU_ABI != null) {
+                String sql = "(CPU_ABI is null";
+                String cpuabis[] = CPU_ABI.split(",");
+                for (int i = 0; i < cpuabis.length; i++) {
+                    String cpuabi = cpuabis[i];
+                    sql = sql + " or CPU_ABI like '%," + cpuabi + ",%'";
+                }
+                sql = sql + ")";
+                criteria.add(Restrictions.sqlRestriction(sql));
+            }
+            */
+
+            criteria.add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%,"
+                    + model_id + ",%'))"));
+        } else {
+            criteria.add(Restrictions.eq("appStatus", (short) 0));
+        }
+
+        int totalRows = ((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult()).intValue(); // 是否为null
+        return totalRows;
+
+    }
+
+	// liuhaiyan@按叶子类型id获取所有app列表并按机型过滤
+	public List<AppInfo> getAppsByLeafTypeIdWithFilterModel(
+			final AppType appType, final int apps_per_page,
+			final int page_index, final int order_type, final Short model_id,
+			final Integer sdkVersion, final String drawable_dpi,
+			final String CPU_ABI) throws Exception {
+
+		@SuppressWarnings({ "rawtypes", "unchecked" })
+		List<AppInfo> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(AppInfo.class);
+
+						criteria.add(Restrictions.eq("appType", appType));
+
+						if (null != model_id) {
+							criteria.add(Restrictions.or(Restrictions.le(
+									"minSdkVersion", sdkVersion), Restrictions
+									.isNull("minSdkVersion")));
+
+							criteria.add(Restrictions.or(Restrictions.ge(
+									"maxSdkVersion", sdkVersion), Restrictions
+									.isNull("maxSdkVersion")));
+							/*
+							if(CPU_ABI!=null){
+                                String sql="(CPU_ABI is null";
+                                String cpuabis[]=CPU_ABI.split(","); 
+                                for(int i=0; i<cpuabis.length; i++)
+                                {
+                                    String cpuabi=cpuabis[i];
+                                    sql=sql+" or CPU_ABI like '%,"+cpuabi+",%'";                          
+                                }
+                                sql=sql+")";
+                                criteria.add(Restrictions.sqlRestriction(sql)); 
+                            }
+                            */
+
+							criteria.add(Restrictions
+									.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + model_id + ",%'))"));
+						}
+						else{
+                            criteria.add(Restrictions.ne("appStatus", (short) 12));
+                        }
+						
+						switch (order_type) {
+                            case Constants.TYPE_ONSALEDATE_ASC:
+                                //criteria.addOrder(Order.asc("onSaleDate"));
+                                criteria.addOrder(Order.asc("updateDate"));
+                                break;
+                            case Constants.TYPE_ONSALEDATE_DESC:
+                                //criteria.addOrder(Order.desc("onSaleDate"));
+                                criteria.addOrder(Order.desc("updateDate"));
+                                break;
+                            case Constants.TYPE_DOWNLOADCOUNT_ASC:
+                                criteria.addOrder(Order.asc("downloadCount"));
+                                break;
+                            case Constants.TYPE_DOWNLOADCOUNT_DESC:
+                                criteria.addOrder(Order.desc("downloadCount"));
+                                break;
+                            case Constants.TYPE_AVGCOMMENT_ASC:
+                                criteria.addOrder(Order.asc("avgComment"));
+                                break;
+                            case Constants.TYPE_AVGCOMMENT_DESC:
+                                criteria.addOrder(Order.desc("avgComment"));
+                                break;
+                            default:
+                                break;
+                        }
+						criteria.setFirstResult((page_index - 1)
+                                  * apps_per_page);
+                        criteria.setMaxResults(apps_per_page + 1);
+                        
+						List<AppInfo> result = criteria.list();
+						return result;
+					}
+				});
+		if(null!=list && list.size()>0){
+            return list;
+        }else{
+            return null;
+        }   
+	}
+
+    // liuhaiyan@相关推荐：获取某一个类型的应用
+    public List<AppInfo> getAppsByLeafType(
+            final AppType appType, final int start_position,
+            final int length, final Short model_id,
+            final Integer sdkVersion, final String drawable_dpi,
+            final String CPU_ABI) throws Exception {
+
+        @SuppressWarnings({ "rawtypes", "unchecked" })
+        List<AppInfo> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(AppInfo.class);
+
+                        criteria.add(Restrictions.eq("appType", appType));
+
+                        if (null != model_id) {
+                            criteria.add(Restrictions.or(Restrictions.le(
+                                    "minSdkVersion", sdkVersion), Restrictions
+                                    .isNull("minSdkVersion")));
+
+                            criteria.add(Restrictions.or(Restrictions.ge(
+                                    "maxSdkVersion", sdkVersion), Restrictions
+                                    .isNull("maxSdkVersion")));
+                            /*
+                            if(CPU_ABI!=null){
+                                String sql="(CPU_ABI is null";
+                                String cpuabis[]=CPU_ABI.split(","); 
+                                for(int i=0; i<cpuabis.length; i++)
+                                {
+                                    String cpuabi=cpuabis[i];
+                                    sql=sql+" or CPU_ABI like '%,"+cpuabi+",%'";                          
+                                }
+                                sql=sql+")";
+                                criteria.add(Restrictions.sqlRestriction(sql)); 
+                            }
+                            */
+                            criteria.add(Restrictions
+                                    .sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + model_id + ",%'))"));
+                        }
+                        else{
+                            criteria.add(Restrictions.ne("appStatus", (short) 12));
+                        }
+
+                        criteria.setFirstResult(start_position);
+                        criteria.setMaxResults(length);
+                        
+                        List<AppInfo> result = criteria.list();
+                        return result;
+                    }
+                });
+        if(null!=list && list.size()>0){
+            return list;
+        }else{
+            return null;
+        }   
+    }
+	
+	// liuhaiyan@按搜索关键词获取某类型中所有app列表并按机型过滤
+    public List<AppInfo> getAppsByKeyNameForModel(final SearchKey searchKey, final Model modelClass) throws Exception {
+        
+        String sql = "";
+        String key = searchKey.getKey_name().trim().replaceAll(" ", "%");
+        
+        if(null == modelClass){
+            sql = "select id,tag,appCnName,appAuthor,appPackage,appCnName,appIcon,avgComment,commentCount," +
+                    "appVersion,appVersionCode,downloadCount,patchs,apkSize,official from t_app_info" +
+            		" where" + 
+                    " (appCnName like '%" + key + "%'" +
+                    " or appKeyWord like '%" + searchKey.getKey_name().trim() + "%')" +
+            		" and appStatus!="+Constants.APP_OFFSALE + 
+            		" order by downloadCount desc" +
+                    " limit " +  (searchKey.getPage_index()-1)*searchKey.getApps_per_page()+","+(searchKey.getApps_per_page()+1) ;
+        }else{
+            /*
+            String subquery= "";
+            if(null!=modelClass.getCPU_ABI()){
+                subquery = "(CPU_ABI is null";
+                String cpuabis[]=modelClass.getCPU_ABI().split(","); 
+                for(int i=0; i<cpuabis.length; i++)
+                {
+                    String cpuabi=cpuabis[i];
+                    subquery=subquery+" or CPU_ABI like '%,"+cpuabi+",%'";                          
+                }
+                subquery=subquery+")";
+              
+            }
+            */
+            sql = "select id,tag,appCnName,appAuthor,appPackage,appCnName,appIcon,avgComment,commentCount," +
+            		"appVersion,appVersionCode,downloadCount,patchs,apkSize,official from t_app_info" +
+                    " where" +
+                    " (appCnName like '%" + key + "%'" +
+                    " or appKeyWord like '%" + searchKey.getKey_name().trim() + "%')" +
+                    " and (appStatus="+Constants.APP_ONSALE + " or (appStatus=" + Constants.APP_PART_ONSALE + " and filter_model not like '%," + modelClass.getId() + ",%'))"+
+                    " and (minSdkVersion is null or minSdkVersion<=" + modelClass.getSdkVersion() + ")" +
+                    " and (maxSdkVersion is null or maxSdkVersion>=" + modelClass.getSdkVersion() + ")" +
+                    //" and " + subquery + 
+                    " order by downloadCount desc" +
+                    " limit " +  (searchKey.getPage_index()-1)*searchKey.getApps_per_page()+","+(searchKey.getApps_per_page()+1) ;
+        }
+        
+        @SuppressWarnings("unchecked")
+        List<AppInfo> list = getSession().createSQLQuery(sql)
+                .addScalar("id", Hibernate.LONG)
+                .addScalar("tag", Hibernate.SHORT)
+                .addScalar("appCnName", Hibernate.STRING)
+                .addScalar("appAuthor", Hibernate.STRING)    
+                .addScalar("appPackage", Hibernate.STRING)
+                //.addScalar("parent_id", Hibernate.STRING)
+                .addScalar("appCnName", Hibernate.STRING)
+                //.addScalar("appEnName", Hibernate.STRING)
+                .addScalar("appIcon", Hibernate.STRING)
+                .addScalar("avgComment", Hibernate.FLOAT)
+                .addScalar("commentCount", Hibernate.INTEGER)
+                .addScalar("appVersion", Hibernate.STRING)
+                .addScalar("appVersionCode", Hibernate.STRING)
+                .addScalar("downloadCount", Hibernate.INTEGER)
+                .addScalar("patchs",Hibernate.STRING)
+                .addScalar("apkSize",Hibernate.INTEGER)
+                .addScalar("official",Hibernate.CHARACTER)
+                .setResultTransformer(Transformers.aliasToBean(AppInfo.class)).list();
+
+        return list;
+    }
+    
+    public int countAppsByKeyNameForModel(final SearchKey searchKey, final Model modelClass) throws Exception {
+        
+        String sql = "";
+        String key = searchKey.getKey_name().trim().replaceAll(" ", "%");
+        
+        if(null == modelClass){
+            sql = "select count(*) from t_app_info" +
+                    " where" + 
+                    " (appCnName like '%" + key + "%'" +
+                    " or appKeyWord like '%" + searchKey.getKey_name().trim() + "%')" +
+                    " and appStatus!="+Constants.APP_OFFSALE ;           
+        }else{
+            /*
+            String subquery= "";
+            if(null!=modelClass.getCPU_ABI()){
+                subquery = "(CPU_ABI is null";
+                String cpuabis[]=modelClass.getCPU_ABI().split(","); 
+                for(int i=0; i<cpuabis.length; i++)
+                {
+                    String cpuabi=cpuabis[i];
+                    subquery=subquery+" or CPU_ABI like '%,"+cpuabi+",%'";                          
+                }
+                subquery=subquery+")";
+              
+            }
+            */
+            sql = "select count(*) from t_app_info" +
+                    " where" +
+                    " (appCnName like '%" + key + "%'" +
+                    " or appKeyWord like '%" + searchKey.getKey_name().trim() + "%')" +
+                    " and (appStatus="+Constants.APP_ONSALE + " or (appStatus=" + Constants.APP_PART_ONSALE + " and filter_model not like '%," + modelClass.getId() + ",%'))"+
+                    " and (minSdkVersion is null or minSdkVersion<=" + modelClass.getSdkVersion() + ")" +
+                    " and (maxSdkVersion is null or maxSdkVersion>=" + modelClass.getSdkVersion() + ")" ;
+                    //subquery ;
+        }
+        
+        @SuppressWarnings("unchecked")
+        BigInteger count = (BigInteger) getSession().createSQLQuery(sql).uniqueResult();
+        
+        return count.intValue();
+    }
+    /*
+    public List<AppInfo> getAppsByKeyNameWithFilterModel(final SearchKey searchKey, final Model modelClass) throws Exception {
+
+        @SuppressWarnings({ "rawtypes", "unchecked" })
+        List<AppInfo> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(AppInfo.class);
+        
+                        if (null != searchKey.getKey_name() && !"".equals(searchKey.getKey_name())) { // 搜索
+                            String key = searchKey.getKey_name().trim().replaceAll(" ", "%");
+                            criteria.add(Restrictions.like("appCnName", "%"
+                                    + key + "%"));
+                        }
+
+                        if (null != modelClass) {
+                            criteria.add(Restrictions.or(Restrictions.le(
+                                    "minSdkVersion", modelClass.getSdkVersion()), Restrictions
+                                    .isNull("minSdkVersion")));
+
+                            criteria.add(Restrictions.or(Restrictions.ge(
+                                    "maxSdkVersion", modelClass.getSdkVersion()), Restrictions
+                                    .isNull("maxSdkVersion")));
+
+                            if(null != modelClass.getCPU_ABI()){
+                                String sql="(CPU_ABI is null";
+                                String cpuabis[]=modelClass.getCPU_ABI().split(","); 
+                                for(int i=0; i<cpuabis.length; i++)
+                                {
+                                    String cpuabi=cpuabis[i];
+                                    sql=sql+" or CPU_ABI like '%,"+cpuabi+",%'";                          
+                                }
+                                sql=sql+")";
+                                criteria.add(Restrictions.sqlRestriction(sql)); 
+                            }
+                            criteria.add(Restrictions
+                                    .sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + modelClass.getId() + ",%'))"));
+                        }
+                        else{
+                            criteria.add(Restrictions.ne("appStatus", (short) 12));
+                        }
+                        
+                        criteria.addOrder(Order.desc("downloadCount"));
+                        
+                        criteria.setFirstResult((searchKey.getPage_index() - 1)
+                                * searchKey.getApps_per_page());
+                        criteria.setMaxResults(searchKey.getApps_per_page() + 1);
+                        
+                        List<AppInfo> result = criteria.list();
+                        return result;
+                    }
+                });
+        return list;
+    }
+    */
+    /*
+	public List<AppInfo> getAppsByKeyNameWithFilterModel(final String keyName,
+			final List<AppType> appTypesList, final int apps_per_page,
+			final int page_index, final int order_type, final Short model_id,
+			final Integer sdkVersion, final String drawable_dpi,
+			final String CPU_ABI) throws Exception {
+
+		@SuppressWarnings({ "rawtypes", "unchecked" })
+		List<AppInfo> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(AppInfo.class);
+		
+						if (null != keyName && !"".equals(keyName)) { // 搜索
+							String key = keyName.trim().replaceAll(" ", "%");
+							criteria.add(Restrictions.like("appCnName", "%"
+									+ key + "%"));
+						}
+						if (null != appTypesList && appTypesList.size() > 0) {
+							criteria.add(Restrictions.in("appType",
+									appTypesList));
+						}
+						if (null != model_id) {
+							criteria.add(Restrictions.or(Restrictions.le(
+									"minSdkVersion", sdkVersion), Restrictions
+									.isNull("minSdkVersion")));
+
+							criteria.add(Restrictions.or(Restrictions.ge(
+									"maxSdkVersion", sdkVersion), Restrictions
+									.isNull("maxSdkVersion")));
+
+							if(CPU_ABI!=null){
+                                String sql="(CPU_ABI is null";
+                                String cpuabis[]=CPU_ABI.split(","); 
+                                for(int i=0; i<cpuabis.length; i++)
+                                {
+                                    String cpuabi=cpuabis[i];
+                                    sql=sql+" or CPU_ABI like '%,"+cpuabi+",%'";                          
+                                }
+                                sql=sql+")";
+                                criteria.add(Restrictions.sqlRestriction(sql)); 
+                            }
+							criteria.add(Restrictions
+									.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + model_id + ",%'))"));
+						}
+						else{
+                            criteria.add(Restrictions.ne("appStatus", (short) 12));
+                        }
+						
+						switch (order_type) {
+                            case 0:
+                                criteria.addOrder(Order.asc("onSaleDate"));
+                                break;
+                            case 1:
+                                criteria.addOrder(Order.desc("onSaleDate"));
+                                break;
+                            case 2:
+                                criteria.addOrder(Order.asc("downloadCount"));
+                                break;
+                            case 3:
+                                criteria.addOrder(Order.desc("downloadCount"));
+                                break;
+                            case 4:
+                                criteria.addOrder(Order.asc("avgComment"));
+                                break;
+                            case 5:
+                                criteria.addOrder(Order.desc("avgComment"));
+                                break;
+
+                            default:
+                                break;
+                        }
+						List<AppInfo> result = criteria.list();
+						return result;
+					}
+				});
+		return list;
+	}
+    */
+	public List<AppInfo> findAppInfoList(final String name_key,
+			final AppType appType, final int apps_per_page,
+			final int page_index, final int order_type) throws Exception {
+
+		@SuppressWarnings({ "rawtypes", "unchecked" })
+		List<AppInfo> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException {
+						Criteria criteria = session
+								.createCriteria(AppInfo.class);
+
+						if (null != name_key) { // 搜索
+							criteria.add(Restrictions.like("appCnName", "%"
+									+ name_key + "%"));
+						}
+
+						if (null != appType) { // 如果appType为空，则表示为所有的app排行@排行
+							criteria.add(Restrictions.eq("appType", appType));
+						}
+
+						if (0 != apps_per_page && 0 != page_index) { // apps_per_page设为0表示查找所有app，便于统计app数量@分类
+
+							switch (order_type) {
+							case 0:
+								criteria.addOrder(Order.desc("onSaleDate"));
+								break;
+							case 1:
+								criteria.addOrder(Order.asc("onSaleDate"));
+								break;
+							case 2:
+								criteria.addOrder(Order.asc("downloadCount"));
+								break;
+							case 3:
+								criteria.addOrder(Order.desc("downloadCount"));
+								break;
+							case 4:
+								criteria.addOrder(Order.asc("avgComment"));
+								break;
+							case 5:
+								criteria.addOrder(Order.desc("avgComment"));
+								break;
+
+							default:
+								break;
+							}
+
+							criteria.setFirstResult((page_index - 1)
+									* apps_per_page);
+							criteria.setMaxResults(apps_per_page);
+						}
+
+						List<AppInfo> result = criteria.list();
+						return result;
+					}
+				});
+		return list;
+	}
+
+	// liuhaiyan@保存手机评论后，相应更改app的总分数、平均分和总评级数
+	public boolean saveAppInfoForSaveComment(AppInfo appInfo, Float score)
+			throws Exception {
+		boolean result = false;
+		try {
+			Float commmentSum = appInfo.getCommentSum();
+			appInfo.setCommentSum(commmentSum + score);
+			appInfo.setCommentCount(appInfo.getCommentCount() + 1);
+			Float avg_comment = (commmentSum + score)/(appInfo.getCommentCount());
+			appInfo.setAvgComment(avg_comment);
+			getHibernateTemplate().save(appInfo);
+			result = true;
+		} catch (Exception e) {
+			throw e;
+		}
+        return result;
+    }
+
+    private boolean updateCommentGrade(Long app_id, Float score) throws Exception {
+        String sql = "";
+        int grade = 0;
+        if (5 == score) {
+            grade = 5;
+        } else if (4 == score) {
+            grade = 4;
+        } else if (3 == score) {
+            grade = 3;
+        } else if (2 == score) {
+            grade = 2;
+        } else if (1 == score) {
+            grade = 1;
+        }
+        if (0 != grade) {
+            sql = "update t_comment_grade set score" + grade + "=score" + grade + "-1 where app_id=" + app_id;
+            getSession().createSQLQuery(sql).executeUpdate();
+        }
+        return true;
+    }
+
+	// liuhaiyan@手机评论删除或审核不通过后，相应更改app的总分数、平均分和总评级数
+	public boolean updateAppInfoForDeleteComment(AppInfo appInfo, Float score)
+			throws Exception {
+		boolean result = false;
+		try {
+		    if(null==score || 0 == score){
+		        return true;
+		    }
+			Float commmentSum = appInfo.getCommentSum();
+			appInfo.setCommentSum(commmentSum - score);
+			appInfo.setCommentCount(appInfo.getCommentCount() - 1);
+			if (appInfo.getCommentCount() == 0) {
+				appInfo.setAvgComment((float)0);
+			} else {
+				appInfo.setAvgComment((commmentSum - score)
+						/ appInfo.getCommentCount());
+			}
+			updateCommentGrade(appInfo.getId(), score);
+			getHibernateTemplate().save(appInfo);
+			result = true;
+		} catch (Exception e) {
+			throw e;
+		}
+		return result;
+	}
+	
+	public int getModuleDBVersion(String module, int module_id) throws Exception{
+	    try {
+            String sqlString = "select version from t_db_version where module_id="+module_id+" and module='"+module+"'";
+            int db_version = (Integer) getSession().createSQLQuery(sqlString).uniqueResult();   
+            return db_version;
+        } catch (Exception e) {
+            throw e;
+        }
+	}
+	
+	public boolean updateModuleDBVersion(String module, int module_id) throws Exception{
+        try {
+            String sqlString = "update t_db_version set version=version+1 where module_id="+module_id+" and module='"+module+"'";
+            getSession().createSQLQuery(sqlString).executeUpdate();   
+            return true;
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<AppInfo> getAppInfoListForUpdate(String packages, Model model)
+			throws Exception {
+	
+		List<AppInfo> appInfoList = null;
+		Session session = getSession();
+		Query query = null;
+
+		String packagesSql = "(\'" + packages + "\')";
+		packagesSql = packagesSql.replace(",", "\',\'");
+		/*
+		 * String queryString1 =
+		 * "select * from (select * from t_app_info where appPackage in ? and "
+		 * +
+		 * "(minSdkVersion<=? or minSdkVersion is null) and (maxSdkVersion>=? or maxSdkVersion is null) and "
+		 * +
+		 * "(CPU_ABI=? or CPU_ABI is null) and (filter_model is null or filter_model not like ? ) "
+		 * +
+		 * "order by appVersionCode desc) t_app_info2 group by t_app_info2.appPackage"
+		 * ; Query queryObj = session.createSQLQuery(queryString1);
+		 * queryObj.setString(0, packagesSql); queryObj.setInteger(1,
+		 * model.getSdkVersion()); queryObj.setInteger(2,
+		 * model.getSdkVersion()); queryObj.setString(3, model.getCPU_ABI());
+		 * queryObj.setString(4, "%,"+model.getId()+",%");
+		 * 
+		 * return queryObj.list();
+		 */
+		String queryString;
+		
+		if(null!=model){
+		    /*
+		    String CPU_ABI=model.getCPU_ABI();
+		    String sql="";
+		    
+		    if(CPU_ABI!=null){
+                sql="(CPU_ABI is null";
+                String cpuabis[]=CPU_ABI.split(","); 
+                for(int i=0; i<cpuabis.length; i++)
+                {
+                    String cpuabi=cpuabis[i];
+                    sql=sql+" or CPU_ABI like '%,"+cpuabi+",%'";                          
+                }
+                sql=sql+")";        
+            }
+            */
+		    queryString = "select id,appCnName,appEnName,avgComment,commentCount,appPackage,appVersion,appVersionCode,apkSize,appIcon,patchs,official from t_app_info where appPackage in "
+                    + packagesSql
+                    + " and "
+                    + "(minSdkVersion<="
+                    + model.getSdkVersion()
+                    + " or minSdkVersion is null) and (maxSdkVersion>="
+                    + model.getSdkVersion()
+                    + " or maxSdkVersion is null) and "
+                    //+ sql
+                    //+ " and "
+                    +"(appStatus=0 or (appStatus=13 and "
+                    + "filter_model not like '%,"
+                    + model.getId()
+                    + ",%'))";
+		    /*
+		    queryString = "select * from (select * from t_app_info where binary appPackage in "
+                    + packagesSql
+                    + " and "
+                    + "(minSdkVersion<="
+                    + model.getSdkVersion()
+                    + " or minSdkVersion is null) and (maxSdkVersion>="
+                    + model.getSdkVersion()
+                    + " or maxSdkVersion is null) and "
+                    + sql
+                    + " and "
+                    +"(appStatus=0 or (appStatus=13 and "
+                    + "filter_model not like '%,"
+                    + model.getId()
+                    + "%,'))"
+                    + " order by appVersionCode desc) t_app_info2 group by t_app_info2.appPackage";
+            */
+        } else {
+            queryString = "select id,appCnName,appEnName,avgComment,commentCount,appPackage,appVersion,appVersionCode,apkSize,appIcon,patchs,official from t_app_info where appPackage in "
+                    + packagesSql + " and appStatus!=12";
+            /*
+             * queryString =
+             * "select * from (select * from t_app_info where appPackage in " +
+             * packagesSql +
+             * " order by appVersionCode desc) t_app_info2 group by t_app_info2.appPackage"
+             * ;
+             */
+        }
+
+        query = session.createSQLQuery(queryString).addScalar("id", Hibernate.LONG)
+                .addScalar("appCnName", Hibernate.STRING).addScalar("appEnName", Hibernate.STRING)
+                .addScalar("avgComment", Hibernate.FLOAT).addScalar("commentCount", Hibernate.INTEGER)
+                .addScalar("appPackage", Hibernate.STRING).addScalar("appVersion", Hibernate.STRING)
+                .addScalar("appVersionCode", Hibernate.STRING).addScalar("apkSize", Hibernate.INTEGER)
+                .addScalar("appIcon",Hibernate.STRING).addScalar("patchs",Hibernate.STRING)
+                .addScalar("official",Hibernate.CHARACTER)
+                .setResultTransformer(Transformers.aliasToBean(AppInfo.class));
+        //query = session.createSQLQuery(queryString).addEntity(AppInfo.class);
+        List<AppInfo> list = query.list();
+        if (null != list && list.size() > 0) {
+            appInfoList = list;
+		}
+
+		return appInfoList;
+    }
+	
+    public AppInfo getAppInfoForUpdate(String app_package, Model model) throws Exception {
+
+        AppInfo appInfo = null;
+        Session session = getSession();
+        Query query = null;
+
+        String queryString = "";
+        if (null != model) {
+            /*
+            String CPU_ABI = model.getCPU_ABI();
+            String sql = "";
+            if (CPU_ABI != null) {
+                sql = "(CPU_ABI is null";
+                String cpuabis[] = CPU_ABI.split(",");
+                for (int i = 0; i < cpuabis.length; i++) {
+                    String cpuabi = cpuabis[i];
+                    sql = sql + " or CPU_ABI like '%," + cpuabi + ",%'";
+                }
+                sql = sql + ")";
+            }
+            */
+            queryString = "select id,appCnName,appEnName,avgComment,commentCount,appPackage,appVersion,appVersionCode,apkSize,appIcon,patchs,official from t_app_info where appPackage='" + app_package + "' and "
+                    + "(minSdkVersion<=" + model.getSdkVersion() + " or minSdkVersion is null) and (maxSdkVersion>="
+                    + model.getSdkVersion() + " or maxSdkVersion is null) and " //+ sql + " and "
+                    + "(appStatus=0 or (appStatus=13 and " + "filter_model not like '%," + model.getId() + ",%'))";
+        } else {
+            queryString = "select id,appCnName,appEnName,avgComment,commentCount,appPackage,appVersion,appVersionCode,apkSize,appIcon,patchs,official from t_app_info where appPackage='" + app_package + "' and appStatus!=12";
+        }
+        
+        query = session.createSQLQuery(queryString).addScalar("id", Hibernate.LONG)
+                .addScalar("appCnName", Hibernate.STRING).addScalar("appEnName", Hibernate.STRING)
+                .addScalar("avgComment", Hibernate.FLOAT).addScalar("commentCount", Hibernate.INTEGER)
+                .addScalar("appPackage", Hibernate.STRING).addScalar("appVersion", Hibernate.STRING)
+                .addScalar("appVersionCode", Hibernate.STRING).addScalar("apkSize", Hibernate.INTEGER)
+                .addScalar("appIcon",Hibernate.STRING).addScalar("patchs",Hibernate.STRING)
+                .addScalar("official",Hibernate.CHARACTER)
+                .setResultTransformer(Transformers.aliasToBean(AppInfo.class));
+        //query = session.createSQLQuery(queryString).addEntity(AppInfo.class);
+        List<AppInfo> list = query.list();
+        if (null != list && list.size() > 0) {
+            appInfo = list.get(0);
+        }
+        return appInfo;
+    }
+
+    public void updateDownloadCountForAppInfo(AppInfo appInfo) throws Exception {
+        String sql = "update AppInfo a set " + "a.downloadCount=? " + "where a.id=?";
+        getSession().createQuery(sql).setInteger(0, appInfo.getDownloadCount() + 1).setLong(1,appInfo.getId()).executeUpdate();
+    }
+
+	public void updateDownloadCount(Long id) throws Exception {
+		AppInfo appInfo = findAppById(id);
+		appInfo.setDownloadCount(appInfo.getDownloadCount() + 1);
+		getHibernateTemplate().update(appInfo);
+	}
+	
+	private ProjectionList setJoinAppsProList(){
+	    ProjectionList proList = Projections.projectionList();
+        proList.add(Projections.property("appInfo.id"),"id");
+        proList.add(Projections.property("appInfo.tag"),"tag");
+        proList.add(Projections.property("appInfo.appPackage"),"appPackage");
+        proList.add(Projections.property("appInfo.appCnName"),"appCnName");
+        proList.add(Projections.property("appInfo.appEnName"),"appEnName");
+        proList.add(Projections.property("appInfo.appIcon"),"appIcon");
+        proList.add(Projections.property("appInfo.appAuthor"),"appAuthor");
+        proList.add(Projections.property("appInfo.avgComment"),"avgComment");
+        proList.add(Projections.property("appInfo.commentCount"),"commentCount");
+        proList.add(Projections.property("appInfo.appVersion"),"appVersion");
+        proList.add(Projections.property("appInfo.appVersionCode"),"appVersionCode");
+        proList.add(Projections.property("appInfo.apkSize"),"apkSize");
+        proList.add(Projections.property("appInfo.downloadCount"),"downloadCount");
+        proList.add(Projections.property("appInfo.official"),"official");
+        proList.add(Projections.property("appInfo.patchs"),"patchs");   
+        return proList;
+	}
+	@Override
+	public List<AppInfo> getJoinApps(final String className, final RequestParameter requestParameter, final Model model) throws Exception {
+        
+	    //EditorRecommendApp
+	    
+        Criteria criteria = getSession()
+                .createCriteria(Class.forName("com.bbkmobile.iqoo.console.dao.recommendation.EditorRecommendApp"));
+
+        Criteria app_criteria = criteria.createAlias("appInfo", 
+                "appInfo",Criteria.LEFT_JOIN);
+           
+        criteria.setProjection(setJoinAppsProList());
+
+        if (null != model) {
+            app_criteria.add(Restrictions.or(Restrictions.le("minSdkVersion", model.getSdkVersion()),
+                    Restrictions.isNull("minSdkVersion")));
+
+            app_criteria.add(Restrictions.or(Restrictions.ge("maxSdkVersion", model.getSdkVersion()),
+                    Restrictions.isNull("maxSdkVersion")));
+
+            app_criteria.add(Restrictions.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + model.getId() + ",%'))"));
+        } else{
+            app_criteria.add(Restrictions.ne("appInfo.appStatus", (short) 12)); 
+        }
+        
+        criteria.addOrder(Order.asc("show_order"));
+        //app_criteria.addOrder(Order.desc("updateDate"));
+
+        criteria.setFirstResult((requestParameter.getPage_index() - 1)
+                * requestParameter.getApps_per_page());
+        criteria.setMaxResults(requestParameter.getApps_per_page() + 1);
+        
+        criteria.setResultTransformer(Transformers.aliasToBean(AppInfo.class));
+        @SuppressWarnings("unchecked")
+        List<AppInfo> appInfos = criteria.list();
+          
+        if(null!=appInfos && appInfos.size()>0){
+            return appInfos;
+        }else{
+            return null;
+        }  
+    }
+	
+    public String getXmlForAppInfoWithShotscreen(AppInfo appInfo,String appVersion) throws Exception{
+            List<TAppScreenshot> appScreenshots = findAppScreenshot(appInfo);
+	        
+            StringBuilder sb = new StringBuilder();
+	        sb.append("<Package><id><![CDATA[");
+	        sb.append(appInfo.getId());
+	        sb.append("]]></id><tag><![CDATA[");
+            sb.append(appInfo.getTag());
+            sb.append("]]></tag><package_name><![CDATA[");
+	        sb.append(appInfo.getAppPackage());
+	        sb.append("]]></package_name><parent_id><![CDATA[");
+	        //sb.append(appInfo.getAppType().getParentId());
+	        sb.append("null");
+	        sb.append("]]></parent_id><title_zh><![CDATA[");
+	        sb.append(appInfo.getAppCnName());
+	        sb.append("]]></title_zh><title_en><![CDATA[");
+	        sb.append(appInfo.getAppEnName());
+	        sb.append("]]></title_en><icon_url><![CDATA[");
+	        sb.append(UtilTool.getDownloadImageHttpURL(appInfo.getAppIcon()));
+	        sb.append("]]></icon_url><developer><![CDATA[");
+	        //sb.append(appInfo.getDeveloper().getName());
+	        sb.append(appInfo.getAppAuthor());
+	        sb.append("]]></developer><score><![CDATA[");
+	        sb.append(appInfo.getAvgComment());
+	        sb.append("]]></score><raters_count><![CDATA[");
+	        sb.append(appInfo.getCommentCount());
+	        sb.append("]]></raters_count><version_name><![CDATA[");
+	        sb.append(appInfo.getAppVersion());
+	        sb.append("]]></version_name><version_code><![CDATA[");
+	        sb.append(appInfo.getAppVersionCode());  
+	        sb.append("]]></version_code><download_url><![CDATA[");  
+	        sb.append(UtilTool.getHttpURL("/appinfo/downloadApkFile?id=" + appInfo.getId()+"&app_version="+appVersion));
+	        sb.append("]]></download_url><upload_time><![CDATA[");
+	        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            String releaseDate = dateFormat.format(appInfo.getUpdateDate()); //getOnSaleDate
+            sb.append(releaseDate);
+            sb.append("]]></upload_time><size><![CDATA[");
+	        sb.append(appInfo.getApkSize());
+	        sb.append("]]></size><download_count><![CDATA["); 
+	        sb.append(appInfo.getDownloadCount());
+	        sb.append("]]></download_count><offical><![CDATA["); 
+	        sb.append("0");
+	        sb.append("]]></offical><patchs><![CDATA[");
+	        if(null!=appInfo.getPatchs()){
+	            sb.append(appInfo.getPatchs());
+	        }
+	        sb.append("]]></patchs><ScreenshotList>");                 
+            if(null!=appScreenshots && 0!=appScreenshots.size()){
+                for(TAppScreenshot appScreenshot:appScreenshots){
+                    sb.append("<screenshot><![CDATA[");
+               //     sb.append(baseURI+appScreenshot.getScreenshot());
+                    sb.append(UtilTool.getDownloadImageHttpURL(appScreenshot.getScreenshot()));
+                    sb.append("]]></screenshot>");
+                }
+            }
+            sb.append("</ScreenshotList></Package>");
+	        return sb.toString();
+	}
+	
+    public String getXmlForAppInfo(AppInfo appInfo,String appVersion) throws Exception{
+        StringBuilder sb = new StringBuilder();
+        sb.append("<Package><id><![CDATA[");
+        sb.append(appInfo.getId());
+        sb.append("]]></id><tag><![CDATA[");
+        sb.append(appInfo.getTag());
+        sb.append("]]></tag><package_name><![CDATA[");
+        sb.append(appInfo.getAppPackage());
+        sb.append("]]></package_name><parent_id><![CDATA[");
+        //sb.append(appInfo.getAppType().getParentId());
+        sb.append("null");
+        sb.append("]]></parent_id><title_zh><![CDATA[");
+        sb.append(appInfo.getAppCnName());
+        sb.append("]]></title_zh><title_en><![CDATA[");
+        sb.append(appInfo.getAppEnName());
+        sb.append("]]></title_en><icon_url><![CDATA[");
+        sb.append(UtilTool.getDownloadImageHttpURL(appInfo.getAppIcon()));
+        sb.append("]]></icon_url><developer><![CDATA[");
+        //sb.append(appInfo.getDeveloper().getName());
+        sb.append(appInfo.getAppAuthor());
+        sb.append("]]></developer><score><![CDATA[");
+        sb.append(appInfo.getAvgComment());
+        sb.append("]]></score><raters_count><![CDATA[");
+        sb.append(appInfo.getCommentCount());
+        sb.append("]]></raters_count><version_name><![CDATA[");
+        sb.append(appInfo.getAppVersion());
+        sb.append("]]></version_name><version_code><![CDATA[");
+        sb.append(appInfo.getAppVersionCode());  
+        sb.append("]]></version_code><download_url><![CDATA[");  
+        sb.append(UtilTool.getHttpURL("/appinfo/downloadApkFile?id=" + appInfo.getId()+"&app_version="+appVersion));
+        sb.append("]]></download_url><size><![CDATA[");
+        sb.append(appInfo.getApkSize());
+        sb.append("]]></size><download_count><![CDATA["); 
+        sb.append(appInfo.getDownloadCount());
+        sb.append("]]></download_count><offical><![CDATA["); 
+        sb.append("0");
+        sb.append("]]></offical><patchs><![CDATA[");
+        if(null!=appInfo.getPatchs()){
+            sb.append(appInfo.getPatchs());
+        }
+        sb.append("]]></patchs></Package>");
+        return sb.toString();
+    }
+    
+    public String getXmlForAppInfos(List<AppInfo> appInfos,String appVersion) throws Exception{
+        StringBuilder sb = new StringBuilder();
+        
+        for(AppInfo appInfo:appInfos){
+            sb.append("<Package><id><![CDATA[");
+            sb.append(appInfo.getId());
+            sb.append("]]></id><tag><![CDATA[");
+            sb.append(appInfo.getTag());
+            sb.append("]]></tag><package_name><![CDATA[");
+            sb.append(appInfo.getAppPackage());
+            sb.append("]]></package_name><parent_id><![CDATA[");
+            //sb.append(appInfo.getAppType().getParentId());
+            sb.append("null");
+            sb.append("]]></parent_id><title_zh><![CDATA[");
+            sb.append(appInfo.getAppCnName());
+            sb.append("]]></title_zh><title_en><![CDATA[");
+            sb.append(appInfo.getAppEnName());
+            sb.append("]]></title_en><icon_url><![CDATA[");
+            sb.append(UtilTool.getDownloadImageHttpURL(appInfo.getAppIcon()));
+            sb.append("]]></icon_url><developer><![CDATA[");
+            //sb.append(appInfo.getDeveloper().getName());
+            sb.append(appInfo.getAppAuthor());
+            sb.append("]]></developer><score><![CDATA[");
+            sb.append(appInfo.getAvgComment());
+            sb.append("]]></score><raters_count><![CDATA[");
+            sb.append(appInfo.getCommentCount());
+            sb.append("]]></raters_count><version_name><![CDATA[");
+            sb.append(appInfo.getAppVersion());
+            sb.append("]]></version_name><version_code><![CDATA[");
+            sb.append(appInfo.getAppVersionCode());  
+            sb.append("]]></version_code><download_url><![CDATA[");  
+            sb.append(UtilTool.getHttpURL("/appinfo/downloadApkFile?id=" + appInfo.getId()+"&app_version="+appVersion));
+            sb.append("]]></download_url><size><![CDATA[");
+            sb.append(appInfo.getApkSize());
+            sb.append("]]></size><download_count><![CDATA["); 
+            sb.append(appInfo.getDownloadCount());
+            sb.append("]]></download_count><offical><![CDATA["); 
+            sb.append("0");
+            sb.append("]]></offical><patchs><![CDATA[");
+            if(null!=appInfo.getPatchs()){
+                sb.append(appInfo.getPatchs());
+            }
+            sb.append("]]></patchs></Package>");
+        }
+        
+        return sb.toString();
+    }
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<ErrorReport> findErrorReportByApp(final AppInfo appInfo,
+			final int start, final char error_type) throws Exception {
+		@SuppressWarnings("rawtypes")
+		List<ErrorReport> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException, SQLException {
+						String queryString = "from ErrorReport where error_type="
+								+ error_type
+								+ " and appInfo.id="
+								+ appInfo.getId();
+						Query query = session.createQuery(queryString);
+						query.setFirstResult(start);
+						query.setMaxResults(10);
+						List<ErrorReport> list = query.list();
+						return list;
+					}
+				});
+		return list;
+	}
+
+	/**
+	 * 计算当前应用的所有错误报告总数
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public Integer countErrorReport(final AppInfo appInfo, final int start,
+			final char error_type) throws Exception {
+		// TODO Auto-generated method stub
+		int records = 0;
+		@SuppressWarnings("rawtypes")
+		List<ErrorReport> list = this.getHibernateTemplate().executeFind(
+				new HibernateCallback() {
+					public Object doInHibernate(Session session)
+							throws HibernateException, SQLException {
+						String queryString = "from ErrorReport where error_type="
+								+ error_type
+								+ " and appInfo.id="
+								+ appInfo.getId();
+						Query query = session.createQuery(queryString);
+						List<ErrorReport> list = query.list();
+						return list;
+					}
+				});
+		if (null != list && list.size() > 0) {
+			records = list.size();
+		}
+		return records;
+	}
+
+	@Override
+	public Long saveAppInfo(AppInfo appInfo) throws Exception {
+		Long id = null;
+		id = (Long) getHibernateTemplate().save(appInfo);
+		return id;
+	}
+	
+	public Long saveBaiduAppInfo(BaiduAppInfo apkInfo,BaiduAppInfo OldBaiduAppInfo) throws Exception {
+	    Long id = null;
+	    try {
+	        if(1==apkInfo.getSwitchCode()){
+	            OldBaiduAppInfo.setAppCnName(apkInfo.getAppCnName());
+                OldBaiduAppInfo.setAppEnName(apkInfo.getAppCnName());
+                OldBaiduAppInfo.setAppVersion(apkInfo.getAppVersion());
+                OldBaiduAppInfo.setAppDesc(apkInfo.getAppDesc());
+                OldBaiduAppInfo.setAppKeyWord(apkInfo.getAppKeyWord());
+                OldBaiduAppInfo.setAppIcon(apkInfo.getAppIcon()); 
+                OldBaiduAppInfo.setAppApk(apkInfo.getAppApk());
+                OldBaiduAppInfo.setApkSize(apkInfo.getApkSize());
+                OldBaiduAppInfo.setAppVersionCode(apkInfo.getAppVersionCode());
+                OldBaiduAppInfo.setAppPackage(apkInfo.getAppPackage());
+                OldBaiduAppInfo.setUpdateDate(new Date());
+                //OldBaiduAppInfo.setOnSaleDate(new Date());
+                // OldBaiduAppInfo.setOffSaleDate(apkInfo.getOffSaleDate());
+                OldBaiduAppInfo.setAndroidPermission(apkInfo.getAndroidPermission());
+                OldBaiduAppInfo.setCommentCount(apkInfo.getCommentCount());
+                OldBaiduAppInfo.setCommentSum(apkInfo.getCommentSum());
+                OldBaiduAppInfo.setAvgComment(apkInfo.getAvgComment());
+                OldBaiduAppInfo.setDownloadCount(apkInfo.getDownloadCount());
+                OldBaiduAppInfo.setMinSdkVersion(apkInfo.getMinSdkVersion());
+                OldBaiduAppInfo.setMaxSdkVersion(apkInfo.getMaxSdkVersion());
+                OldBaiduAppInfo.setTargetSdkVersion(apkInfo.getTargetSdkVersion());
+                OldBaiduAppInfo.setDrawable_dpi(apkInfo.getDrawable_dpi());
+                OldBaiduAppInfo.setUses_feature(apkInfo.getUses_feature());
+                OldBaiduAppInfo.setCPU_ABI(apkInfo.getCPU_ABI());
+                //OldBaiduAppInfo.setFilter_model(apkInfo.getFilter_model());
+                //OldBaiduAppInfo.setFilter_screen(apkInfo.getFilter_screen());
+                OldBaiduAppInfo.setSignature(apkInfo.getSignature());
+                OldBaiduAppInfo.setOfficial(apkInfo.getOfficial());
+                //OldBaiduAppInfo.setPatchs(apkInfo.getPatchs());
+                
+                OldBaiduAppInfo.setScreenshot1(apkInfo.getScreenshot1());
+                OldBaiduAppInfo.setScreenshot2(apkInfo.getScreenshot2());
+                if(null!=apkInfo.getApp_developer()&&!"null".equals(apkInfo.getApp_developer())&&!"NULL".equals(apkInfo.getApp_developer())&&!"None".equals(apkInfo.getApp_developer())){
+                	OldBaiduAppInfo.setApp_developer(apkInfo.getApp_developer());
+                }
+                              
+                getHibernateTemplate().update(OldBaiduAppInfo);
+	        	id=OldBaiduAppInfo.getId();
+	        }else{
+	            id = (Long) getHibernateTemplate().save(apkInfo);
+	        }
+	        return id;
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+	
+	public Long countBaiduAppInfos(BaiduAppInfo baiduAppInfo) throws Exception {
+        try {
+            Long count = null;
+            String countSqlString="select count(*) from t_baidu_app_info";
+            count = (Long) getSession().createSQLQuery(countSqlString).uniqueResult();
+            return count;
+        } catch (Exception e) {
+            throw e;
+        }
+       
+    }
+	
+	public BaiduAppInfo getBaiduAppInfo(BaiduAppInfo baiduAppInfo) throws Exception {
+        try {
+            BaiduAppInfo baiduAppInfo2 = null;
+            String sqlString="select * from t_baidu_app_info limit " + baiduAppInfo.getLimit();
+            @SuppressWarnings("unchecked")
+            List<BaiduAppInfo> list = getSession().createSQLQuery(sqlString).addEntity(BaiduAppInfo.class).list();
+            if (null != list && list.size() > 0) {  
+                baiduAppInfo2 = list.get(0);
+            }
+            return baiduAppInfo2;
+        } catch (Exception e) {
+            throw e;
+        }
+       
+    }
+
+	@Override
+	public void updateApkInfo(String property, String value, Long id) throws Exception {
+		try {
+			String sql = "update AppInfo u set " + "u." + property + "=? " + "where u.id=?";
+			
+			Session session = getSession();
+
+			Query updateObj = session.createQuery(sql);
+
+			updateObj.setString(0, value);
+			updateObj.setLong(1, id);
+
+			updateObj.executeUpdate();
+			/**/
+		} catch (Exception e) {
+			Lg.error(com.bbkmobile.iqoo.console.constants.LgType.APPINFO, "更新app<"+ id +">信息到数据库失败", e);
+			throw e;
+		}
+	}
+	
+	@Override
+	public void updateAppOffSaleModel(Long[] ids, String model, int modelCount, String screen)
+			throws Exception {
+		// TODO Auto-generated method stub
+	//	String queryString="";
+		String filter_model="";
+		String filter_screen="";
+		String queryString1 ="delete AdvertisementApp where appInfo.id=?";
+    	String queryString2 ="delete TopicApp where appInfo.id=?";
+    	String queryString3 ="delete AppHubSet where appInfo.id=?";
+    	String queryString4 ="delete CellphoneRecommendApp where appInfo.id=?";
+    	
+    	Session session=getSession();
+		Query queryObj=null;
+    	
+		if(null!=ids && ids.length>0)
+		{
+			for (int i = 0; i < ids.length; i++) {
+				AppInfo appInfo=this.getHibernateTemplate().load(AppInfo.class, ids[i]);
+				if(null!=model && !"".equals(model))
+				{
+					filter_model=appInfo.getFilter_model();
+					if(null!=filter_model&&!"".equals(filter_model))
+					{	
+					//	filter_model=","+filter_model+",";
+						String add_model="";
+						if(model.contains(","))
+						{
+							String model_arr[]=model.split(",");
+							for(int j=0; j<model_arr.length; j++)
+							{
+								if(!filter_model.contains(","+model_arr[j]+","))
+								{
+									add_model+=model_arr[j]+",";
+								}
+							}
+						}
+						else
+						{
+							if(!filter_model.contains(","+model+","))
+							{
+								add_model+=model+",";
+							}
+						}
+						
+						if(!"".equals(add_model))
+						{
+							model=appInfo.getFilter_model()+add_model;
+						}
+					}
+					else
+					{
+						model=","+model+",";
+					}
+				}
+				
+				if(null!=screen && !"".equals(screen))
+				{
+					filter_screen=appInfo.getFilter_screen();
+					if(null!=filter_screen&&!"".equals(filter_screen))
+					{	
+					//	filter_model=","+filter_model+",";
+						String add_screen="";
+						if(screen.contains(","))
+						{
+							String screen_arr[]=screen.split(",");
+							for(int j=0; j<screen_arr.length; j++)
+							{
+								if(!filter_screen.contains(","+screen_arr[j]+","))
+								{
+									add_screen+=screen_arr[j]+",";
+								}
+							}
+						}
+						else
+						{
+							if(!filter_screen.contains(","+screen+","))
+							{
+								add_screen+=screen+",";
+							}
+						}
+						
+						if(!"".equals(add_screen))
+						{
+							screen=appInfo.getFilter_screen()+add_screen;
+						}
+					}
+					else
+					{
+						screen=","+screen+",";
+					}
+				}
+				
+				
+
+				if(null!=model&&!"".equals(model))
+				{
+					String modelNum=model.substring(1,model.lastIndexOf(","));
+					int len=modelNum.split(",").length;
+					if(len>=modelCount)
+					{
+						//此应用在所有机型已下架
+						appInfo.setAppStatus((short)12);
+						appInfo.setOffSaleDate(new Date());
+						appInfo.setFilter_model(null);
+						appInfo.setFilter_screen(null);
+
+						this.getHibernateTemplate().update(appInfo);
+						
+						//当应用在所有机型下架后，处于下架状态，此时要删除所有与此应用有关的数据						
+						//1.删除广告应用设置中的此应用  t_ad_app
+						queryObj=session.createQuery(queryString1);
+				        queryObj.setLong(0, ids[i]);
+				        queryObj.executeUpdate();
+						
+						//2.删除专题应用设置中的此应用  t_topic_app
+				        queryObj=session.createQuery(queryString2);
+				        queryObj.setLong(0, ids[i]);
+				        queryObj.executeUpdate();
+
+						//3.删除汇应用设置中的此应用  t_hub_set
+				        queryObj=session.createQuery(queryString3);
+				        queryObj.setLong(0, ids[i]);
+				        queryObj.executeUpdate();
+				        
+				        //4.删除推荐设置中的此应用  t_cellphone_recommend
+				        queryObj=session.createQuery(queryString4);
+				        queryObj.setLong(0, ids[i]);
+				        queryObj.executeUpdate();
+				        
+		                //5.删除汇热门推荐中对应的app
+		                String deleteHubHotContentSql ="delete from HubHotContent where object_id=? and type=?";     
+		                queryObj=session.createQuery(deleteHubHotContentSql);
+		                queryObj.setLong(0, ids[i]);
+		                queryObj.setCharacter(1, '1');
+		                queryObj.executeUpdate();
+		                
+		                String deleteUpdateDateTop = "delete from t_app_onsale_date_top where app_id="+ids[i];
+		                session.createSQLQuery(deleteUpdateDateTop).executeUpdate();
+		                
+		                String deleteDownloadTop = "delete from t_app_download_month_top where app_id="+ids[i];
+		                session.createSQLQuery(deleteDownloadTop).executeUpdate();
+		                
+		                //删除游戏榜
+		                String deleteTopGame = "delete from t_top_game where app_id="+ids[i];
+		                session.createSQLQuery(deleteTopGame).executeUpdate();
+		                //删除应用榜
+		                String deleteTopApp = "delete from t_top_application where app_id="+ids[i];
+		                session.createSQLQuery(deleteTopApp).executeUpdate();
+		                //删除最新榜
+		                String deleteRankNew = "delete from t_rank_new where app_id="+ids[i];
+		                session.createSQLQuery(deleteRankNew).executeUpdate();
+		                //删除最热榜
+		                String deleteRankHot = "delete from t_rank_hot where app_id="+ids[i];
+		                session.createSQLQuery(deleteRankHot).executeUpdate();
+		                //删除上升最快榜
+		                String deleteTopRisk = "delete from t_top_risk where app_id="+ids[i];
+		                session.createSQLQuery(deleteTopRisk).executeUpdate();
+		                //删除新品速递
+		                String deleteNewApp = "delete from t_newapp_recommend where app_id="+ids[i];
+		                session.createSQLQuery(deleteNewApp).executeUpdate();
+		                //删除装机必备
+		                String deleteEditor = "delete from t_editor_recommend where app_id="+ids[i];
+		                session.createSQLQuery(deleteEditor).executeUpdate();
+		                //删除排期管理
+		                String deleteSetup = "delete from t_rank_setup where object_type=1 and object_id="+ids[i];
+		                session.createSQLQuery(deleteSetup).executeUpdate();
+		                
+					}
+					else
+					{
+						appInfo.setAppStatus((short)13);
+						appInfo.setFilter_model(model);
+						if(null!=screen && !"".equals(screen))
+						{
+							appInfo.setFilter_screen(screen);
+						}
+						this.getHibernateTemplate().update(appInfo);
+						
+						 //同步更新汇热门推荐中对应的app
+                        String updateHubHotContentSql ="update HubHotContent set filter_model=?,app_status=? where object_id=? and type=?";     
+                        queryObj=session.createQuery(updateHubHotContentSql);
+                        queryObj.setString(0, model);
+                        queryObj.setShort(1, (short) 13);
+                        queryObj.setLong(2, ids[i]);
+                        queryObj.setCharacter(3, '1');
+                        queryObj.executeUpdate();
+					}
+				}
+				else if(null!=screen && !"".equals(screen))
+				{
+					appInfo.setFilter_screen(screen);
+					this.getHibernateTemplate().update(appInfo);
+				}
+			}
+		}
+	}
+
+	@Override
+	public void updateAppOnSaleForModel(Long[] ids, String model, List<Model> allModel, String screen, List<ConsoleConstant> allScreen)
+			throws Exception {
+		// TODO Auto-generated method stub
+		AppInfo appInfo=null;
+		String filter_model="";          //机型
+		String filter_screen="";         //分辨率
+		String temp="";
+		String temp_screen="";
+		String allModelStr="";
+		String allScreenStr="";
+		boolean flag=false;
+		
+		if(null!=ids && ids.length>0 )
+		{
+			for(Model m : allModel)
+			{
+				allModelStr+=","+m.getId();
+			}
+			allModelStr+=",";
+			
+			for(ConsoleConstant s : allScreen)
+			{
+				allScreenStr+=","+s.getId();
+			}
+			allScreenStr+=",";
+			for(Long id : ids)
+			{
+				appInfo=this.getHibernateTemplate().load(AppInfo.class, id);
+				if(null!=model && !"".equals(model) )
+				{	
+					filter_model=appInfo.getFilter_model();
+					if("".equals(filter_model) || null==filter_model)
+					{
+						filter_model=allModelStr;
+					}
+					if(!"".equals(filter_model) && null!=filter_model)
+					{
+					//	filter_model=","+filter_model+",";
+						
+						if(model.contains(","))
+						{
+							String model_arr[]=model.split(",");
+							for(int j=0; j<model_arr.length; j++)
+							{
+								temp=","+model_arr[j]+",";
+								if(!"".equals(filter_model) && filter_model.contains(temp))
+								{
+									filter_model=filter_model.replaceAll(temp, ",");
+									flag=true;
+								}
+							}
+						}
+						else
+						{
+							temp=","+model+",";
+							if(filter_model.contains(temp))
+							{
+								filter_model=filter_model.replaceAll(temp, ",");
+								flag=true;
+							}
+						}
+						
+					}
+				}
+				
+				if(null!=screen && !"".equals(screen))
+				{
+					filter_screen=appInfo.getFilter_screen();
+					if("".equals(filter_screen) || null==filter_screen)
+					{
+						filter_screen=allScreenStr;
+					}
+					if(!"".equals(filter_screen) && null!=filter_screen)
+					{
+					//	filter_model=","+filter_model+",";
+						
+						if(screen.contains(","))
+						{
+							String screen_arr[]=screen.split(",");
+							for(int j=0; j<screen_arr.length; j++)
+							{
+								temp_screen=","+screen_arr[j]+",";
+								if(!"".equals(filter_screen) && filter_screen.contains(temp_screen))
+								{
+									filter_screen=filter_screen.replaceAll(temp_screen, ",");
+									flag=true;
+								}
+							}
+						}
+						else
+						{
+							temp_screen=","+screen+",";
+							if(filter_screen.contains(temp_screen))
+							{
+								filter_screen=filter_screen.replaceAll(temp_screen, ",");
+								flag=true;
+							}
+						}	
+					}		
+				}
+				
+				if(flag)
+				{
+					if(",".equals(filter_model))
+					{
+						filter_model="";
+						filter_screen="";
+						appInfo.setAppStatus((short)0);
+					}
+					else
+					{
+				//		filter_model=filter_model.substring(1, filter_model.lastIndexOf(","));
+						temp=filter_model.substring(1,filter_model.lastIndexOf(","));
+						
+						if(temp.split(",").length==allModel.size())
+						{
+							appInfo.setAppStatus((short)12);
+						}
+						else
+						{
+							appInfo.setAppStatus((short)13);
+						}
+					}
+					appInfo.setOnSaleDate(new Date());
+					appInfo.setFilter_model(filter_model);
+					appInfo.setFilter_screen(filter_screen);
+					this.getHibernateTemplate().update(appInfo);	
+				}
+				
+			}
+		}
+	}
+
+	@Override
+	public void updateWithNewApk(AppInfo appInfo) throws Exception {
+		try {
+		    
+	          String sql = "update AppInfo u set " +  
+                      "u.appType=?, " + 
+                      "u.developer=?, " +
+                      "u.appCnName=?, " + 
+                      "u.appEnName=?, " + 
+                      "u.appVersion=?, " +
+                      "u.appAuthor=?, " + 
+                      "u.appKeyWord=?, " + 
+                      "u.appDesc=?, " + 
+                      "u.appApk = ?, u.apkSize = ?, " +
+                      "u.appVersionCode = ?, " +
+                      "u.appPackage = ?, " +
+                      "u.androidPermission = ?, " +
+                      "u.minSdkVersion = "+ appInfo.getMinSdkVersion() +
+                      ", u.maxSdkVersion = " + appInfo.getMaxSdkVersion() + 
+                      ", u.targetSdkVersion = " + appInfo.getTargetSdkVersion() + 
+                       ", u.tag = " + appInfo.getTag() + 
+                      ", u.drawable_dpi = ?, " +
+                      "u.uses_feature = ?, " +
+                      "u.CPU_ABI = ?, " +
+                      "u.patchs = ?, " +
+                      "u.official = ?, " +
+                      "u.auto_update = ?, " +
+                      "u.app_remark=?, " + 
+                      "u.updateDate=? "  +
+                      "where u.id=?";
+         
+         Session session = getSession();
+
+         Query updateObj = session.createQuery(sql);
+
+         updateObj.setInteger(0, appInfo.getAppType().getId());
+         updateObj.setInteger(1, appInfo.getDeveloper().getId());
+         updateObj.setString(2, appInfo.getAppCnName());
+         updateObj.setString(3, appInfo.getAppEnName());
+         updateObj.setString(4, appInfo.getAppVersion());
+         updateObj.setString(5, appInfo.getAppAuthor());
+         updateObj.setString(6, appInfo.getAppKeyWord());
+         updateObj.setString(7, appInfo.getAppDesc());
+         updateObj.setString(8, appInfo.getAppApk());
+         updateObj.setDouble(9, appInfo.getApkSize());
+         updateObj.setString(10, appInfo.getAppVersionCode());
+         updateObj.setString(11, appInfo.getAppPackage());
+         updateObj.setString(12, appInfo.getAndroidPermission());
+         updateObj.setString(13, appInfo.getDrawable_dpi());
+         updateObj.setString(14, appInfo.getUses_feature());
+         updateObj.setString(15, appInfo.getCPU_ABI());
+         updateObj.setString(16, appInfo.getPatchs());
+         updateObj.setCharacter(17, appInfo.getOfficial());
+         updateObj.setCharacter(18, appInfo.getAuto_update());
+         updateObj.setString(19,appInfo.getApp_remark());
+         updateObj.setTimestamp(20, new Date());
+         updateObj.setLong(21, appInfo.getId());
+         
+         updateObj.executeUpdate();
+			
+		} catch (Exception e) {
+			Lg.error(com.bbkmobile.iqoo.console.constants.LgType.APPINFO, "修改app<"+ appInfo.getId() +">信息到数据库失败", e);
+			throw e;
+		}
+	}
+
+	@Override
+	public void updateWithOldApk(AppInfo appInfo) throws Exception {
+		try {
+			String sql = "update AppInfo u set " + 
+						 "u.appType=?, " + 
+						 "u.developer=?, " +
+						 "u.appCnName=?, " + 
+						 "u.appEnName=?, " + 
+						 "u.appAuthor=?, " + 
+						 "u.appKeyWord=?, " + 
+						 "u.official=?, " + 
+						 "u.advertise=?, " + 
+						 "u.grade=?, " + 
+						 "u.safe=?, " + 
+						 "u.sellType=?, " + 
+						 "u.auto_update=?, " + 
+						 "u.appDesc=?, " + 
+						 "u.app_remark=?, " +
+						 "u.tag=? " + 
+						 "where u.id=?";
+			
+			Session session = getSession();
+
+			Query updateObj = session.createQuery(sql);
+
+			updateObj.setInteger(0, appInfo.getAppType().getId());
+			updateObj.setInteger(1, appInfo.getDeveloper().getId());
+			updateObj.setString(2, appInfo.getAppCnName());
+			updateObj.setString(3, appInfo.getAppEnName());
+			updateObj.setString(4, appInfo.getAppAuthor());
+			updateObj.setString(5, appInfo.getAppKeyWord());
+			updateObj.setCharacter(6, appInfo.getOfficial());
+			
+			updateObj.setCharacter(7, appInfo.getAdvertise());
+			updateObj.setCharacter(8, appInfo.getGrade());
+			updateObj.setString(9, appInfo.getSafe());
+			updateObj.setCharacter(10,appInfo.getSellType());
+			
+			updateObj.setCharacter(11, appInfo.getAuto_update());
+			updateObj.setString(12, appInfo.getAppDesc());
+			updateObj.setString(13, appInfo.getApp_remark());
+			updateObj.setShort(14,appInfo.getTag());
+			//updateObj.setTimestamp(9, appInfo.getUpdateDate());
+			updateObj.setLong(15, appInfo.getId());
+			
+
+			updateObj.executeUpdate();
+			
+		} catch (Exception e) {
+			Lg.error(com.bbkmobile.iqoo.console.constants.LgType.APPINFO, "修改app<"+ appInfo.getId() +">信息到数据库失败", e);
+			throw e;
+        }
+    }
+
+    @Override
+    public boolean updateOldAppInfoByUpload(AppInfo appInfo, AppInfo apkInfo, int switchCode) throws Exception {
+        try {
+            if (1 == switchCode) { // 高版本替换低版本，低版本存入历史库中
+                if (null == findAppHistoryInfo(appInfo)) {
+                    AppHistoryInfo appHistoryInfo = new AppHistoryInfo();
+                    appHistoryInfo.setAppType(appInfo.getAppType());
+                    appHistoryInfo.setDeveloper(appInfo.getDeveloper());
+                    appHistoryInfo.setAppCnName(appInfo.getAppCnName());
+                    appHistoryInfo.setAppEnName(appInfo.getAppEnName());
+                    appHistoryInfo.setAppVersion(appInfo.getAppVersion());
+                    appHistoryInfo.setAppAuthor(appInfo.getAppAuthor());
+                    appHistoryInfo.setSellType(appInfo.getSellType());
+//                    appHistoryInfo.setPayType(appInfo.getPayType());
+//                    appHistoryInfo.setPayTypeInApp(appInfo.getPayTypeInApp());
+//                    appHistoryInfo.setPriceReason(appInfo.getPriceReason());
+//                    appHistoryInfo.setDiscount(appInfo.getDiscount());
+                    appHistoryInfo.setLargess(appInfo.getLargess());
+                    appHistoryInfo.setApp_remark(appInfo.getApp_remark());
+                    appHistoryInfo.setAppDesc(appInfo.getAppDesc());
+                    appHistoryInfo.setAppKeyWord(appInfo.getAppKeyWord());
+                    appHistoryInfo.setAppIcon(appInfo.getAppIcon());
+                    appHistoryInfo.setResolution(appInfo.getResolution());
+                    appHistoryInfo.setPlatform(appInfo.getPlatform());
+                    appHistoryInfo.setAppApk(appInfo.getAppApk());
+                    appHistoryInfo.setApkSize(appInfo.getApkSize());
+                    appHistoryInfo.setAppVersionCode(appInfo.getAppVersionCode());
+                    appHistoryInfo.setAppPackage(appInfo.getAppPackage());
+                    appHistoryInfo.setAppStatus(appInfo.getAppStatus());
+                    appHistoryInfo.setUpdateDate(new Date());
+                    appHistoryInfo.setOnSaleDate(appInfo.getOnSaleDate());
+                    appHistoryInfo.setOffSaleDate(appInfo.getOffSaleDate());
+                    appHistoryInfo.setAndroidPermission(appInfo.getAndroidPermission());
+                    appHistoryInfo.setCommentCount(appInfo.getCommentCount());
+                    appHistoryInfo.setCommentSum(appInfo.getCommentSum());
+                    appHistoryInfo.setAvgComment(appInfo.getAvgComment());
+                    appHistoryInfo.setDownloadCount(appInfo.getDownloadCount());
+                    appHistoryInfo.setMinSdkVersion(appInfo.getMinSdkVersion());
+                    appHistoryInfo.setMaxSdkVersion(appInfo.getMaxSdkVersion());
+                    appHistoryInfo.setTargetSdkVersion(appInfo.getTargetSdkVersion());
+                    appHistoryInfo.setDrawable_dpi(appInfo.getDrawable_dpi());
+                    appHistoryInfo.setUses_feature(appInfo.getUses_feature());
+                    appHistoryInfo.setCPU_ABI(appInfo.getCPU_ABI());
+                    appHistoryInfo.setFilter_model(appInfo.getFilter_model());
+                    appHistoryInfo.setFilter_screen(appInfo.getFilter_screen());
+                    appHistoryInfo.setSignature(appInfo.getSignature());
+                    appHistoryInfo.setAuto_update(appInfo.getAuto_update());
+                    appHistoryInfo.setOfficial(appInfo.getOfficial());
+                    appHistoryInfo.setTag(appInfo.getTag());
+                    
+                    appHistoryInfo.setPatchs(appInfo.getPatchs());
+
+                    getHibernateTemplate().save(appHistoryInfo);
+                }
+
+            }
+          //  String del_old_apk = appInfo.getAppApk();
+            if (2 == switchCode || 3 == switchCode) { // 低版本替换高版本 或 相同版本 则删除原版本apk文件  *改为不删除原版本apk文件*  
+            	addAppInfoDelete(appInfo);   //原来appInfo的数据保存到t_app_info_delete中
+            	/*
+				File del = new File(UploadManager.getAbsolutePath(del_old_apk));
+				if (del.exists()) {
+					del.delete();
+				}
+				*/
+			}
+            
+            appInfo.setAppType(apkInfo.getAppType());
+            appInfo.setDeveloper(apkInfo.getDeveloper());
+            appInfo.setAppCnName(apkInfo.getAppCnName());
+            appInfo.setAppEnName(apkInfo.getAppEnName());
+            appInfo.setAppVersion(apkInfo.getAppVersion());
+            appInfo.setAppAuthor(apkInfo.getAppAuthor());
+            // appInfo.setSellType(appInfo.getSellType());
+            // appInfo.setPayType(appInfo.getPayType());
+            // appInfo.setPayTypeInApp(appInfo.getPayTypeInApp());
+            // appInfo.setPriceReason(appInfo.getPriceReason());
+            // appInfo.setDiscount(appInfo.getDiscount());
+            // appInfo.setLargess(appInfo.getLargess());
+            appInfo.setAppDesc(apkInfo.getAppDesc());
+            appInfo.setAppKeyWord(apkInfo.getAppKeyWord());
+            // appInfo.setAppIcon(apkInfo.getAppIcon()); //图片可以暂时用被替换版本的，故注释
+            // appInfo.setResolution(appInfo.getResolution());
+            appInfo.setPlatform(apkInfo.getPlatform());
+            appInfo.setAppApk(apkInfo.getAppApk());
+            appInfo.setApkSize(apkInfo.getApkSize());
+            appInfo.setAppVersionCode(apkInfo.getAppVersionCode());
+            appInfo.setAppPackage(apkInfo.getAppPackage());
+            // appInfo.setAppStatus(apkInfo.getAppStatus()); //状态与之前相同，故注释
+            appInfo.setUpdateDate(new Date());
+         //   appInfo.setOnSaleDate(apkInfo.getOnSaleDate());
+       //     appInfo.setOffSaleDate(apkInfo.getOffSaleDate());
+            appInfo.setAndroidPermission(apkInfo.getAndroidPermission());
+            // appInfo.setCommentCount(apkInfo.getCommentCount());
+            // appInfo.setCommentSum(apkInfo.getCommentSum());
+            // appInfo.setAvgComment(apkInfo.getAvgComment());
+            // appInfo.setDownloadCount(apkInfo.getDownloadCount());
+            appInfo.setMinSdkVersion(apkInfo.getMinSdkVersion());
+            appInfo.setMaxSdkVersion(apkInfo.getMaxSdkVersion());
+            appInfo.setTargetSdkVersion(apkInfo.getTargetSdkVersion());
+            appInfo.setDrawable_dpi(apkInfo.getDrawable_dpi());
+            appInfo.setUses_feature(apkInfo.getUses_feature());
+            appInfo.setCPU_ABI(apkInfo.getCPU_ABI());
+            //appInfo.setFilter_model(apkInfo.getFilter_model());
+            //appInfo.setFilter_screen(apkInfo.getFilter_screen());
+            appInfo.setSignature(apkInfo.getSignature());
+            appInfo.setOfficial(apkInfo.getOfficial());
+            appInfo.setAuto_update(apkInfo.getAuto_update());
+            appInfo.setApp_remark(apkInfo.getApp_remark());
+            appInfo.setPatchs(apkInfo.getPatchs());
+            appInfo.setTag(apkInfo.getTag());
+            
+            appInfo.setGrade(apkInfo.getGrade());
+            appInfo.setAdvertise(apkInfo.getAdvertise());
+            appInfo.setSafe(apkInfo.getSafe());
+            
+            getHibernateTemplate().update(appInfo);
+
+            apkInfo.setId(appInfo.getId()); // 下一步 替换icon 和 screenhot 的应用id
+
+            return true;
+        } catch (Exception e) {
+            Lg.error(com.bbkmobile.iqoo.console.constants.LgType.APPINFO, "修改app<" + appInfo.getId() + ">信息到数据库失败", e);
+            throw e;
+        }
+
+    }
+    
+    //低版本替换高版本或同版本替换，原始app数据保存到t_app_info_delete
+    //update delete:payType,payTypeInApp,priceReason,price,discount columns by time
+    public void addAppInfoDelete(AppInfo appInfo) throws Exception{
+    	try{
+	    	Date date = new Date();
+	    	String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date);
+	    	String copyString = "insert into t_app_info_delete(app_id,appType,appDeveloper,appCnName,appEnName,appVersion,appAuthor,sellType,largess,appDesc,app_remark,appKeyWord,appIcon,resolution,platform,appApk,patchs,apkSize,appVersionCode,appPackage,appStatus,tag,updateDate,onSaleDate ,offSaleDate,androidPermission,commentCount,commentSum,avgComment,downloadCount,minSdkVersion,maxSdkVersion,targetSdkVersion,drawable_dpi,uses_feature,CPU_ABI,filter_model,filter_screen ,signature,auto_update,official)" +
+	    			" select id,appType,appDeveloper,appCnName,appEnName,appVersion,appAuthor,sellType,largess,appDesc,app_remark,appKeyWord,appIcon,resolution,platform,appApk,patchs,apkSize,appVersionCode,appPackage,appStatus,tag,updateDate,onSaleDate ,'"+dateStr+"',androidPermission,commentCount,commentSum,avgComment,downloadCount,minSdkVersion,maxSdkVersion,targetSdkVersion,drawable_dpi,uses_feature,CPU_ABI,filter_model,filter_screen ,signature,auto_update,official from t_app_info where id=" + appInfo.getId();
+	        getSession().createSQLQuery(copyString).executeUpdate();
+    	}catch(Exception e){
+    		Lg.error(com.bbkmobile.iqoo.console.constants.LgType.APPINFO, "高版本或同版本数据保存到t_app_info_delete失败", e);
+            throw e;
+    	}
+    }
+	
+	//liuhaiyan@保存终端浏览记录
+    public boolean saveBrowseLog(RequestParameter requestParameter) throws Exception{
+        try{
+            /*
+            int weekDay=WeekdayUtil.getWeekday();
+            Session session = getSession();
+            Query query = null;
+            String sql;           
+            //SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//设置日期格式
+          
+            sql = "insert into t_browse_log_"+weekDay+"(imei,model,ip,cfrom,req_id,cs,page_index,elapsedtime,version) "
+                    +"value('"
+                    +requestParameter.getImei()+"','"
+                    +requestParameter.getModel()+"','"
+                    +requestParameter.getIp()+"','"
+                    +requestParameter.getCfrom()+"','"
+                    +requestParameter.getIdStr()+"','"
+                    +requestParameter.getCsStr()+"','"
+                    +requestParameter.getPageIndexStr()+"','"
+                    +requestParameter.getElapsedtime()+"','"
+                    +(int)requestParameter.getApp_version()+"')";
+                    
+            query = session.createSQLQuery(sql);
+            query.executeUpdate();
+            */
+            SimpleDateFormat sdf=new SimpleDateFormat( "yyyy-MM-dd");
+            Calendar day=Calendar.getInstance();
+            String date = sdf.format(day.getTime()).replace("-", "");
+            String sql = "insert into t_browse_log_"+date+"(imei,model,ip,cfrom,req_id,cs,page_index,elapsedtime,version) "
+                    +"value('"
+                    +requestParameter.getImei()+"','"
+                    +requestParameter.getModel()+"',INET_ATON('"
+                    +requestParameter.getIp()+"'),'"
+                    +requestParameter.getCfrom()+"','"
+                    +requestParameter.getIdStr()+"','"
+                    +requestParameter.getCsStr()+"','"
+                    +requestParameter.getPageIndexStr()+"','"
+                    +requestParameter.getElapsedtime()+"','"
+                    +(int)requestParameter.getApp_version()+"')";
+            if(Constants.USE_LOGCACHE){
+            	UpgradeQueryLogCache.getIns().add(sql);
+            }else{
+            	getSession().createSQLQuery(sql).executeUpdate();
+            }
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+
+    public boolean saveDownloadAppLog(RequestParameter requestParameter) throws Exception{
+        try{
+            /*
+            Session session = getSession();
+            Query query = null;
+            String sql;           
+          
+            sql = "insert into t_app_download_log(imei,model,ip,cfrom,app_id,module_id,related,elapsedtime,cs,version) "
+                    +"value('"
+                    +requestParameter.getImei()+"','"
+                    +requestParameter.getModel()+"','"
+                    +requestParameter.getIp()+"','"
+                    +requestParameter.getCfrom()+"','"
+                    +requestParameter.getIdStr()+"','"
+                    +requestParameter.getModule_id()+"','"
+                    +requestParameter.getRelated()+"','"
+                    +requestParameter.getElapsedtime()+"','"
+                    +requestParameter.getCsStr()+"','"
+                    +requestParameter.getVersion()+"')";
+                    
+            query = session.createSQLQuery(sql);
+            query.executeUpdate();
+            */
+            //int module_id = -1;
+            long elapsedtime = 0;
+            short related = -1;
+            short updated = -1;
+            short cs = -1;
+            long imei = 0;
+            /* 
+            if(null!=requestParameter.getModule_id() && !requestParameter.getModule_id().equals("")){
+                module_id = Short.parseShort(requestParameter.getModule_id());
+            }*/
+            if(null!=requestParameter.getElapsedtime() && !requestParameter.getElapsedtime().equals("")){
+                elapsedtime = Long.parseLong(requestParameter.getElapsedtime());
+            }
+            if(null!=requestParameter.getRelated() && !requestParameter.getRelated().equals("")){
+                related = Short.parseShort(requestParameter.getRelated());
+            }
+            if(null!=requestParameter.getUpdate() && !requestParameter.getUpdate().equals("")){
+                updated = Short.parseShort(requestParameter.getUpdate());
+            }
+            if(null!=requestParameter.getCsStr() && !requestParameter.getCsStr().equals("")){
+                cs = Short.parseShort(requestParameter.getCsStr());
+            }
+            if(null!=requestParameter.getImei() && !requestParameter.getImei().equals("")){
+                imei = Long.parseLong(requestParameter.getImei());
+            }
+            SimpleDateFormat sdf=new SimpleDateFormat( "yyyy-MM-dd");
+            Calendar day=Calendar.getInstance();
+            String date = sdf.format(day.getTime()).replace("-", "");
+            String sql = "insert into t_app_download_log_"+date+"(imei,model,ip,cfrom,app_id,module_id,related,updated,elapsedtime,cs,version,uuid,user_name,status) "
+                    +"value("
+                    +imei+",'"
+                    +requestParameter.getModel()+"',INET_ATON('"
+                    +requestParameter.getIp()+"'),"
+                    +requestParameter.getCfrom()+","
+                    +Long.parseLong(requestParameter.getIdStr())+",'"
+                    +requestParameter.getModule_id()+"',"
+                    +related+","
+                    +updated+","
+                    +elapsedtime+","
+                    +cs+",'"
+                    +requestParameter.getVersion()+"','"
+                    +requestParameter.getUser_id()+"','"
+                    +requestParameter.getUser_name()+"','"
+                    +"1'" 
+                    +")";
+            if(Constants.USE_LOGCACHE){
+            	UpgradeQueryLogCache.getIns().add(sql);
+            }else{
+            	getSession().createSQLQuery(sql).executeUpdate();
+            }
+            return true;
+        }catch(Exception e){
+            //e.printStackTrace();
+            throw e;
+        }
+    }
+    
+    public boolean savePcDownloadAppLog(RequestParameter requestParameter) throws Exception{
+        try{
+
+            String sql = "insert into t_app_pc_download_log(app_id,package_name,ip,cfrom,version) "
+                    +"value("
+                    +Long.parseLong(requestParameter.getIdStr())+",'"
+                    +requestParameter.getPackages()+"',"
+                    +"INET_ATON('"
+                    +requestParameter.getIp()+"'),"
+                    +requestParameter.getCfrom()+",'"
+                    +requestParameter.getVersion()+"')";
+            getSession().createSQLQuery(sql).executeUpdate();
+            return true;
+        }catch(Exception e){
+            //e.printStackTrace();
+            throw e;
+        }
+    }
+    
+    public boolean saveDownloadBaiduAppLog(RequestParameter requestParameter) throws Exception{
+        try{
+            Session session = getSession();
+            Query query = null;
+            String sql;           
+          
+            sql = "insert into t_app_baidu_download_log(imei,model,ip,cfrom,app_id,module_id,related,elapsedtime,cs,version) "
+                    +"value('"
+                    +requestParameter.getImei()+"','"
+                    +requestParameter.getModel()+"','"
+                    +requestParameter.getIp()+"','"
+                    +requestParameter.getCfrom()+"','"
+                    +requestParameter.getIdStr()+"','"
+                    +requestParameter.getModule_id()+"','"
+                    +requestParameter.getRelated()+"','"
+                    +requestParameter.getElapsedtime()+"','"
+                    +requestParameter.getCsStr()+"','"
+                    +requestParameter.getVersion()+"')";
+                    
+            query = session.createSQLQuery(sql);
+            query.executeUpdate();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    
+    //liuhaiyan@保存终端更新packages记录
+    public boolean savePackagesUpdateLog(RequestParameter requestParameter) throws Exception{
+        try{
+            /*
+            int weekDay=WeekdayUtil.getWeekday();
+            Session session = getSession();
+            Query query = null;
+            String sql;           
+          
+            sql = "insert into t_packages_update_log_"+weekDay+"(imei,model,ip,packages,elapsedtime,cs,version) "
+                    +"value('"
+                    +requestParameter.getImei()+"','"
+                    +requestParameter.getModel()+"','"
+                    +requestParameter.getIp()+"','"
+                    +requestParameter.getPackages()+"','"
+                    +requestParameter.getElapsedtime()+"','"
+                    +requestParameter.getCsStr()+"','"
+                    +requestParameter.getVersion()+"')";
+            query = session.createSQLQuery(sql);
+            query.executeUpdate();
+            */ 
+            SimpleDateFormat sdf=new SimpleDateFormat( "yyyy-MM-dd");
+            Calendar day=Calendar.getInstance();
+            String date = sdf.format(day.getTime()).replace("-", "");
+            String sql = "insert into t_packages_update_log_"+date+"(imei,model,ip,packages,elapsedtime,cs,version) "
+                    +"value('"
+                    +requestParameter.getImei()+"','"
+                    +requestParameter.getModel()+"',INET_ATON('"
+                    +requestParameter.getIp()+"'),'"
+                    +requestParameter.getPackages()+"','"
+                    +requestParameter.getElapsedtime()+"','"
+                    +requestParameter.getCsStr()+"','"
+                    +requestParameter.getVersion()+"')";
+            if(Constants.USE_LOGCACHE){
+            	UpgradeQueryLogCache.getIns().add(sql);
+            }else{
+            	getSession().createSQLQuery(sql).executeUpdate();
+            }
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    
+    //liuhaiyan@保存终端搜索关键词记录
+    public boolean saveSeachWordLog(RequestParameter requestParameter ) throws Exception{
+        try{
+            /*
+            Session session = getSession();
+            Query query = null;
+            String sql;           
+          
+            sql = "insert into t_search_word_log(imei,model,ip,word,cfrom,cs,page_index,elapsedtime,version) "
+                    +"value('"
+                    +requestParameter.getImei()+"','"
+                    +requestParameter.getModel()+"','"
+                    +requestParameter.getIp()+"','"
+                    +requestParameter.getWord()+"','"
+                    +requestParameter.getKey()+"','"
+                    +requestParameter.getCsStr()+"','"
+                    +requestParameter.getPage_index()+"','"
+                    +requestParameter.getElapsedtime()+"','"
+                    +(int)requestParameter.getApp_version()+"')";
+            query = session.createSQLQuery(sql);
+            query.executeUpdate();
+            */
+            SimpleDateFormat sdf=new SimpleDateFormat( "yyyy-MM-dd");
+            Calendar day=Calendar.getInstance();
+            String date = sdf.format(day.getTime()).replace("-", "");
+            String sql = "insert into t_search_word_log_"+date+"(imei,model,ip,word,cfrom,cs,page_index,elapsedtime,version) "
+                    +"value('"
+                    +requestParameter.getImei()+"','"
+                    +requestParameter.getModel()+"',INET_ATON('"
+                    +requestParameter.getIp()+"'),'"
+                    +requestParameter.getWord()+"','"
+                    +requestParameter.getKey()+"','"
+                    +requestParameter.getCsStr()+"','"
+                    +requestParameter.getPage_index()+"','"
+                    +requestParameter.getElapsedtime()+"','"
+                    +(int)requestParameter.getApp_version()+"')";
+            if(Constants.USE_LOGCACHE){
+            	UpgradeQueryLogCache.getIns().add(sql);
+            }else{
+            	getSession().createSQLQuery(sql).executeUpdate();
+            }
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    /*
+    public boolean saveSeachKeyLog(SearchResultForm searchResultForm ) throws Exception{
+        try{
+            int weekDay=WeekdayUtil.getWeekday();
+            String sql;           
+          
+            sql = "insert into t_search_word_log_"+weekDay+"(imei,model,ip,word,cs,page_index) "
+                    +"value('"
+                    +searchResultForm.getImei()+"','"
+                    +searchResultForm.getModel()+"','"
+                    +searchResultForm.getIp()+"','"
+                    +searchResultForm.getWord()+"','"
+                    +searchResultForm.getCs()+"','"
+                    +searchResultForm.getPageNum()+"')";
+                    
+            if(Constants.USE_LOGCACHE){
+            	UpgradeQueryLogCache.getIns().add(sql);
+            }else{
+            	getSession().createSQLQuery(sql).executeUpdate();
+            }
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    */
+    @SuppressWarnings("unchecked")
+    public List<String> getSearchHotWord(String model) throws Exception{
+        try{       
+            String sqlString = "select word from t_search_hot_word order by show_order";   
+            List<?> list = getSession().createSQLQuery(sqlString).list();
+
+            if (null != list && list.size() > 0) {  
+                return (List<String>) list;
+            }  
+            return null;
+        }catch(Exception e){
+            throw e;
+        }  
+    }
+    
+    public boolean saveBrowseAppLog(RequestParameter requestParameter) throws Exception{
+        try{
+            /*
+            int weekDay=WeekdayUtil.getWeekday();
+            Session session = getSession();
+            Query query = null;
+            String sql;           
+          
+            sql = "insert into t_browse_app_log_"+weekDay+"(imei,model,ip,cfrom,app_id,module_id,related,elapsedtime,cs,version) "
+                    +"value('"
+                    +requestParameter.getImei()+"','"
+                    +requestParameter.getModel()+"','"
+                    +requestParameter.getIp()+"','"
+                    +requestParameter.getCfrom()+"','"
+                    +requestParameter.getIdStr()+"','"
+                    +requestParameter.getModule_id()+"','"
+                    +requestParameter.getRelated()+"','"
+                    +requestParameter.getElapsedtime()+"','"
+                    +requestParameter.getCsStr()+"','"
+                    +(int)requestParameter.getApp_version()+"')";
+                    
+            query = session.createSQLQuery(sql);
+            query.executeUpdate();
+            */
+            SimpleDateFormat sdf=new SimpleDateFormat( "yyyy-MM-dd");
+            Calendar day=Calendar.getInstance();
+            String date = sdf.format(day.getTime()).replace("-", "");
+            String sql = "insert into t_browse_app_log_"+date+"(imei,model,ip,cfrom,app_id,module_id,related,elapsedtime,cs,version) "
+                    +"value('"
+                    +requestParameter.getImei()+"','"
+                    +requestParameter.getModel()+"',INET_ATON('"
+                    +requestParameter.getIp()+"'),'"
+                    +requestParameter.getCfrom()+"','"
+                    +requestParameter.getIdStr()+"','"
+                    +requestParameter.getModule_id()+"','"
+                    +requestParameter.getRelated()+"','"
+                    +requestParameter.getElapsedtime()+"','"
+                    +requestParameter.getCsStr()+"','"
+                    +(int)requestParameter.getApp_version()+"')";
+            if(Constants.USE_LOGCACHE){
+            	UpgradeQueryLogCache.getIns().add(sql);
+            }else{
+            	getSession().createSQLQuery(sql).executeUpdate();
+            }
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    public boolean saveBrowseBaiduAppLog(RequestParameter requestParameter) throws Exception{
+        try{
+            Session session = getSession();
+            Query query = null;
+            String sql;           
+          
+            sql = "insert into t_browse_baidu_app_log(imei,model,ip,cfrom,app_id,module_id,related,elapsedtime,cs,version) "
+                    +"value('"
+                    +requestParameter.getImei()+"','"
+                    +requestParameter.getModel()+"','"
+                    +requestParameter.getIp()+"','"
+                    +requestParameter.getCfrom()+"','"
+                    +requestParameter.getIdStr()+"','"
+                    +requestParameter.getModule_id()+"','"
+                    +requestParameter.getRelated()+"','"
+                    +requestParameter.getElapsedtime()+"','"
+                    +requestParameter.getCsStr()+"','"
+                    +(int)requestParameter.getApp_version()+"')";
+                    
+            query = session.createSQLQuery(sql);
+            query.executeUpdate();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+
+    public boolean saveBrowseAppPackageLog(RequestParameter requestParameter) throws Exception{
+        try{
+            Session session = getSession();
+            Query query = null;
+            String sql;           
+          
+            sql = "insert into t_browse_app_package_log(imei,model,ip,cfrom,app_id,app_package,module_id,related,elapsedtime,cs,version) "
+                    +"value('"
+                    +requestParameter.getImei()+"','"
+                    +requestParameter.getModel()+"','"
+                    +requestParameter.getIp()+"','"
+                    +requestParameter.getCfrom()+"','"
+                    +requestParameter.getIdStr()+"','"
+                    +requestParameter.getPackages()+"','"
+                    +requestParameter.getModule_id()+"','"
+                    +requestParameter.getRelated()+"','"
+                    +requestParameter.getElapsedtime()+"','"
+                    +requestParameter.getCsStr()+"','"
+                    +(int)requestParameter.getApp_version()+"')";
+                    
+            query = session.createSQLQuery(sql);
+            query.executeUpdate();
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+    
+    public boolean deleteLogTables() throws Exception{
+        SimpleDateFormat sdf=new SimpleDateFormat( "yyyy-MM-dd");
+        Calendar day=Calendar.getInstance();
+       
+        day.add(Calendar.DATE,-4);
+        String date1 = sdf.format(day.getTime()).replace("-", "");
+
+        //删除下载日志表
+        deleteAppDownloadLog(date1);
+        Lg.info(LgType.APPINFO, "成功删除载日志表-"+date1);
+        
+        //删除下载完成日志表
+        deleteAppDownloadCompleteLog(date1);
+        Lg.info(LgType.APPINFO, "成功删除下载完成日志表-"+date1);
+        
+        //删除浏览app日志表
+        deleteBrowseAppLog(date1);
+        Lg.info(LgType.APPINFO, "成功删除浏览app日志表-"+date1);
+        
+        //删除浏览模块表
+        deleteBrowseLog(date1);
+        Lg.info(LgType.APPINFO, "成功删除浏览模块表-"+date1);
+        
+        //删除更新日志表
+        deletePackagesUpdateLog(date1);
+        Lg.info(LgType.APPINFO, "成功删除更新日志表-"+date1);
+        
+        //删除热词搜索日志表
+        deleteSearchWordLog(date1);
+        Lg.info(LgType.APPINFO, "成功删除热词搜索日志表-"+date1);
+        
+        return true;   
+    }
+    
+    private boolean deleteAppDownloadLog(String date) throws Exception{
+        String tAppDownLoadLog = "drop table if exists t_app_download_log_"+date;
+        getSession().createSQLQuery(tAppDownLoadLog).executeUpdate();
+        return true;
+    }
+    
+    private boolean deleteAppDownloadCompleteLog(String date) throws Exception{
+        String tAppDownLoadLog = "drop table if exists t_app_download_complete_log_"+date;
+        getSession().createSQLQuery(tAppDownLoadLog).executeUpdate();
+        return true;
+    }
+    
+    private boolean deleteBrowseAppLog(String date) throws Exception{
+        String tBrowseAppLog = "drop table if exists t_browse_app_log_"+date;
+        getSession().createSQLQuery(tBrowseAppLog).executeUpdate();
+        return true;
+    }
+    
+    private boolean deleteBrowseLog(String date) throws Exception{
+        String tBrowseLog = "drop table if exists t_browse_log_"+date;
+        getSession().createSQLQuery(tBrowseLog).executeUpdate();
+        return true;
+    }
+    
+    private boolean deletePackagesUpdateLog(String date) throws Exception{
+        String tPackagesUpdateLog = "drop table if exists t_packages_update_log_"+date;
+        getSession().createSQLQuery(tPackagesUpdateLog).executeUpdate();
+        return true;
+    }
+    
+    private boolean deleteSearchWordLog(String date) throws Exception{
+        String tPackagesUpdateLog = "drop table if exists t_search_word_log_"+date;
+        getSession().createSQLQuery(tPackagesUpdateLog).executeUpdate();
+        return true;
+    }
+    
+    public boolean addLogTables() throws Exception{
+        SimpleDateFormat sdf=new SimpleDateFormat( "yyyy-MM-dd");
+        Calendar day=Calendar.getInstance();
+
+        //day.add(Calendar.DATE,1);
+        String date1 = sdf.format(day.getTime()).replace("-", "");
+        day.add(Calendar.DATE,1);
+        String date2 = sdf.format(day.getTime()).replace("-", "");
+        day.add(Calendar.DATE,1);
+        String date3 = sdf.format(day.getTime()).replace("-", "");
+        
+        String date = date1+","+date2+","+date3;
+        //生成下载日志表
+        addAppDownloadLogTable(date1);
+        addAppDownloadLogTable(date2);
+        addAppDownloadLogTable(date3);
+        Lg.info(LgType.APPINFO, "成功生成载日志表-"+date);
+        
+        //生成浏览app日志表
+        addBrowseAppLogTable(date1);
+        addBrowseAppLogTable(date2);
+        addBrowseAppLogTable(date3);
+        Lg.info(LgType.APPINFO, "成功生成浏览app日志表-"+date);
+        
+        //生成浏览模块表
+        addBrowseLogTable(date1);
+        addBrowseLogTable(date2);
+        addBrowseLogTable(date3);
+        Lg.info(LgType.APPINFO, "成功生成浏览模块表-"+date);
+        
+        //生成更新日志表
+        addPackagesUpdateLogTable(date1);
+        addPackagesUpdateLogTable(date2);
+        addPackagesUpdateLogTable(date3);
+        Lg.info(LgType.APPINFO, "成功生成更新日志表-"+date);
+        
+        //生成热词搜索日志表
+        addSearchWordLogTable(date1);
+        addSearchWordLogTable(date2);
+        addSearchWordLogTable(date3);
+        Lg.info(LgType.APPINFO, "成功生成热词搜索日志表-"+date);
+        
+        //生成统计日志表
+        addAppDownloadCountTable();
+        
+        //生成下载完成日志表
+        addAppDownloadCompleteLogTable(date1);
+        addAppDownloadCompleteLogTable(date2);
+        addAppDownloadCompleteLogTable(date3);
+        Lg.info(LgType.APPINFO, "成功生成下载完成日志表-"+date);
+        
+        return true;
+    }
+    
+    private boolean addAppDownloadCountTable() throws Exception{
+       SimpleDateFormat sdf=new SimpleDateFormat( "yyyy-MM");
+       Calendar day=Calendar.getInstance();
+       day.add(Calendar.MONTH,1);
+       String date = sdf.format(day.getTime()).replace("-", "");
+       
+       String days = "";
+       for(int i=1;i<=31;i++){
+           days += i+"th int(11) DEFAULT '0',";
+       }
+       String tAppDownLoadLog = "create table if not exists t_app_download_count_"+date
+              + " (id int(11) NOT NULL AUTO_INCREMENT,"
+              + "app_id bigint(20) NOT NULL,"
+              +  days
+              +  "PRIMARY KEY (id),"
+              + "UNIQUE KEY u_index_app_id (app_id))"
+              + " ENGINE=InnoDB AUTO_INCREMENT=10000 DEFAULT CHARSET=utf8";
+      getSession().createSQLQuery(tAppDownLoadLog).executeUpdate();
+      return true;
+    }
+    
+    private boolean addAppDownloadLogTable(String date) throws Exception{
+        String tAppDownLoadLog = "create table if not exists t_app_download_log_"+date
+                +" (id bigint(20) NOT NULL AUTO_INCREMENT,"
+                + "imei bigint(20) DEFAULT 0,"
+                + "model varchar(50) DEFAULT NULL," 
+                + "ip int unsigned DEFAULT 0,"
+                + "add_date timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+                + "cfrom int DEFAULT '-1'," 
+                + "app_id bigint(20) DEFAULT 0,"
+                + "module_id varchar(20) DEFAULT '-1' COMMENT '模块id',"        
+                + "elapsedtime bigint DEFAULT 0 COMMENT '开机时间',"
+                + "related tinyint(1) DEFAULT -1 COMMENT '来自相关推荐为1'," 
+                + "updated tinyint(1) DEFAULT -1 COMMENT '更新下载为1'," 
+                + "cs tinyint(1) DEFAULT -1,"
+                + "version varchar(5) DEFAULT NULL," 
+                + "uuid varchar(50) DEFAULT NULL," 
+                + "user_name varchar(100) DEFAULT NULL," 
+                + "status varchar(10) DEFAULT NULL COMMENT '1-点击下载，2-取消下载'," 
+                + "PRIMARY KEY (id))"
+                + " ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8";
+        getSession().createSQLQuery(tAppDownLoadLog).executeUpdate();
+        return true;
+    }
+    
+    private boolean addAppDownloadCompleteLogTable(String date) throws Exception{
+        String tAppDownLoadLog = "create table if not exists t_app_download_complete_log_"+date
+                +" (id bigint(20) NOT NULL AUTO_INCREMENT,"
+                + "imei bigint(20) DEFAULT 0,"
+                + "model varchar(50) DEFAULT NULL," 
+                + "ip int unsigned DEFAULT 0,"
+                + "add_date timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+                + "cfrom int DEFAULT '-1'," 
+                + "app_id bigint(20) DEFAULT 0,"
+                + "module_id varchar(20) DEFAULT '-1' COMMENT '模块id',"        
+                + "elapsedtime bigint DEFAULT 0 COMMENT '开机时间',"
+                + "related tinyint(1) DEFAULT -1 COMMENT '来自相关推荐为1'," 
+                + "updated tinyint(1) DEFAULT -1 COMMENT '更新下载为1'," 
+                + "cs tinyint(1) DEFAULT -1,"
+                + "version varchar(5) DEFAULT NULL," 
+                + "PRIMARY KEY (id))"
+                + " ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8";
+        getSession().createSQLQuery(tAppDownLoadLog).executeUpdate();
+        return true;
+    }
+    
+    private boolean addBrowseAppLogTable(String date) throws Exception{
+        String tBrowseAppLog = "create table if not exists t_browse_app_log_"+date
+                + " (id bigint(20) NOT NULL AUTO_INCREMENT,"
+                + "imei varchar(20) DEFAULT NULL,"
+                + "model varchar(50) DEFAULT NULL,"
+                + "ip int unsigned DEFAULT 0,"
+                + "add_date timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+                + "cfrom varchar(5) DEFAULT NULL,"
+                + "app_id varchar(20) DEFAULT NULL,"
+                + "module_id varchar(20) DEFAULT NULL COMMENT '模块id',"
+                + "elapsedtime varchar(20) DEFAULT NULL COMMENT '开机时间',"
+                + "related varchar(5) DEFAULT NULL COMMENT '来自相关推荐为1',"
+                + "cs varchar(5) DEFAULT NULL,"
+                + "version varchar(5) DEFAULT NULL,"
+                + "PRIMARY KEY (id))"
+                + " ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8";
+        getSession().createSQLQuery(tBrowseAppLog).executeUpdate();
+        return true;
+    }
+    
+    private boolean addBrowseLogTable(String date) throws Exception{
+        String tBrowseLog = "create table if not exists t_browse_log_"+date
+                + "(id bigint(20) NOT NULL AUTO_INCREMENT,"
+                + "imei varchar(20) DEFAULT NULL,"
+                + "model varchar(50) DEFAULT NULL,"
+                + "ip int unsigned DEFAULT 0,"
+                + "add_date timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+                + "cfrom varchar(5) DEFAULT NULL,"
+                + "req_id varchar(20) DEFAULT NULL,"
+                + "cs varchar(5) DEFAULT NULL,"
+                + "page_index varchar(5) DEFAULT NULL,"
+                + "elapsedtime varchar(20) DEFAULT NULL COMMENT '开机时间',"
+                + "version varchar(5) DEFAULT NULL,"
+                + "PRIMARY KEY (id))"
+                + " ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8";
+        getSession().createSQLQuery(tBrowseLog).executeUpdate();
+        return true;
+    }
+    
+    private boolean addPackagesUpdateLogTable(String date) throws Exception{
+        String tPackagesUpdateLog = "create table if not exists t_packages_update_log_"+date
+                + "(id bigint(20) NOT NULL AUTO_INCREMENT,"
+                + "imei varchar(30) DEFAULT NULL,"
+                + "model varchar(50) DEFAULT NULL,"
+                + "ip int unsigned DEFAULT 0,"
+                + "add_date timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+                + "packages varchar(5000) DEFAULT NULL,"
+                + "elapsedtime varchar(20) DEFAULT NULL COMMENT '开机时间',"
+                + "cs varchar(5) DEFAULT NULL,"
+                + "version varchar(5) DEFAULT NULL,"
+                + "PRIMARY KEY (id))"
+                + " ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8";
+        getSession().createSQLQuery(tPackagesUpdateLog).executeUpdate();
+        return true;
+    }
+    
+    private boolean addSearchWordLogTable(String date) throws Exception{
+        String tPackagesUpdateLog = "create table if not exists t_search_word_log_"+date
+                + "( id bigint(20) NOT NULL AUTO_INCREMENT,"
+                + "imei varchar(20) DEFAULT NULL,"
+                + "model varchar(50) DEFAULT NULL,"
+                + "ip int unsigned DEFAULT 0,"
+                + "add_date timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+                + "word varchar(50) DEFAULT NULL,"
+                + "cfrom varchar(5) DEFAULT NULL,"
+                + "cs varchar(5) DEFAULT NULL,"
+                + "page_index varchar(5) DEFAULT NULL,"
+                + "elapsedtime varchar(20) DEFAULT NULL COMMENT '开机时间',"
+                + "version varchar(5) DEFAULT NULL,"
+                + "PRIMARY KEY (id),"
+                + "KEY index_search_word (word))"
+                + " ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8";
+        getSession().createSQLQuery(tPackagesUpdateLog).executeUpdate();
+        return true;
+    }
+
+    public boolean timeDeleteAllLog() throws Exception{
+        try{
+            Session session = getSession();
+            Query query = null;
+            
+            Calendar day=Calendar.getInstance();
+            day.add(Calendar.DATE,-1);
+            SimpleDateFormat sdf=new SimpleDateFormat( "yyyy-MM-dd");
+            String dateString = sdf.format(day.getTime()) + " 00:00:00";
+            
+            //SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");//设置日期格式
+            //String dateString = sdf.format(new Date()) + " 00:00:00";
+            
+            String browseLogSql = null;
+            String browseAppLogSql = null;
+            String packagesUpdateLogSql = null;
+            String searchWordLogSql = null;
+            
+            int logCount[][]=new int[7][4];
+            for(int j=0;j<4;j++){
+                for(int i=0;i<7;i++){
+                    logCount[i][j]=1;
+                }
+            }
+            
+            //org.hibernate.Transaction tx;  引擎为mysiam无事务机制
+            //session.beginTransaction(); 
+
+            for (int i = 0; i < 7; i++) {
+                for (int k = 1; k > 0;) {
+                    if (logCount[i][0]!= 0) {
+                        browseLogSql = "delete from t_browse_log_" + i + " where add_date<'" + dateString + "' limit "
+                                + Constants.ONE_COUNT_DELETE_LOG;
+                        logCount[i][0] = session.createSQLQuery(browseLogSql).executeUpdate();
+                    }
+                    if (logCount[i][1] != 0) {
+                        browseAppLogSql = "delete from t_browse_app_log_" + i + " where add_date<'" + dateString
+                                + "' limit " + Constants.ONE_COUNT_DELETE_LOG;
+                        logCount[i][1] = session.createSQLQuery(browseAppLogSql).executeUpdate();
+                    }
+                    if (logCount[i][2] != 0) {                 
+                        packagesUpdateLogSql = "delete from t_packages_update_log_" + i + " where add_date<'"
+                                + dateString + "' limit " + Constants.ONE_COUNT_DELETE_LOG;
+                        logCount[i][2] = session.createSQLQuery(packagesUpdateLogSql).executeUpdate();        
+                    }
+                    if (logCount[i][3] != 0) {             
+                        searchWordLogSql = "delete from t_search_word_log_" + i + " where add_date<'" + dateString
+                                + "' limit " + Constants.ONE_COUNT_DELETE_LOG;
+                        logCount[i][3] = session.createSQLQuery(searchWordLogSql).executeUpdate();
+                    }
+                    if (logCount[i][0] == 0 && logCount[i][1] == 0 && logCount[i][2] == 0
+                            && logCount[i][3] == 0) {
+                        break;
+                    }
+                }
+            }
+            return true;
+        }catch(Exception e){
+            throw e;
+        }
+    }
+
+    public boolean isSystemPackage(String appPackage) throws Exception{
+        try {
+            String queryString="select systemPackage from SystemPackage where systemPackage=?";
+            Session session=getSession();
+            Query queryObject = session.createQuery(queryString);
+            queryObject.setString(0, appPackage);         
+            List list=queryObject.list();
+            if(null!=list && list.size()>0){
+                return true;
+            }else{
+                return false;
+            }
+        } catch (Exception e) {
+            Lg.error(LgType.APPINFO, "判断是否为系统包名时出错，error=" + e.getMessage());
+            throw e;
+        }
+    }
+    
+    public boolean packageIsExist(String appPackage) throws Exception {
+        try {
+            String queryString = "select appPackage from AppInfo where appPackage=?";
+            Session session = getSession();
+            Query queryObject = session.createQuery(queryString);
+            queryObject.setString(0, appPackage);
+            List list = queryObject.list();
+            if (null != list && list.size() > 0) {
+                return true;
+            }
+            if (isSystemPackage(appPackage)) {
+                return true;
+            }
+            return false;
+
+        } catch (Exception e) {
+            Lg.error(LgType.APPINFO, "查找数据库中是否有相同包名信息时出错，error=" + e.getMessage());
+            throw e;
+        }
+    }
+    
+    public AppInfo getApppInfoWithPackage(String appPackage) throws Exception {
+        AppInfo appInfo = null;
+        String queryString = "select id,appCnName,appEnName,appAuthor,appVersion,appIcon,patchs,apkSize,appVersionCode,appPackage,tag,commentCount,avgComment,official from t_app_info" +
+                " where appPackage='" + appPackage + "' and appStatus!=12";
+
+        Query query = getSession().createSQLQuery(queryString)
+                        .addScalar("id", Hibernate.LONG)
+                        .addScalar("appCnName", Hibernate.STRING)
+                        .addScalar("appEnName", Hibernate.STRING)
+                        .addScalar("appAuthor", Hibernate.STRING)
+                        .addScalar("appVersion", Hibernate.STRING)
+                        .addScalar("appIcon", Hibernate.STRING)
+                        .addScalar("patchs", Hibernate.STRING)
+                        .addScalar("apkSize", Hibernate.INTEGER)
+                        .addScalar("appVersionCode", Hibernate.STRING)
+                        .addScalar("appPackage", Hibernate.STRING)
+                        .addScalar("tag", Hibernate.SHORT)
+                        .addScalar("commentCount", Hibernate.INTEGER)
+                        .addScalar("avgComment", Hibernate.FLOAT)                                            
+                        .addScalar("official", Hibernate.CHARACTER)
+                        .setResultTransformer(Transformers.aliasToBean(AppInfo.class));
+        @SuppressWarnings("unchecked")
+        List<AppInfo> list = query.list();
+        if (null != list && list.size() > 0) {
+            appInfo = (AppInfo) list.get(0);
+        }
+        return appInfo;
+        /*
+        try {
+            String queryString = "select * from t_app_info where appPackage='"
+                    + appPackage + "' and appStatus!=12";
+
+            Query query = getSession().createSQLQuery(queryString).addEntity(AppInfo.class);
+
+            List<AppInfo> list = query.list();
+            if (null != list && list.size() > 0) {
+                return list.get(0);
+            }
+            return null;
+        } catch (Exception e) {
+            //Lg.error(LgType.APPINFO, "getApppInfoWithPackage出错，error=" + e.getMessage());
+            throw e;
+        }
+        */
+    }
+
+	@Override
+	public void updateFilterModelByScreen(short modelId, int screenId) throws Exception {
+		// TODO Auto-generated method stub
+		String model=modelId+",";
+		String screen=","+screenId+",";
+		List<AppInfo> appInfos=this.getHibernateTemplate().find("from AppInfo where appStatus=13 and filter_screen like '%"+screen+"%'");
+		if(null!=appInfos && appInfos.size()>0)
+		{
+			for(AppInfo app : appInfos)
+			{
+				model=app.getFilter_model()+model;
+				app.setFilter_model(model);
+				this.getHibernateTemplate().update(app);
+			}
+		}
+	}
+
+    @Override
+    public BaiduAppId saveBaiduAppId(BaiduAppId baiduAppId) throws Exception {
+        getHibernateTemplate().save(baiduAppId);
+        return baiduAppId;
+    }
+
+    @Override
+    public BaiduAppId getLocalBaiduAppId(BaiduAppId baiduAppId) throws Exception {
+        List<BaiduAppId> baiduAppIds =  getHibernateTemplate().find("from BaiduAppId where baidu_id = ?",baiduAppId.getBaidu_id());
+        if(null!=baiduAppIds && baiduAppIds.size()>0){
+            return baiduAppIds.get(0);
+        }
+        else{
+            return null;
+        } 
+    }
+    
+    public BaiduAppId getLocalBaiduAppIdById(Long id) throws Exception {
+        List<BaiduAppId> baiduAppIds =  getHibernateTemplate().find("from BaiduAppId where id = ?",id);
+        if(null!=baiduAppIds && baiduAppIds.size()>0){
+            return baiduAppIds.get(0);
+        }
+        else{
+            return null;
+        } 
+    }
+
+    @Override
+    public AppInfo findAppByPackage(String appPackage) throws Exception {
+        AppInfo appInfo = null;
+        try {
+            String queryString = "from AppInfo where appPackage=?";
+            Session session = getSession();
+            Query queryObject = session.createQuery(queryString);
+            queryObject.setString(0, appPackage);
+            List list = queryObject.list();
+            if (null != list && list.size() > 0) {
+                appInfo = (AppInfo)list.get(0);
+            }
+        } catch (Exception e) {
+            Lg.error(LgType.APPINFO, "根据包名" + appPackage + "查找app信息时出错，error=" + e.getMessage());
+            throw e;
+        }
+        return appInfo;
+    }
+    
+    public AppInfo findOnSaleAppByPackage(String appPackage) throws Exception {
+        try {
+            String queryString = "from AppInfo where appPackage=? and appStatus!=?";
+            Session session = getSession();
+            Query queryObject = session.createQuery(queryString);
+            queryObject.setString(0, appPackage);
+            queryObject.setShort(1, (short) 12);
+            List list = queryObject.list();
+            if (null != list && list.size() > 0) {
+                return (AppInfo)list.get(0);
+            }else{
+                return null;
+            }
+        } catch (Exception e) {
+            Lg.error(LgType.APPINFO, "根据包名查找app信息时出错，error=" + e.getMessage());
+            throw e;
+        }
+    }
+    
+    public boolean saveBaiduAppUrl(Long id, String url) throws Exception {
+        
+        String queryString = "update BaiduAppId set url=? where id=?";
+        Session session = getSession();
+        Query queryObj = session.createQuery(queryString);
+        queryObj.setString(0, url);
+        queryObj.setLong(1, id);
+        queryObj.executeUpdate();
+       
+        return true;
+    }
+
+    public AppHistoryInfo findAppHistoryInfo(AppInfo appInfo) throws Exception{
+        try {
+            String queryString = "from AppHistoryInfo where appPackage=? and appVersionCode=?";
+            Session session = getSession();
+            Query queryObject = session.createQuery(queryString);
+            queryObject.setString(0, appInfo.getAppPackage());
+            queryObject.setString(1, appInfo.getAppVersionCode());
+            List list = queryObject.list();
+            if (null != list && list.size() > 0) {
+                return (AppHistoryInfo)list.get(0);
+            }else{
+                return null;
+            }
+        } catch (Exception e) {
+            Lg.error(LgType.APPINFO, "根据包名和版本号查找app历史版本信息时出错，error=" + e.getMessage());
+            throw e;
+        }
+    }
+    
+    @Override
+	public void deleteOffSaleApp(Long[] ids) throws Exception {
+		// TODO Auto-generated method stub
+		if(null!=ids && ids.length>0 )
+		{
+			Session session = getSession();
+			Query queryObject=null;
+			
+			AppInfo appInfo=new AppInfo();
+			for(Long id : ids)
+			{   
+             //   String copyString = "insert into t_app_info_delete select * from t_app_info where id=" + id;
+				Date date = new Date();
+		    	String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date);//下架时间用来存储删除时间
+				String copyString = "insert into t_app_info_delete(app_id,appType,appDeveloper,appCnName,appEnName,appVersion,appAuthor,sellType,payType,appDesc,app_remark,appKeyWord,appIcon,resolution,platform,appApk,patchs,apkSize,appVersionCode,appPackage,appStatus,updateDate,onSaleDate ,offSaleDate,androidPermission,commentCount,commentSum,avgComment,downloadCount,minSdkVersion,maxSdkVersion,targetSdkVersion,drawable_dpi,uses_feature,CPU_ABI,filter_model,filter_screen ,signature,auto_update,official)" +
+		    			" select id,appType,appDeveloper,appCnName,appEnName,appVersion,appAuthor,sellType,largess,appDesc,app_remark,appKeyWord,appIcon,resolution,platform,appApk,patchs,apkSize,appVersionCode,appPackage,appStatus,updateDate,onSaleDate ,'"+dateStr+"',androidPermission,commentCount,commentSum,avgComment,downloadCount,minSdkVersion,maxSdkVersion,targetSdkVersion,drawable_dpi,uses_feature,CPU_ABI,filter_model,filter_screen ,signature,auto_update,official from t_app_info where id=" + id;
+		        
+                session.createSQLQuery(copyString).executeUpdate();
+                // 1.删除应用评论
+                String queryComment = "delete from AppComment where appInfo.id=?";
+                queryObject = session.createQuery(queryComment);
+                queryObject.setLong(0, id);
+                queryObject.executeUpdate();
+
+                // 2.删除应用错误报告
+                String queryError = "delete from ErrorReport where appInfo.id=?";
+                queryObject = session.createQuery(queryError);
+                queryObject.setLong(0, id);
+                queryObject.executeUpdate();
+			    /*
+				appInfo=this.getHibernateTemplate().load(AppInfo.class, id);
+				//1.删除应用评论  
+				 String queryComment="delete from AppComment where appInfo.id=?"; 
+				queryObject=session.createQuery(queryComment);
+				queryObject.setLong(0, id);
+			    queryObject.executeUpdate();
+				
+				//2.删除应用错误报告
+			    String queryError="delete from ErrorReport where appInfo.id=?";
+			    queryObject=session.createQuery(queryError);
+				queryObject.setLong(0, id);
+			    queryObject.executeUpdate();
+				
+				//3.删除应用APK，图标文件，应用记录
+			    String apkURL="";
+	            String iconURL="";
+	            File file=null;
+			    String queryApp="delete from  AppInfo where id=?";
+				if(null!=appInfo)
+				{
+					apkURL=appInfo.getAppApk();
+					iconURL=appInfo.getAppIcon();
+					if(null!=apkURL && !"".equals(apkURL))
+					{
+						apkURL=UtilTool.getDownloadPath(apkURL);
+						file = new File(apkURL);
+						file.delete();    //删除APK
+					}
+					if(null!=iconURL && !"".equals(iconURL))
+					{
+						iconURL=UtilTool.getDownloadPath(iconURL);
+						file = new File(iconURL);
+						file.delete();    //删除图标
+					}				
+					queryObject=session.createQuery(queryApp);
+					queryObject.setLong(0, id);
+				    queryObject.executeUpdate();
+				}
+				//4.删除应用截图文件，应用截图记录
+				 String screenShotURL="";
+				List<TAppScreenshot> list=null;
+				String queryString="from TAppScreenshot where appInfo.id=?";
+				queryObject = session.createQuery(queryString);
+	            queryObject.setLong(0, id);
+	            list = queryObject.list();
+	            if(null!=list && list.size()>0)
+	            {
+	            	for(TAppScreenshot appScreenShot : list)
+	            	{
+	            		screenShotURL=appScreenShot.getScreenshot();
+	            		if(null!=screenShotURL && !"".equals(screenShotURL))
+	            		{
+	            			screenShotURL=UtilTool.getDownloadPath(screenShotURL);
+	            			file = new File(screenShotURL);
+		            		file.delete();
+	            		}
+	            		this.getHibernateTemplate().delete(appScreenShot);
+	            	}
+	            }
+                */
+			    
+		        
+			    //1.删除广告应用设置中的此应用  t_ad_app,需要更新对应的t_ad_info的app_count,app_id
+			    String queryString1 ="delete AdvertisementApp where appInfo.id=?";
+			    queryObject=session.createQuery(queryString1);
+			    queryObject.setLong(0, id);
+			    queryObject.executeUpdate();
+                
+                //2.删除专题应用设置中的此应用  t_topic_app
+			    String queryString2 ="delete TopicApp where appInfo.id=?";
+              
+			    queryObject=session.createQuery(queryString2);
+			    queryObject.setLong(0, id);
+			    queryObject.executeUpdate();
+
+                //3.删除汇应用设置中的此应用  t_hub_set
+			    String queryString3 ="delete AppHubSet where appInfo.id=?";
+              
+			    queryObject=session.createQuery(queryString3);
+			    queryObject.setLong(0, id);
+			    queryObject.executeUpdate();
+                
+                //4.删除推荐设置中的此应用  t_cellphone_recommend
+			    String queryString4 ="delete CellphoneRecommendApp where appInfo.id=?";
+			    queryObject=session.createQuery(queryString4);
+			    queryObject.setLong(0, id);
+			    queryObject.executeUpdate();
+			    
+                //5.删除汇热门推荐中对应的app
+                String deleteHubHotContentSql ="delete from HubHotContent where object_id=? and type=?";     
+                queryObject=session.createQuery(deleteHubHotContentSql);
+                queryObject.setLong(0, id);
+                queryObject.setCharacter(1, '1');
+                queryObject.executeUpdate();
+                
+                //删除排行榜中的应用
+                String deleteUpdateDateTop = "delete from t_app_onsale_date_top where app_id="+id;
+                session.createSQLQuery(deleteUpdateDateTop).executeUpdate();
+                
+                String deleteDownloadTop = "delete from t_app_download_month_top where app_id="+id;
+                session.createSQLQuery(deleteDownloadTop).executeUpdate();
+                
+                //删除游戏榜
+                String deleteTopGame = "delete from t_top_game where app_id="+id;
+                session.createSQLQuery(deleteTopGame).executeUpdate();
+                //删除应用榜
+                String deleteTopApp = "delete from t_top_application where app_id="+id;
+                session.createSQLQuery(deleteTopApp).executeUpdate();
+                //删除最新榜
+                String deleteRankNew = "delete from t_rank_new where app_id="+id;
+                session.createSQLQuery(deleteRankNew).executeUpdate();
+                //删除最热榜
+                String deleteRankHot = "delete from t_rank_hot where app_id="+id;
+                session.createSQLQuery(deleteRankHot).executeUpdate();
+                //删除上升最快榜
+                String deleteTopRisk = "delete from t_top_risk where app_id="+id;
+                session.createSQLQuery(deleteTopRisk).executeUpdate();
+                //删除新品速递
+                String deleteNewApp = "delete from t_newapp_recommend where app_id="+id;
+                session.createSQLQuery(deleteNewApp).executeUpdate();
+                //删除装机必备
+                String deleteEditor = "delete from t_editor_recommend where app_id="+id;
+                session.createSQLQuery(deleteEditor).executeUpdate();
+                //删除排期管理
+                String deleteSetup = "delete from t_rank_setup where object_type=1 and object_id="+id;
+                session.createSQLQuery(deleteSetup).executeUpdate();
+                
+                
+                String deleteAppInfo = "delete from t_app_info where id="+id;
+                session.createSQLQuery(deleteAppInfo).executeUpdate();
+			}
+		}
+    }
+    
+    //update app
+    public boolean updateAppInfoFromBaidu(AppInfo appInfo, AppInfo apkInfo) throws Exception {
+        try {
+            if (null == findAppHistoryInfo(appInfo)) {
+                AppHistoryInfo appHistoryInfo = new AppHistoryInfo();
+                appHistoryInfo.setAppType(appInfo.getAppType());
+                appHistoryInfo.setDeveloper(appInfo.getDeveloper());
+                appHistoryInfo.setAppCnName(appInfo.getAppCnName());
+                appHistoryInfo.setAppEnName(appInfo.getAppEnName());
+                appHistoryInfo.setAppVersion(appInfo.getAppVersion());
+                appHistoryInfo.setAppAuthor(appInfo.getAppAuthor());
+                appHistoryInfo.setSellType(appInfo.getSellType());
+//                appHistoryInfo.setPayType(appInfo.getPayType());
+//                appHistoryInfo.setPayTypeInApp(appInfo.getPayTypeInApp());
+//                appHistoryInfo.setPriceReason(appInfo.getPriceReason());
+//                appHistoryInfo.setDiscount(appInfo.getDiscount());
+                appHistoryInfo.setLargess(appInfo.getLargess());
+                appHistoryInfo.setAppDesc(appInfo.getAppDesc());
+                appHistoryInfo.setAppKeyWord(appInfo.getAppKeyWord());
+                appHistoryInfo.setAppIcon(appInfo.getAppIcon());
+                appHistoryInfo.setResolution(appInfo.getResolution());
+                appHistoryInfo.setPlatform(appInfo.getPlatform());
+                appHistoryInfo.setAppApk(appInfo.getAppApk());
+                appHistoryInfo.setApkSize(appInfo.getApkSize());
+                appHistoryInfo.setAppVersionCode(appInfo.getAppVersionCode());
+                appHistoryInfo.setAppPackage(appInfo.getAppPackage());
+                appHistoryInfo.setAppStatus(appInfo.getAppStatus());
+                appHistoryInfo.setUpdateDate(appInfo.getUpdateDate());
+                appHistoryInfo.setOnSaleDate(appInfo.getOnSaleDate());
+                appHistoryInfo.setOffSaleDate(new Date());
+                appHistoryInfo.setAndroidPermission(appInfo.getAndroidPermission());
+                appHistoryInfo.setCommentCount(appInfo.getCommentCount());
+                appHistoryInfo.setCommentSum(appInfo.getCommentSum());
+                appHistoryInfo.setAvgComment(appInfo.getAvgComment());
+                appHistoryInfo.setDownloadCount(appInfo.getDownloadCount());
+                appHistoryInfo.setMinSdkVersion(appInfo.getMinSdkVersion());
+                appHistoryInfo.setMaxSdkVersion(appInfo.getMaxSdkVersion());
+                appHistoryInfo.setTargetSdkVersion(appInfo.getTargetSdkVersion());
+                appHistoryInfo.setDrawable_dpi(appInfo.getDrawable_dpi());
+                appHistoryInfo.setUses_feature(appInfo.getUses_feature());
+                appHistoryInfo.setCPU_ABI(appInfo.getCPU_ABI());
+                appHistoryInfo.setFilter_model(appInfo.getFilter_model());
+                appHistoryInfo.setFilter_screen(appInfo.getFilter_screen());
+                appHistoryInfo.setSignature(appInfo.getSignature());
+                appHistoryInfo.setAuto_update(appInfo.getAuto_update());
+                appHistoryInfo.setOfficial(appInfo.getOfficial());
+                appHistoryInfo.setPatchs(appInfo.getPatchs());
+
+                getHibernateTemplate().save(appHistoryInfo);
+            }
+
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//设置日期格式
+            
+            // appInfo.setAppType(apkInfo.getAppType());
+            // appInfo.setDeveloper(apkInfo.getDeveloper());
+            appInfo.setAppCnName(apkInfo.getAppCnName());
+            appInfo.setAppEnName(apkInfo.getAppCnName());
+            appInfo.setAppVersion(apkInfo.getAppVersion());
+            // appInfo.setAppAuthor(apkInfo.getAppAuthor());
+            // appInfo.setSellType(appInfo.getSellType());
+            // appInfo.setPayType(appInfo.getPayType());
+            // appInfo.setPayTypeInApp(appInfo.getPayTypeInApp());
+            // appInfo.setPriceReason(appInfo.getPriceReason());
+            // appInfo.setDiscount(appInfo.getDiscount());
+            // appInfo.setLargess(appInfo.getLargess());
+            if(null!=apkInfo.getAppDesc()&&!"".equals(apkInfo.getAppDesc())){
+	             appInfo.setAppDesc(apkInfo.getAppDesc()); //更新app的评论
+            }
+            // appInfo.setAppKeyWord(apkInfo.getAppKeyWord());
+            if(null!=apkInfo.getAppIcon()&&!"".equals(apkInfo.getAppIcon())){
+	            appInfo.setAppIcon(apkInfo.getAppIcon()); //更新icon
+            }
+            // appInfo.setResolution(appInfo.getResolution());
+            // appInfo.setPlatform(apkInfo.getPlatform());
+            appInfo.setAppApk(apkInfo.getAppApk());
+            appInfo.setApkSize(apkInfo.getApkSize());
+            appInfo.setAppVersionCode(apkInfo.getAppVersionCode());
+            appInfo.setAppPackage(apkInfo.getAppPackage());
+            // appInfo.setAppStatus(apkInfo.getAppStatus()); //状态与之前相同，故注释
+            appInfo.setUpdateDate(new Date());
+            //appInfo.setOnSaleDate(new Date());
+            // appInfo.setOffSaleDate(apkInfo.getOffSaleDate());
+            appInfo.setAndroidPermission(apkInfo.getAndroidPermission());
+            // appInfo.setCommentCount(apkInfo.getCommentCount());
+            // appInfo.setCommentSum(apkInfo.getCommentSum());
+            // appInfo.setAvgComment(apkInfo.getAvgComment());
+            // appInfo.setDownloadCount(apkInfo.getDownloadCount());
+            appInfo.setMinSdkVersion(apkInfo.getMinSdkVersion());
+            appInfo.setMaxSdkVersion(apkInfo.getMaxSdkVersion());
+            appInfo.setTargetSdkVersion(apkInfo.getTargetSdkVersion());
+            appInfo.setDrawable_dpi(apkInfo.getDrawable_dpi());
+            appInfo.setUses_feature(apkInfo.getUses_feature());
+            appInfo.setCPU_ABI(apkInfo.getCPU_ABI());
+            //appInfo.setFilter_model(apkInfo.getFilter_model());
+            //appInfo.setFilter_screen(apkInfo.getFilter_screen());
+            appInfo.setSignature(apkInfo.getSignature());
+            //appInfo.setOfficial(apkInfo.getOfficial());
+            appInfo.setPatchs(apkInfo.getPatchs());
+            
+            getHibernateTemplate().update(appInfo);
+            
+            return true;
+            /*
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//设置日期格式
+            String sql = "update AppInfo u set " + "u.appCnName='" + apkInfo.getAppCnName() + 
+                    "',u.appEnName='" + apkInfo.getAppCnName() +
+                    "',u.appVersion='" + apkInfo.getAppVersion() +
+                    "',u.appApk='" + apkInfo.getAppApk() +
+                    "',u.apkSize=" + apkInfo.getApkSize() +
+                    ",u.appVersionCode='" + apkInfo.getAppVersionCode() +
+                    "',u.appPackage='" + apkInfo.getAppPackage() +
+                    "',u.updateDate='" +  sdf.format(new Date()) +
+                    "',u.androidPermission='" + apkInfo.getAndroidPermission() +
+                    "',u.minSdkVersion=" + apkInfo.getMinSdkVersion() +
+                    ",u.maxSdkVersion=" + apkInfo.getMaxSdkVersion() +
+                    ",u.targetSdkVersion=" + apkInfo.getTargetSdkVersion() +
+                    ",u.drawable_dpi='" + apkInfo.getDrawable_dpi() +
+                    "',u.uses_feature='" + apkInfo.getUses_feature() +
+                    "',u.CPU_ABI='" + apkInfo.getCPU_ABI() +
+                    "',u.signature='" + apkInfo.getSignature() +
+                    "' where u.id=" + appInfo.getId();
+            System.out.println("sql=="+sql);
+            
+            Session session = getSession();
+
+            Query updateObj = session.createQuery(sql);
+            updateObj.executeUpdate();
+            */
+
+        } catch (Exception e) {
+//            e.printStackTrace();
+//            Lg.error(LgType.APPUPDATE, "从百度更新app信息到数据库失败:" + appInfo.getAppCnName() + "(" + appInfo.getId()
+//                    + "),error=" + e.getMessage());
+//            return false;
+            throw e;
+        }
+        
+    }
+    
+    public boolean saveUserOperation(UserInfo userInfo) throws Exception{
+        try{
+            Session session = getSession();
+            Query query = null;
+            String sql;           
+          
+            sql = "insert into t_user_operation(user_id,operation_id,target) "
+                    +"value('"
+                    +userInfo.getUserid()+"','"
+                    +userInfo.getOperation_id()+"','"
+                    +userInfo.getOperation_target()+"')";
+                    
+            query = session.createSQLQuery(sql);
+            query.executeUpdate();
+            return true;
+        }catch(Exception e){
+            Lg.error(LgType.APPINFO, "保存用户操作日志失败 user_id：" + userInfo.getOperation_id() + 
+                    ",operation_id:"+userInfo.getOperation_id()+
+                    ",target:" + userInfo.getOperation_target()+
+                    ",error=" + e.getMessage());
+            return false;
+            // throw e;
+        }
+    }
+    
+    public boolean saveAppBaiduType(long app_id,int app_type,int baidu_type) throws Exception{
+        try {
+            String saveSql = "insert into t_app_baidu_type(app_id,app_type,baidu_type) value("+app_id+","+app_type+","+baidu_type+")";
+            getSession().createSQLQuery(saveSql).executeUpdate();
+            return true;
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+    
+    public boolean updateAppBaiduId(Long app_id, String baidu_id) throws Exception{
+        try {
+            String insertString = "insert into t_app_baidu_id(app_id,baidu_id) value(" +
+            		app_id + "," +
+            		baidu_id + ")";
+            getSession().createSQLQuery(insertString).executeUpdate();
+            return true;
+        } catch (Exception e) {
+            //e.printStackTrace();
+            Lg.error(LgType.APPUPDATE, "DB:updateAppBaiduId,app_id=" + app_id + ",baidu_id= " + baidu_id 
+                    + "),error=" + e.getMessage());
+        }
+        return false;
+    }
+
+	@Override
+	public List<AppInfo> findAppsByPackage(String appPackage) throws Exception {
+		try {
+			String queryString = "from AppInfo where appPackage=?";
+			Session session = getSession();
+			Query queryObject = session.createQuery(queryString);
+			queryObject.setString(0, appPackage);
+			List<AppInfo> list = queryObject.list();
+			return list;
+		} catch (Exception e) {
+			Lg.error(LgType.APPINFO, "AppInfoDAOImpl::findAppsByPackage————根据包名" + appPackage + "查找app列表信息时出错，error="
+					+ e.getMessage());
+			throw e;
+		}
+	}
+	 @Override
+	    public BaiduAppInfo findBaiduAppByPackage(String appPackage) throws Exception {
+		 BaiduAppInfo baiduAppInfo = null;
+	        try {
+	            String queryString = "from BaiduAppInfo where appPackage=?";
+	            Session session = getSession();
+	            Query queryObject = session.createQuery(queryString);
+	            queryObject.setString(0, appPackage);
+	            List list = queryObject.list();
+	            if (null != list && list.size() > 0) {
+	            	baiduAppInfo = (BaiduAppInfo)list.get(0);
+	            }
+	        } catch (Exception e) {
+	            Lg.error(LgType.APPINFO, "根据包名" + appPackage + "查找百度app信息时出错，error=" + e.getMessage());
+	            throw e;
+	        }
+	        return baiduAppInfo;
+	    }	
+	 
+	 public List<AppHistoryInfo> getAppHistoryByAppPackage(AppInfo appInfo) throws Exception{
+		 List<AppHistoryInfo> list_app_history = getHibernateTemplate().find("from AppHistoryInfo where appPackage=? order by id desc limit 50", appInfo.getAppPackage());
+		 return list_app_history;
+	 }
+	 
+	 public AppHistoryInfo getAppHistoryDetail(AppHistoryInfo appHistory) throws Exception{
+		 appHistory = getHibernateTemplate().get(AppHistoryInfo.class, appHistory.getId());
+		 List<TAppHistoryScreenshot> list_history_screenshot = getHibernateTemplate().find("from TAppHistoryScreenshot where appPackage=? and appVersionCode=?",appHistory.getAppPackage(),appHistory.getAppVersionCode());
+		 appHistory.setList_history_screenshot(list_history_screenshot);
+		 return appHistory;
+	 }
+	 
+	 public boolean addScreenshotToHistory(AppInfo appInfo) throws Exception{
+		 String copySql = "insert into t_app_screenshot_history(app_id,screenshot,picorder,appVersionCode,appPackage) select app_id,screenshot,picorder,appVersionCode,'"+appInfo.getAppPackage()+"'  from t_app_screenshot where app_id="+appInfo.getId();
+         getSession().createSQLQuery(copySql).executeUpdate();
+		 return true;
+	 }
+	 
+	 public boolean saveLogs(List<String> logs) throws Exception{		
+		 if(null!=logs&&logs.size()>0){
+				for(String log : logs){
+					getSession().createSQLQuery(log).executeUpdate();
+				}
+			}
+		 return true;
+	 }
+
+	@Override
+	public void saveBaiduAppInfo(BaiduAppInfo baiduAppInfo) {
+			getHibernateTemplate().save(baiduAppInfo);
+			getHibernateTemplate().flush();
+	}
+
+	@Override
+	public void updateAppType(String []ids, String to_type) throws Exception {
+		String sql = "update t_app_info set appType = ? where id = ? ";
+		if(ids != null && ids.length >0){
+			Session session = getSession();
+			if(session != null){
+				for(String id : ids){
+					session.createSQLQuery(sql)
+						.setString(0, to_type)
+						.setString(1, id)
+						.executeUpdate();
+				}
+			}
+			
+		}
+	}
+	@Override
+	public List<AppInfo> getAppsBySearchKey(String key,PageVO page) throws Exception{
+		String sql = "select * from t_app_info where appCnName like ? or appDesc like ? limit ?,10";
+		Session session = getSession();
+		Query query = session.createSQLQuery(sql).addEntity(AppInfo.class)
+				.setString(0,"%"+key+"%").setString(1, "%"+key+"%").setInteger(2,page.getCurrentPageNum() -1);
+		return query.list();
+	};
+	@Override
+	public int counterAppsBySearchKey(String key) throws Exception{
+		String sql = "select count(*) from t_app_info where appCnName like ? or appDesc like ? ";
+		Session session = getSession();
+		Query query = session.createSQLQuery(sql).setString(0,"%"+key+"%").setString(1, "%"+key+"%");
+		Object obj =  query.uniqueResult();
+		BigInteger big = new BigInteger(obj.toString());
+		return big.intValue();
+	}
+}

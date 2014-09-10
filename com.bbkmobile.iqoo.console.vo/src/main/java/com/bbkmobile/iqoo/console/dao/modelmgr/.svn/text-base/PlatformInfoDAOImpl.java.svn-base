@@ -1,0 +1,96 @@
+package com.bbkmobile.iqoo.console.dao.modelmgr;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+public class PlatformInfoDAOImpl extends HibernateDaoSupport implements
+		PlatformInfoDAO {
+
+	@SuppressWarnings("unchecked")
+	public List<ConsoleConstant> getPlatformInfo(Short type) throws Exception {
+		return getHibernateTemplate().find("from ConsoleConstant where type="+type);
+	}
+
+	// 添加系列
+	public boolean addPlatform(ConsoleConstant platform) throws Exception {
+		boolean result = false;
+		if (null != platform) {
+			platform.setAdd_date(new Date());
+			getHibernateTemplate().save(platform);
+			result = true;
+		}
+		return result;
+	}
+
+	public ConsoleConstant findPlatformById(Short id) throws Exception {
+		try {
+			return (ConsoleConstant) getHibernateTemplate().find(
+					"from ConsoleConstant where id=?", id).get(0);
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	// 修改系列
+	public boolean updatePlatform(ConsoleConstant platform) throws Exception {
+		try {
+			String queryString = "update ConsoleConstant set value=?,describe=?,c_favor=?,modify_date=? where id=?";
+			Session session = getSession();
+			Query queryObject = session.createQuery(queryString);
+			queryObject.setString(0, platform.getValue());
+			queryObject.setString(1, platform.getDescribe());
+			queryObject.setString(2, platform.getC_favor());
+			queryObject.setTimestamp(3, new Date());
+			queryObject.setLong(4, platform.getId());
+			queryObject.executeUpdate();
+			return true;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	public boolean deletePlatformByID(Short[] ids) throws Exception {
+		try {
+			String queryString = "delete ConsoleConstant where id=?";
+			Session session = getSession();
+			for (Short id : ids) {
+				Query queryObj = session.createQuery(queryString);
+				queryObj.setLong(0, id);
+				queryObj.executeUpdate();
+			}
+			return true;
+		} catch (Exception e) {
+			throw e;
+		}
+
+	}
+
+	public ConsoleConstant findPlatformByMdName(String md_name) throws Exception {
+		try {
+			return (ConsoleConstant) getHibernateTemplate().find(
+					"from ConsoleConstant where md_name =?", md_name).get(0);
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+	
+	public boolean updateShowOrder(Short id, int order) throws Exception {
+		// TODO Auto-generated method stub
+		try{
+			String queryString ="update ConsoleConstant set show_order=? where id=?";
+			Session session=getSession();
+			Query queryObj=session.createQuery(queryString);
+			queryObj.setInteger(0, order);
+			queryObj.setLong(1, id);
+			queryObj.executeUpdate();
+			return true;
+		}catch(Exception e){
+			throw e;
+		}
+	}
+}

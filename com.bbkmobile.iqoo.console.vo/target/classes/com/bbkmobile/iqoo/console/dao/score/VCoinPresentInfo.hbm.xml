@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping>
+	<class name="com.bbkmobile.iqoo.console.dao.score.VCoinPresentInfo"
+		table="t_v_coin_present">
+		<id name="id" type="java.lang.Long">
+			<column name="id" />
+			<generator class="identity" />
+		</id>
+
+		<property name="largess" type="java.lang.Integer">
+			<column name="largess">
+			</column>
+		</property>
+
+		<many-to-one name="appInfo"
+			class="com.bbkmobile.iqoo.console.dao.appinfo.AppInfo" column="appInfo_id"
+			unique="true" outer-join="true" fetch="select" lazy="false" not-null="true" />
+
+		<property name="add_date" type="timestamp">
+			<column name="add_date" length="19" not-null="true">
+			</column>
+		</property>
+
+		<property name="modify_date" type="timestamp">
+			<column name="modify_date" length="19">
+			</column>
+		</property>
+	</class>
+</hibernate-mapping>
+

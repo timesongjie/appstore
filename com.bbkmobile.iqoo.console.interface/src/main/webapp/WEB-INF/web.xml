@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://java.sun.com/xml/ns/javaee" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
+  <welcome-file-list>
+    <welcome-file>index.jsp</welcome-file>
+  </welcome-file-list>
+  <context-param>
+		<param-name>log4jConfigLocation</param-name>
+		<param-value>classpath:config/log4j.properties</param-value>
+	</context-param>
+	<context-param>
+		<param-name>log4jRefreshInterval</param-name>
+		<param-value>6000</param-value>
+	</context-param>
+	<context-param>
+		<param-name>log4jExposeWebAppRoot</param-name>
+		<param-value>false</param-value>
+	</context-param> 
+   <listener>
+      <listener-class>org.springframework.web.util.Log4jConfigListener </listener-class>
+   </listener>
+  
+<!--   <filter>
+    <filter-name>fileFilter</filter-name>
+    <filter-class>com.bbkmobile.iqoo.console.apkupload.business.utils.FileFilter</filter-class>
+  </filter>
+  <filter-mapping>
+    <filter-name>fileFilter</filter-name>
+    <url-pattern>/pic/upload/*</url-pattern>
+  </filter-mapping> 
+  <filter>
+    <filter-name>authFilter</filter-name>
+    <filter-class>com.bbkmobile.iqoo.console.filter.AuthFilter</filter-class>
+  </filter>
+  <filter-mapping>
+    <filter-name>authFilter</filter-name>
+    <url-pattern>*.jsp</url-pattern>
+    <url-pattern>*.action</url-pattern>
+  </filter-mapping>-->
+  <filter>
+    <filter-name>struts2filter</filter-name>
+    <filter-class>org.apache.struts2.dispatcher.ng.filter.StrutsPrepareAndExecuteFilter</filter-class>
+  </filter>
+
+  <filter-mapping>
+    <filter-name>struts2filter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+  <context-param>
+    <param-name>contextConfigLocation</param-name>
+    <param-value> classpath*:hibernate.cfg.xml, classpath*:applicationContext_interface.xml</param-value>
+  </context-param>
+  <listener>
+    <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+  </listener>
+  <error-page>
+    <error-code>404</error-code>
+    <location>/exception/resourceNotExists.html</location>
+  </error-page>
+  <session-config>
+    <session-timeout>30</session-timeout>
+  </session-config>
+</web-app>

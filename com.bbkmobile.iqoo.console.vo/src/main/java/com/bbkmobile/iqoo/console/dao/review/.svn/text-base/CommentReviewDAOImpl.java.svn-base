@@ -1,0 +1,641 @@
+package com.bbkmobile.iqoo.console.dao.review;
+
+import java.math.BigInteger;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+
+import org.hibernate.Criteria;
+import org.hibernate.HibernateException;
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Restrictions;
+import org.springframework.orm.hibernate3.HibernateCallback;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.console.constants.Constants;
+import com.bbkmobile.iqoo.console.constants.UtilTool;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppComment;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+import com.bbkmobile.iqoo.console.dao.appinfo.BaiduAppComment;
+import com.bbkmobile.iqoo.console.dao.appinfo.RequestParameter;
+import com.bbkmobile.iqoo.console.dao.login.BbkAdminUser;
+import com.bbkmobile.iqoo.console.dao.modelmgr.Model;
+import com.bbkmobile.iqoo.console.dao.userfeedback.CommentGrade;
+
+public class CommentReviewDAOImpl extends HibernateDaoSupport implements CommentReviewDAO {
+    
+    public CommentGrade getCommentGrade(Long app_id) throws Exception{
+        String sql = "select * from t_comment_grade where app_id = ? ";
+        List<CommentGrade> commentGrades = getSession().createSQLQuery(sql).addEntity(CommentGrade.class).setLong(0, app_id).list();
+        if(null!=commentGrades && commentGrades.size()>0){
+            return commentGrades.get(0);
+        }else{
+            return null;
+        }
+    }
+    
+    public boolean isCommented(final RequestParameter requestParameter, final String target) throws Exception {
+        try {
+            Long appId = requestParameter.getIdlong();
+            String imei = requestParameter.getImei();
+            String appVersionCode = requestParameter.getAppVersionCode();
+            Float version = requestParameter.getApp_version();
+            int count = 0;
+            
+            String queryString = "";
+            String tableName = "";
+            
+            if(target.equals("local")){
+                tableName = "t_app_comment";
+                if(version>=Constants.APPSTORE_VERSION_5_1 && null!=appVersionCode && !appVersionCode.equals("")){
+                    queryString = "select count(*) from " + tableName + " where app_id=" + appId + " and appversioncode='" + appVersionCode + "' and user_imei='" + imei + "'";
+                    count = ((BigInteger)getSession().createSQLQuery(queryString).uniqueResult()).intValue();
+                    return (count>=1) ? true : false;
+                }
+            }else{
+                tableName = "t_baidu_app_comment";
+            }
+            
+            queryString = "select count(*) from " + tableName + " where app_id=" + appId + " and user_imei='" + imei + "'";
+            count = ((BigInteger)getSession().createSQLQuery(queryString).uniqueResult()).intValue();
+            return (count>2) ? true : false;
+            /*
+            if (null!=user_name && !"".equals(user_name)) {
+                queryString = "select id from " + table_name + " where app_id=" + app_id + " and user_name='" + user_name + "'";
+            }else{
+                queryString = "select id from " + table_name + " where app_id=" + app_id + " and user_imei='" + imei + "'";
+            }
+            */
+            /*
+            query = getSession().createSQLQuery(queryString);
+            List<?> list = query.list();
+            if (null != list && list.size() > 2) {
+                return true;
+            }else{
+                return false;
+            }
+            */
+        } catch (Exception e) {
+            throw e;
+        }
+       
+    } 
+    
+    public int countAppCommentList(final Long app_id) throws Exception {
+
+        Criteria criteria = getSession().createCriteria(AppComment.class);
+
+        Criteria app_criteria = criteria.createCriteria( // 关联appInfo
+                "appInfo", Criteria.LEFT_JOIN);
+
+        app_criteria.add(Restrictions.eq("id", app_id));
+
+        criteria.add(Restrictions.ne("comment_status", Constants.COMMENT_REVIEW_NO_PASS)); // Constants.COMMENT_REVIEW_NO_PASS为审核没有通过
+
+        int totalRows = ((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult()).intValue(); // 是否为null
+        return totalRows;
+    }
+    
+    public List<AppComment> findAppCommentList(final Long app_id, final int apps_per_page, final int page_index) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<AppComment> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(AppComment.class);
+
+                        Criteria app_criteria = criteria.createCriteria(           //关联appInfo
+                                "appInfo", Criteria.LEFT_JOIN);
+                        
+                        app_criteria.add(Restrictions.eq("id", app_id));
+                        
+                        criteria.add(Restrictions.ne("comment_status", Constants.COMMENT_REVIEW_NO_PASS));        //Constants.COMMENT_REVIEW_NO_PASS为审核没有通过
+                        
+                        criteria.addOrder(Order.desc("comment_date"));
+                        /*
+                        if(0!=apps_per_page){
+                            criteria.addOrder(Order.desc("comment_date"));
+                            criteria.setFirstResult((page_index-1)*apps_per_page);
+                            criteria.setMaxResults(apps_per_page);   
+                            
+                        }     
+                        */
+                        if(apps_per_page == Constants.COMMENT_COUNT_FOR_PACKAGE){
+                            criteria.setFirstResult((page_index-1)*apps_per_page);
+                            criteria.setMaxResults(apps_per_page);   
+                            
+                        }else{
+                            criteria.setFirstResult((page_index-1)*apps_per_page);
+                            criteria.setMaxResults(apps_per_page + 1);   
+                        }    
+                        List<AppComment> result = criteria.list();
+                        return result;
+                    }
+                });
+        return list;
+        
+    }
+
+    public int countBaiduAppCommentList(final Long app_id) throws Exception {
+
+        Criteria criteria = getSession().createCriteria(BaiduAppComment.class);
+
+        Criteria app_criteria = criteria.createCriteria( // 关联appInfo
+                "appInfo", Criteria.LEFT_JOIN);
+
+        app_criteria.add(Restrictions.eq("id", app_id));
+
+        criteria.add(Restrictions.ne("comment_status", Constants.COMMENT_REVIEW_NO_PASS)); // Constants.COMMENT_REVIEW_NO_PASS为审核没有通过
+
+        int totalRows = ((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult()).intValue(); // 是否为null
+        return totalRows;
+    }
+    
+    public List<BaiduAppComment> findBaiduAppCommentList(final Long app_id, final int apps_per_page, final int page_index) throws Exception {
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        List<BaiduAppComment> list = this.getHibernateTemplate().executeFind(
+                new HibernateCallback() {
+                    public Object doInHibernate(Session session)
+                            throws HibernateException {
+                        Criteria criteria = session
+                                .createCriteria(BaiduAppComment.class);
+                        
+                        criteria.add(Restrictions.eq("app_id", app_id));
+                        
+                        criteria.add(Restrictions.ne("comment_status", Constants.COMMENT_REVIEW_NO_PASS));        //Constants.COMMENT_REVIEW_NO_PASS为审核没有通过
+                        
+                        criteria.addOrder(Order.desc("comment_date"));
+                        /*
+                        if(0!=apps_per_page){
+                            criteria.addOrder(Order.desc("comment_date"));
+                            criteria.setFirstResult((page_index-1)*apps_per_page);
+                            criteria.setMaxResults(apps_per_page);   
+                            
+                        }     
+                        */
+                        if(apps_per_page == Constants.COMMENT_COUNT_FOR_PACKAGE){
+                            criteria.setFirstResult((page_index-1)*apps_per_page);
+                            criteria.setMaxResults(apps_per_page);   
+                            
+                        }else{
+                            criteria.setFirstResult((page_index-1)*apps_per_page);
+                            criteria.setMaxResults(apps_per_page + 1);   
+                        }  
+                        
+                        List<BaiduAppComment> result = criteria.list();
+                        return result;
+                    }
+                });
+        return list;
+        
+    }
+    /*如果查询类型从 应用类型提交 则type_flag为ture，如果从标题栏提交则为false
+    主要解决：当应用类型提交查询类型时，标题栏应用状态显示为全部类型。当从标题栏提交查询类型时，应用类型为“请选择”，两者不同步。*/
+  boolean type_flag = false;  
+  @SuppressWarnings({ "unchecked", "rawtypes" })
+  public List<AppComment> getAllAppCommentList(final AppComment appComment) throws Exception {
+      List<AppComment> list = this.getHibernateTemplate().executeFind(
+              new HibernateCallback() {
+                  public Object doInHibernate(Session session)
+                          throws HibernateException {
+                      Criteria criteria = session
+                              .createCriteria(AppComment.class);
+                      
+                      Criteria app_criteria = criteria.createCriteria(           //关联appInfo
+                              "appInfo", Criteria.LEFT_JOIN);
+                      
+                      //应用类型查询                                      
+                      if (null != appComment.getAppInfo().getAppType().getId() && 
+                          0 != appComment.getAppInfo().getAppType().getId()) {             
+                          app_criteria.add(Restrictions.eq("appType", appComment.getAppInfo()
+                               .getAppType()));
+                          appComment.getAppInfo().setType(0);                              //标题栏类型置为 全部分类，下面从标题栏查询就不会执行了
+                          type_flag = true;                                                //查询类型从 应用类型提交
+                      }   
+                      //从标题栏类型查询  
+                      if ((appComment.getAppInfo().getType() != 0)) {               
+                          appComment.getAppInfo().getAppType().setId(appComment.getAppInfo().getType());                                        
+                          app_criteria.add(Restrictions.eq("appType", appComment.getAppInfo()
+                                  .getAppType()));
+                          type_flag = false;                                               //查询类型从 标题提交
+                          
+                      }      
+                      //状态查询
+                      if(null != appComment.getComment_status() &&  !appComment.getComment_status().equals(Constants.COMMENT_REVIEW_ALL) ){    
+                          criteria.add(Restrictions.eq("comment_status", appComment.getComment_status()));
+                      }
+                  
+                      //应用名称查询
+                      if (null!=appComment.getAppInfo().getAppCnName() && !UtilTool.checkStringNull(appComment.getAppInfo().getAppCnName())) {
+                          app_criteria.add(Restrictions.like("appCnName", "%"
+                                  + appComment.getAppInfo().getAppCnName() + "%"));
+                      }
+                      //评论时间段查询
+                      if(null!=appComment.getFrom_date()){
+                          criteria.add(Restrictions.between("comment_date", appComment.getFrom_date(), appComment.getTo_date()));
+                      }       
+                      
+                      List<AppComment> result = criteria.list();
+                      return result;
+                  }
+              });
+      return list;
+      
+  }
+  
+  
+  @SuppressWarnings("unchecked")
+  public List<AppComment> getAllAppCommentList1() throws Exception {
+      return getHibernateTemplate().find("from AppComment");  //com.bbkmobile.iqoo.console.dao.appinfo.
+  }
+  
+  public int countAppCommentRecords(final AppComment appComment) throws Exception {
+      int result = 0;
+      
+      @SuppressWarnings({ "unchecked", "rawtypes" })
+      List<AppComment> list = this.getHibernateTemplate().executeFind(
+              new HibernateCallback() {
+                  public Object doInHibernate(Session session)
+                          throws HibernateException {
+                      Criteria criteria = session
+                              .createCriteria(AppComment.class);
+                      
+                      Criteria app_criteria = criteria.createCriteria(           //关联appInfo
+                              "appInfo", Criteria.LEFT_JOIN);
+                      
+                      //应用类型查询    
+                      if (null != appComment.getAppInfo().getAppType().getId() && 
+                          0 != appComment.getAppInfo().getAppType().getId() && type_flag) {     //type_flag为ture 则查询类型从 应用类型提交         
+                          app_criteria.add(Restrictions.eq("appType", appComment.getAppInfo()
+                               .getAppType()));
+                          appComment.getAppInfo().setType(0);                      //标题栏类型置为 全部分类，下面从标题栏查询就不会执行了
+                      }   
+                      //从标题栏类型查询        
+                      if ((appComment.getAppInfo().getType() != 0)) {             
+                          app_criteria.add(Restrictions.eq("appType", appComment.getAppInfo()
+                                  .getAppType()));
+                      }      
+                      //状态查询
+                      if(null != appComment.getComment_status() &&  !appComment.getComment_status().equals(Constants.COMMENT_REVIEW_ALL) ){    
+                          criteria.add(Restrictions.eq("comment_status", appComment.getComment_status()));
+                      }
+                      //应用名称查询
+                      if (null!=appComment.getAppInfo().getAppCnName() && !UtilTool.checkStringNull(appComment.getAppInfo().getAppCnName())) {
+   
+                          app_criteria.add(Restrictions.like("appCnName", "%"
+                                  + appComment.getAppInfo().getAppCnName() + "%"));
+                      }
+                      //评论时间段查询
+                      if(null!=appComment.getFrom_date()){
+                          criteria.add(Restrictions.between("comment_date", appComment.getFrom_date(), appComment.getTo_date()));
+                      }
+                   
+                      List<AppComment> result = criteria.list();
+                      return result;
+                  }
+              });
+      if (null != list) {
+          result = list.size();
+      }
+      return result;
+  }
+  
+  public int countAppCommentRecords1(final AppComment appComment) throws Exception {
+      Criteria criteria = getSession()
+              .createCriteria(AppComment.class);
+      
+      Criteria app_criteria = criteria.createCriteria(           //关联appInfo
+              "appInfo", Criteria.LEFT_JOIN);
+             
+      if(null!=appComment.getUser_imei() && !appComment.getUser_imei().equals("")){
+          criteria.add(Restrictions.eq("user_imei", appComment.getUser_imei()));
+      }
+      
+      if(null!=appComment.getComment() && !appComment.getComment().equals("")){
+          criteria.add(Restrictions.like("comment", "%" + appComment.getComment() + "%"));
+      }
+      
+      //应用id
+      if (null!=appComment.getAppInfo().getId()) {
+          app_criteria.add(Restrictions.eq("id", appComment.getAppInfo().getId()));
+      }
+      //应用名称查询
+      if (!UtilTool.checkStringNull(appComment.getAppInfo().getAppCnName())) {
+          app_criteria.add(Restrictions.like("appCnName", appComment.getAppInfo().getAppCnName()));
+      }
+           
+      //状态查询
+      if(null != appComment.getComment_status() &&  !appComment.getComment_status().equals(Constants.COMMENT_REVIEW_ALL) ){    
+          criteria.add(Restrictions.eq("comment_status", appComment.getComment_status()));
+      }
+
+      //评论时间段查询
+      if(null!=appComment.getFrom_date()){
+          criteria.add(Restrictions.between("comment_date", appComment.getFrom_date(), appComment.getTo_date()));
+      }  
+      
+      int totalRows =((Integer) criteria.setProjection(Projections.rowCount()).uniqueResult()).intValue();  //是否为null
+      return totalRows;
+      
+  }
+  
+  public List<AppComment> getAppCommentList1(final int start, final AppComment appComment) throws Exception {
+      @SuppressWarnings({ "unchecked", "rawtypes" })
+      List<AppComment> list = this.getHibernateTemplate().executeFind(
+              new HibernateCallback() {
+                  public Object doInHibernate(Session session)
+                          throws HibernateException {
+                      Criteria criteria = session
+                              .createCriteria(AppComment.class);
+                      
+                      Criteria app_criteria = criteria.createCriteria(           //关联appInfo
+                              "appInfo", Criteria.LEFT_JOIN);
+                      
+                      if(null!=appComment.getUser_imei() && !appComment.getUser_imei().equals("")){
+                          criteria.add(Restrictions.eq("user_imei", appComment.getUser_imei()));
+                      }
+                      
+                      if(null!=appComment.getComment() && !appComment.getComment().equals("")){
+                          criteria.add(Restrictions.like("comment", "%" + appComment.getComment() + "%"));
+                      }
+                      
+                      //应用id
+                      if (null!=appComment.getAppInfo().getId()) {
+                          app_criteria.add(Restrictions.eq("id", appComment.getAppInfo().getId()));
+                      }
+                      //应用名称查询
+                      if (!UtilTool.checkStringNull(appComment.getAppInfo().getAppCnName())) {
+                          app_criteria.add(Restrictions.like("appCnName", appComment.getAppInfo().getAppCnName()));
+                      }
+                           
+                      //状态查询
+                      if(null != appComment.getComment_status() &&  !appComment.getComment_status().equals(Constants.COMMENT_REVIEW_ALL) ){    
+                          criteria.add(Restrictions.eq("comment_status", appComment.getComment_status()));
+                      }
+
+                      //评论时间段查询
+                      if(null!=appComment.getFrom_date()){
+                          criteria.add(Restrictions.between("comment_date", appComment.getFrom_date(), appComment.getTo_date()));
+                      }       
+                      criteria.addOrder(Order.desc("id"));
+                      criteria.setFirstResult(start);
+                      criteria.setMaxResults(Constants.APPS_PER_PAGE_20);
+                      List<AppComment> result = criteria.list();
+                      return result;
+                  }
+              });
+      return list;
+  }
+  
+  public List<AppComment> getAppCommentList(final int start, final AppComment appComment) throws Exception {
+      @SuppressWarnings({ "unchecked", "rawtypes" })
+      List<AppComment> list = this.getHibernateTemplate().executeFind(
+              new HibernateCallback() {
+                  public Object doInHibernate(Session session)
+                          throws HibernateException {
+                      Criteria criteria = session
+                              .createCriteria(AppComment.class);
+                      
+                      Criteria app_criteria = criteria.createCriteria(           //关联appInfo
+                              "appInfo", Criteria.LEFT_JOIN);
+                      
+                      //应用类型查询  
+                      if (null != appComment.getAppInfo().getAppType().getId() && 
+                          0 != appComment.getAppInfo().getAppType().getId()&& type_flag) {     //type_flag为ture 则查询类型从 应用类型提交
+                          app_criteria.add(Restrictions.eq("appType", appComment.getAppInfo()
+                               .getAppType()));
+                          appComment.getAppInfo().setType(0);                      //标题栏类型置为 全部分类，下面从标题栏查询就不会执行了
+
+                      }   
+                      //从标题栏类型查询             
+                      if ((appComment.getAppInfo().getType() != 0)) {             //标题栏：分类
+                          appComment.getAppInfo().getAppType().setId(appComment.getAppInfo().getType());                                        
+                          app_criteria.add(Restrictions.eq("appType", appComment.getAppInfo()
+                                  .getAppType()));                  
+                      }      
+                      //状态查询
+                      if(null != appComment.getComment_status() &&  !appComment.getComment_status().equals(Constants.COMMENT_REVIEW_ALL) ){    
+                          criteria.add(Restrictions.eq("comment_status", appComment.getComment_status()));
+                      }
+            
+                      //应用名称查询
+                      if (null!=appComment.getAppInfo().getAppCnName() && !UtilTool.checkStringNull(appComment.getAppInfo().getAppCnName())) {
+                          app_criteria.add(Restrictions.like("appCnName", "%"
+                                  + appComment.getAppInfo().getAppCnName() + "%"));
+                      }
+                      //评论时间段查询
+                      if(null!=appComment.getFrom_date()){
+                          criteria.add(Restrictions.between("comment_date", appComment.getFrom_date(), appComment.getTo_date()));
+                      }       
+                      
+                      criteria.setFirstResult(start);
+                      criteria.setMaxResults(10);
+                      List<AppComment> result = criteria.list();
+                      return result;
+                  }
+              });
+      return list;
+  }
+  
+  public boolean deleteAppCommentByID(Long[] ids) throws Exception {
+      try{   
+          String queryString ="delete AppComment where id=?";
+          Session session=getSession();
+          for(Long id:ids){
+              Query queryObj=session.createQuery(queryString);
+              queryObj.setLong(0, id);
+              queryObj.executeUpdate();               
+          }
+          return true;
+      }catch(Exception e){
+        throw e;
+      }
+  }
+  
+  public boolean deleteCommentReviewRecordByID(Long[] ids) throws Exception {
+      try{
+          String queryString ="delete CommentReviewRecords where comment_id=?";
+          Session session=getSession();
+          for(Long id:ids){
+              Query queryObj=session.createQuery(queryString);
+              queryObj.setLong(0, id);
+              queryObj.executeUpdate();               
+          }
+          return true;
+      }catch(Exception e){
+        throw e;
+      }
+  }
+  
+  // 查询所有用户评论审核记录
+  @SuppressWarnings("unchecked")
+  public List<CommentReviewRecords> findCommentReviewRecord(AppComment appComment)
+          throws Exception {
+      return getHibernateTemplate().find(
+              "from CommentReviewRecords where appComment=?", appComment);
+
+  }
+
+  // 根据id查询用户评论
+  public AppComment findAppCommentById(Long appComment_id) throws Exception {
+
+      return getHibernateTemplate().load(AppComment.class, appComment_id);
+
+  }
+
+  //保存审核记录 
+  @Override
+  public boolean updateForCommentReview(final CommentReviewRecords review,Integer adminUserId) throws Exception {
+      boolean result = false;
+      AppComment appCommentTmp = findAppCommentById(review.getAppComment().getId());
+
+      if (null != appCommentTmp) {
+          review.setAppComment(appCommentTmp);
+          BbkAdminUser adminUser=getHibernateTemplate().load(BbkAdminUser.class, adminUserId);
+          review.setBbkAdminUser(adminUser);
+          review.setReviewDate(new Date());
+          
+          //if(null!=review.getReviewOpinion()&& !"".equals(review.getReviewOpinion())){
+          if(null!=review.getReviewStatus() && review.getReviewStatus().equals(Constants.COMMENT_REVIEW_NO_PASS)){
+        	  appCommentTmp.setComment_status(Constants.COMMENT_REVIEW_NO_PASS);
+          }
+          else
+          {
+        	  appCommentTmp.setComment_status(Constants.COMMENT_REVIEW_PASS);
+          }
+          
+          getHibernateTemplate().save(review);
+          getHibernateTemplate().update(appCommentTmp);
+          
+          result = true;
+      }
+
+      return result;
+  }
+  
+  //保存批量审核记录 
+  @Override
+  public boolean updateForCommentReview(Long[] ids, CommentReviewRecords review, Integer adminUserId) throws Exception{
+      try{
+          
+          AppComment appComment = new AppComment();
+          BbkAdminUser adminUser=getHibernateTemplate().load(BbkAdminUser.class, adminUserId);
+          //if(null!=review.getReviewOpinion()&& !"".equals(review.getReviewOpinion())){
+          if(null!=review.getReviewStatus() && review.getReviewStatus().equals(Constants.COMMENT_REVIEW_NO_PASS)){
+              for(final Long id:ids){
+                  appComment = findAppCommentById(id);
+                  CommentReviewRecords reviewRecord = new CommentReviewRecords();
+                  reviewRecord.setAppComment(appComment);
+                 
+                  reviewRecord.setBbkAdminUser(adminUser);
+                  reviewRecord.setReviewDate(new Date());
+                  reviewRecord.setReviewStatus('2');
+                  reviewRecord.setReviewOpinion(review.getReviewOpinion());
+              
+                  getHibernateTemplate().save(reviewRecord);
+                  
+                  appComment.setComment_status(Constants.COMMENT_REVIEW_NO_PASS);
+                  getHibernateTemplate().update(appComment);
+                             
+              }
+          }
+          else{
+              for(final Long id:ids){
+                  appComment = findAppCommentById(id);
+                  CommentReviewRecords reviewRecord = new CommentReviewRecords();
+                  reviewRecord.setAppComment(appComment);
+                  reviewRecord.setBbkAdminUser(adminUser);
+                  reviewRecord.setReviewDate(new Date());
+                  reviewRecord.setReviewStatus('1');
+                  
+                  getHibernateTemplate().save(reviewRecord);
+                  
+                  appComment.setComment_status(Constants.COMMENT_REVIEW_PASS);
+                  getHibernateTemplate().update(appComment);
+              }
+          }
+         
+          return true;
+      }catch(Exception e){
+        throw e;
+      }
+  }
+  
+  //批量导入评论
+  public  boolean saveComments(AppInfo appInfo, AppComment appComment,String [] strArray) throws Exception{
+	  try{
+		  int interval = 99;    //自定义评论的间隔时间
+		  String user_ip="192.168.4.32";  //自定义用户ip
+		  String user_imei="865410010000000"; //自定义用户手机imei
+		  
+		  Long app_id = appInfo.getId();
+		  String appversion = appInfo.getAppVersion();
+		  String appversioncode = appInfo.getAppVersionCode();
+		  Float score = appComment.getScore();
+		  Date comment_date = appComment.getComment_date();
+		  String model="";
+		  String filter_model = appInfo.getFilter_model();
+		  
+		  List<Model> list_model;   //该应用的所有上架手机
+		  if(null!=filter_model&&!"".equals(filter_model)){
+			  filter_model=filter_model.substring(1, filter_model.length()-1); //除去字符串第一个和最后一个逗号
+			  list_model = getHibernateTemplate().find("from Model where id not in("+filter_model+")"); //获取所有机型
+		  }else{
+			  //全部手机型号都上架
+			   list_model = getHibernateTemplate().find("from Model"); //获取所有机型
+		  }
+		  
+		  StringBuffer sqlStr = new StringBuffer();
+		  sqlStr.append("insert into t_app_comment(user_ip,user_imei,model,app_id,appversion,appversioncode,score,comment,comment_date ) values");
+		  int i=0;
+		  int sum = strArray.length;
+		  for(String comment : strArray){
+			  if("".equals(comment.trim())){ //不允许插入的评论为空或全是空格
+				  continue;
+			  }
+			  model = getModel(list_model); //随机选择机型
+			  if(i>0){
+				  sqlStr.append(",");
+			  }
+			  Long second = (long) (interval*sum-interval*i-interval);
+			  String comment_date_str = getDateStr(comment_date,second);
+			  String s = "('"+user_ip+"','"+user_imei+"','"+model+"','"+app_id+"','"+appversion+"','"+appversioncode+"','"+score+"','"+comment+"','"+comment_date_str+"')";
+			  sqlStr.append(s);
+			  i++;
+		  }
+		  getSession().createSQLQuery(sqlStr.toString()).executeUpdate();  //向表t_app_comment中插入评论
+		  			 
+		  String sqlStr2 = "update t_app_info set commentCount=commentCount+"+sum+",commentSum=commentSum+"+sum*score+",avgComment=commentSum/commentCount"+" where id="+app_id;
+		  getSession().createSQLQuery(sqlStr2).executeUpdate(); //修改表t_app_info中对应app的总分数、总评论数和平均数
+		  
+		  
+		  Integer rank = score.intValue();
+		  String rankStr="score"+rank;
+		  String sqlStr3="update t_comment_grade set "+rankStr+"="+rankStr+"+"+sum+" where app_id="+app_id;
+		  getSession().createSQLQuery(sqlStr3).executeUpdate(); //修改表t_comment_grade中对应app的对应分数的总数
+		  
+	  }catch(Exception e){
+		  return false;
+	  }
+	  return true;
+  }
+  
+  private String getDateStr(Date date,Long second){
+	  SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	  return format.format(new Date(date.getTime() - second * 1000));
+  }
+  
+  private String getModel(List<Model> list_model){		
+		if(null!=list_model&&list_model.size()>0){
+			int size =  list_model.size();
+			int rd = (int) (Math.random() * size);
+			return list_model.get(rd).getMd_name();
+		}
+	   return null;
+  }
+
+}

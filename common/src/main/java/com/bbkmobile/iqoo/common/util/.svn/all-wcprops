@@ -1,0 +1,101 @@
+K 25
+svn:wc:ra_dav:version-url
+V 119
+/repositories/IqooSourceCode/!svn/ver/11825/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/common/util
+END
+IPUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 130
+/repositories/IqooSourceCode/!svn/ver/1166/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/common/util/IPUtil.java
+END
+VersionToInteger.java
+K 25
+svn:wc:ra_dav:version-url
+V 140
+/repositories/IqooSourceCode/!svn/ver/1166/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/common/util/VersionToInteger.java
+END
+JsonUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 132
+/repositories/IqooSourceCode/!svn/ver/3575/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/common/util/JsonUtil.java
+END
+Rands.java
+K 25
+svn:wc:ra_dav:version-url
+V 130
+/repositories/IqooSourceCode/!svn/ver/11022/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/common/util/Rands.java
+END
+FileReaderBytes.java
+K 25
+svn:wc:ra_dav:version-url
+V 139
+/repositories/IqooSourceCode/!svn/ver/1166/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/common/util/FileReaderBytes.java
+END
+TokenUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 134
+/repositories/IqooSourceCode/!svn/ver/11403/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/common/util/TokenUtil.java
+END
+EhcacheUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 135
+/repositories/IqooSourceCode/!svn/ver/9710/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/common/util/EhcacheUtil.java
+END
+ImageUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 133
+/repositories/IqooSourceCode/!svn/ver/6970/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/common/util/ImageUtil.java
+END
+ReflectUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 136
+/repositories/IqooSourceCode/!svn/ver/11403/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/common/util/ReflectUtil.java
+END
+MD5.java
+K 25
+svn:wc:ra_dav:version-url
+V 127
+/repositories/IqooSourceCode/!svn/ver/5641/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/common/util/MD5.java
+END
+RequestUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 136
+/repositories/IqooSourceCode/!svn/ver/11403/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/common/util/RequestUtil.java
+END
+CommonUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 135
+/repositories/IqooSourceCode/!svn/ver/11825/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/common/util/CommonUtil.java
+END
+WeekdayUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 135
+/repositories/IqooSourceCode/!svn/ver/2320/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/common/util/WeekdayUtil.java
+END
+FilePathUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 136
+/repositories/IqooSourceCode/!svn/ver/1166/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/common/util/FilePathUtil.java
+END
+BsdiffUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 135
+/repositories/IqooSourceCode/!svn/ver/11671/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/common/util/BsdiffUtil.java
+END
+PageJsoupUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 138
+/repositories/IqooSourceCode/!svn/ver/11664/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/common/util/PageJsoupUtil.java
+END

@@ -1,0 +1,21 @@
+package com.bbkmobile.iqoo.console.dao.notice;
+
+import java.util.List;
+
+public interface NoticeInfoDAO {
+    
+    List<NoticeInfo> getNoticeInfo(int startRecord, NoticeInfo noticeInfo) throws Exception; 
+    
+    int countAllRecords(NoticeInfo noticeInfo) throws Exception;
+    
+	boolean addNoticeInfo(NoticeInfo noticeInfo) throws Exception;   //添加
+
+	NoticeInfo findModelById(Long id) throws Exception;
+	
+	boolean modifyNoticeInfo(NoticeInfo noticeInfo) throws Exception;   //修改
+
+	boolean deleteNoticeInfoByID(Long[] ids) throws Exception;   //删除
+
+	boolean updateRecommend(Long id, Character recommend)throws Exception; //更新
+	
+}

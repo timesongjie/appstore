@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping>
+    <class name="com.bbkmobile.iqoo.console.dao.recommendation.EditorRecommendApp" table="t_editor_recommend" >
+        <id name="id" type="java.lang.Long">
+            <column name="id" />
+            <generator class="identity" />
+        </id>
+        <property name="show_order" type="java.lang.Integer">
+            <column name="show_order"  not-null="true">
+            </column>
+        </property>
+		        
+        <many-to-one name="appInfo"
+			class="com.bbkmobile.iqoo.console.dao.appinfo.AppInfo" column="app_id"
+			unique="true" outer-join="true" fetch="select" lazy="false" not-null="true" />
+	         
+        <property name="add_date" type="timestamp">
+            <column name="add_date" length="19" not-null="true">
+            </column>
+        </property>
+    </class>
+</hibernate-mapping>

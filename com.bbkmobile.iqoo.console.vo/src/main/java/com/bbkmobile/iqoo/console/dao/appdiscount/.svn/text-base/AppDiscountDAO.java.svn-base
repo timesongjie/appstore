@@ -1,0 +1,21 @@
+package com.bbkmobile.iqoo.console.dao.appdiscount;
+
+import java.util.List;
+
+public interface AppDiscountDAO {
+	
+    int countAppDiscountInfoRecords(AppDiscountInfo appDiscountInfo) throws Exception; 
+    
+    List<AppDiscountInfo> getAppDiscountInfoList(int start, final AppDiscountInfo appDiscountInfo) throws Exception;    
+   
+    List<AppDiscountInfo> getAllAppDiscountInfoList(AppDiscountInfo appDiscountInfo) throws Exception ;
+   
+    boolean deleteAppDiscountInfoByID(Long[] ids) throws Exception ;  
+   
+    boolean addAppDiscountInfo(Long[] ids) throws Exception;     
+  
+    boolean updateDiscount(Long id, int discount) throws Exception;
+  
+    boolean updateAppInfoDiscount() throws Exception;
+
+}

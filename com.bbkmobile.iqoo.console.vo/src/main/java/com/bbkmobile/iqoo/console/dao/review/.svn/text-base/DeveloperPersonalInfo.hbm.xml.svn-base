@@ -1,0 +1,102 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 2012-1-5 17:13:51 by Hibernate Tools 3.4.0.CR1 -->
+<hibernate-mapping>
+	<class name="com.bbkmobile.iqoo.console.dao.review.DeveloperPersonalInfo"
+		table="t_developer_personal_info" >
+		<id name="id" type="java.lang.Integer">
+			<column name="id" />
+			<generator class="identity" />
+		</id>
+
+		<many-to-one name="developer"
+			class="com.bbkmobile.iqoo.console.dao.appinfo.Developer" column="developer_id"
+			cascade="save-update" outer-join="true" fetch="select" lazy="false" not-null="true" unique="true"/>
+
+		<property name="ture_name" type="string">
+			<column name="ture_name" length="20">
+			</column>
+		</property>
+		
+		<property name="address" type="string">
+			<column name="address" length="200">
+			</column>
+		</property>
+		
+		<property name="zip_code" type="string">
+			<column name="zip_code" length="10">
+			</column>
+		</property>
+		
+		<property name="phone_number" type="string">
+			<column name="phone_number" length="15">
+			</column>
+		</property>
+		
+		<property name="qq" type="string">
+			<column name="qq" length="15">
+			</column>
+		</property>
+		
+		<property name="msn" type="string">
+			<column name="msn" length="30">
+			</column>
+		</property>
+		
+		<property name="account_name" type="string">
+			<column name="account_name" length="20">
+			</column>
+		</property>
+		
+		<property name="bank_account" type="string">
+			<column name="bank_account" length="24">
+			</column>
+		</property>
+		
+		<property name="bank_name" type="string">
+			<column name="bank_name" length="30">
+			</column>
+		</property>
+		
+		<property name="bank_branch" type="string">
+			<column name="bank_branch" length="50">
+			</column>
+		</property>
+		
+		<property name="bank_address" type="string">
+			<column name="bank_address" length="100">
+			</column>
+		</property>
+
+		<property name="ID_type" type="char">
+			<column name="ID_type" length="1" >
+			</column>
+		</property>
+		
+		<property name="ID_number" type="string">
+			<column name="ID_number" length="20">
+			</column>
+		</property>
+		
+		<property name="ID_scan_pic" type="string">
+			<column name="ID_scan_pic" length="50">
+			</column>
+		</property>
+		
+		<property name="updatetime" type="timestamp">
+			<column name="updatetime" length="19" not-null="true">
+			</column>
+		</property>
+		<property name="verify_status" type="char">
+			<column name="verify_status" length="1" >
+			</column>
+		</property>
+		
+		<property name="sign_time" type="timestamp">
+			<column name="sign_time" length="19">
+			</column>
+		</property>
+		
+	</class>
+</hibernate-mapping>

@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 2012-1-9 9:11:11 by Hibernate Tools 3.4.0.CR1 -->
+<hibernate-mapping>
+    <class name="com.bbkmobile.iqoo.console.dao.appinfo.TBaiduAppScreenshot" table="t_baidu_app_screenshot">
+        <id name="id" type="java.lang.Long">
+            <column name="id" />
+            <generator class="identity" />
+        </id>
+        <many-to-one name="baiduAppInfo" class="com.bbkmobile.iqoo.console.dao.appinfo.BaiduAppInfo" fetch="select">
+            <column name="app_id" not-null="true">
+            </column>
+        </many-to-one>
+        <property name="screenshot" type="string">
+            <column name="screenshot" length="100" not-null="true">
+            </column>
+        </property>
+        
+        <property name="picorder" type="java.lang.Integer">
+			<column name="picorder"></column>
+		</property>			
+		
+		<property name="add_date" type="timestamp">
+			<column name="add_date" length="19">
+			</column>
+		</property>
+		
+    </class>
+</hibernate-mapping>

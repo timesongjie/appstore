@@ -1,0 +1,115 @@
+package com.bbkmobile.iqoo.console.dao.apptype;
+
+import java.util.List;
+
+import org.apache.commons.lang.StringUtils;
+import org.hibernate.Criteria;
+import org.hibernate.Session;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Restrictions;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+public class PersonalTypeDaoImpl extends HibernateDaoSupport implements PersonalTypeDao{
+
+	@Override
+	public int addPersonal(PersonalType type) throws Exception {
+		getHibernateTemplate().save(type);
+		return 0;
+	}
+
+	@Override
+	public List<PersonalType> list(PersonalType type) throws Exception {
+		Session session = getSession();
+		if(type != null){
+			Criteria criteria = session.createCriteria(PersonalType.class);
+			if(type.getId() != null){
+				criteria.add(Restrictions.eq("id", type.getId()));
+			}
+			if(type.getName() != null){
+				criteria.add(Restrictions.eq("name", type.getName()));
+			}
+			if(type.getTag() != null){
+				criteria.add(Restrictions.eq("tag", type.getTag()));
+			}
+			criteria.addOrder(Order.asc("order"));
+			return criteria.list();
+		}
+		return session.createCriteria(PersonalType.class).addOrder(Order.asc("order")).list();
+	}
+
+	@Override
+	public int updatePersonal(PersonalType type) throws Exception {
+		Session session = getSession();
+		PersonalType t = (PersonalType) session.load(PersonalType.class, type.getId());
+		if(type.getAddTime() != null){
+			t.setAddTime(type.getAddTime());
+		}
+		if(StringUtils.isNotBlank(type.getIcon())){
+			t.setIcon(type.getIcon());
+		}
+		if(StringUtils.isNotBlank(type.getName())){
+			t.setName(type.getName());
+		}
+		if(type.getStatus() != null){
+			t.setStatus(type.getStatus());
+		}
+		if(type.getTag() != null){
+			t.setTag(type.getTag());
+		}
+		session.update(t);
+		return 0;
+	}
+
+	@Override
+	public int updatePersonal(List<PersonalType> types) throws Exception {
+		if(types != null && types.size() >0){
+			Session session = getSession();
+			for(PersonalType type : types){
+				
+				PersonalType t = (PersonalType) session.load(PersonalType.class, type.getId());
+				if(type.getAddTime() != null){
+					t.setAddTime(type.getAddTime());
+				}
+				if(StringUtils.isNotBlank(type.getIcon())){
+					t.setIcon(type.getIcon());
+				}
+				if(StringUtils.isNotBlank(type.getName())){
+					t.setName(type.getName());
+				}
+				if(type.getStatus() != null){
+					t.setStatus(type.getStatus());
+				}
+				if(type.getTag() != null){
+					t.setTag(type.getTag());
+				}
+				if(type.getOrder() != null){
+					t.setOrder(type.getOrder());
+				}
+				session.update(t);
+			}
+		}
+		return 0;
+	}
+
+	@Override
+	public int deletePersonalType(Integer[] ids) throws Exception {
+		if(ids != null && ids.length >0){
+			Session session = getSession();
+			for(Integer id :ids){
+				if(id != null){
+					session.createSQLQuery("delete from t_type_personal where id = ?").setInteger(0, id).executeUpdate();
+					//because tras is in dao 
+					session.createSQLQuery("delete from t_type_personal_app where type_id = ?").setInteger(0, id).executeUpdate();
+				}
+			}
+		}
+		return 0;
+	}
+
+	@Override
+	public int getCurShowOrder(char tag) throws Exception {
+		String sql = "SELECT max(orderSort) FROM t_type_personal where tag = ?";
+		return (Integer)getSession().createSQLQuery(sql).setCharacter(0, tag).uniqueResult();
+	}
+
+}

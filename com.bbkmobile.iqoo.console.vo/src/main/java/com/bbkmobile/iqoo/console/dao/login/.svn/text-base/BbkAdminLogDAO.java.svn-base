@@ -1,0 +1,33 @@
+/**
+ * 
+ */
+package com.bbkmobile.iqoo.console.dao.login;
+
+import java.util.List;
+
+/**
+ * @author wangbo
+ * @version 1.0.0.0/2011-7-26
+ */
+public interface BbkAdminLogDAO {
+
+	public void save(Integer userid, String logIP,String consoleUserLogin)throws Exception;
+
+//	public List findOnePage(Integer startRecord) throws Exception;
+//	
+//	public List findOnePage(Integer id, Integer startRecord) throws Exception;
+//	
+//	public Long allCount() throws Exception;
+//	
+//	public Long allCount(Integer id) throws Exception;
+
+	public Integer countAllLogs(BbkAdminLog bbkAdminLog) throws Exception;
+
+	public List<BbkAdminLog> findLogsByProperty(Integer startRecord,
+			BbkAdminLog bbkAdminLog) throws Exception;
+
+	public boolean deleteOneOrMoreLogs(int[] ids) throws Exception;
+
+	public boolean deleteAllLogs() throws Exception;
+	
+}

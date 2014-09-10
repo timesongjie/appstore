@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping>
+	<class name="com.bbkmobile.iqoo.console.dao.appinfo.AndroidPermission"
+		table="t_android_permission">
+		<id name="id" type="java.lang.Long">
+			<column name="id" />
+			<generator class="identity" />
+		</id>
+
+		<property name="permission" type="string">
+			<column name="permission" length="255"></column>
+		</property>
+
+		<property name="add_date" type="timestamp">
+			<column name="add_date" length="19">
+			</column>
+		</property>
+
+	</class>
+</hibernate-mapping>

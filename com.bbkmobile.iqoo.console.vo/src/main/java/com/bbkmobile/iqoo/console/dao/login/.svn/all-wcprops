@@ -1,0 +1,59 @@
+K 25
+svn:wc:ra_dav:version-url
+V 124
+/repositories/IqooSourceCode/!svn/ver/2663/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/login
+END
+BbkAdminUserDAOImpl.java
+K 25
+svn:wc:ra_dav:version-url
+V 149
+/repositories/IqooSourceCode/!svn/ver/1473/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/login/BbkAdminUserDAOImpl.java
+END
+BbkAdminLog.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 144
+/repositories/IqooSourceCode/!svn/ver/1431/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/login/BbkAdminLog.hbm.xml
+END
+BbkAdminLogDAO.java
+K 25
+svn:wc:ra_dav:version-url
+V 144
+/repositories/IqooSourceCode/!svn/ver/1431/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/login/BbkAdminLogDAO.java
+END
+BbkAdminLogDAOImpl.java
+K 25
+svn:wc:ra_dav:version-url
+V 148
+/repositories/IqooSourceCode/!svn/ver/1431/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/login/BbkAdminLogDAOImpl.java
+END
+BbkAdminUser.java
+K 25
+svn:wc:ra_dav:version-url
+V 142
+/repositories/IqooSourceCode/!svn/ver/1128/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/login/BbkAdminUser.java
+END
+BbkAdminLog.java
+K 25
+svn:wc:ra_dav:version-url
+V 141
+/repositories/IqooSourceCode/!svn/ver/1431/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/login/BbkAdminLog.java
+END
+BbkAdminUser.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 145
+/repositories/IqooSourceCode/!svn/ver/1128/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/login/BbkAdminUser.hbm.xml
+END
+BbkAdminUserDAO.java
+K 25
+svn:wc:ra_dav:version-url
+V 145
+/repositories/IqooSourceCode/!svn/ver/1128/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/login/BbkAdminUserDAO.java
+END
+UserInfo.java
+K 25
+svn:wc:ra_dav:version-url
+V 138
+/repositories/IqooSourceCode/!svn/ver/2663/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/login/UserInfo.java
+END

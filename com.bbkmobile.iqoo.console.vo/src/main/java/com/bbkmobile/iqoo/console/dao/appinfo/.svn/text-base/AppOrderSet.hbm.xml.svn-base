@@ -1,0 +1,71 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 2012-1-3 14:53:46 by Hibernate Tools 3.4.0.CR1 -->
+<hibernate-mapping>
+    <class name="com.bbkmobile.iqoo.console.dao.appinfo.AppOrderSet" table="t_app_orderset" >
+        <id name="id" type="java.lang.Long">
+            <column name="id" />
+            <generator class="identity" />
+        </id>
+        <many-to-one name="appInfo"
+			class="com.bbkmobile.iqoo.console.dao.appinfo.AppInfo" column="app_id"
+			cascade="save-update" outer-join="true" fetch="select" lazy="false" not-null="true" />
+			
+		<property name="set_status" type="java.lang.Character">
+            <column name="set_status" length="1">
+            </column>
+        </property>	
+			
+        <property name="true_date" type="string">
+            <column name="true_date" length="30" >
+            </column>
+        </property>
+     
+     	<property name="set_date" type="string">
+            <column name="set_date" length="30" >
+            </column>
+        </property>
+        
+        <property name="true_score" type="string">
+            <column name="true_score" length="30" >
+            </column>
+        </property>
+     
+     	<property name="set_score" type="string">
+            <column name="set_score" length="30" >
+            </column>
+        </property>
+        
+        <property name="true_click" type="string">
+            <column name="true_click" length="30" >
+            </column>
+        </property>
+     
+     	<property name="set_click" type="string">
+            <column name="set_click" length="30" >
+            </column>
+        </property>
+        
+        <property name="true_download" type="string">
+            <column name="true_download" length="30" >
+            </column>
+        </property>
+     
+     	<property name="set_download" type="string">
+            <column name="set_download" length="30" >
+            </column>
+        </property>
+        
+		<property name="set_time" type="timestamp">
+			<column name="set_time" length="19">
+			</column>
+		</property>
+		
+		<property name="admin_name" type="string">
+            <column name="admin_name" length="30" >
+            </column>
+        </property>
+		
+    </class>
+</hibernate-mapping>

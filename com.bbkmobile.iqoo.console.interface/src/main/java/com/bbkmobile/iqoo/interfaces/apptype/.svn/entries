@@ -1,0 +1,44 @@
+10
+
+dir
+9723
+http://192.168.2.22/repositories/IqooSourceCode/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/interfaces/apptype
+http://192.168.2.22/repositories/IqooSourceCode
+
+
+
+2014-07-04T02:11:01.345560Z
+9723
+songjie
+
+
+svn:special svn:externals svn:needs-lock
+
+
+
+
+
+
+
+
+
+
+
+48a75255-62c4-40d4-a5b6-0b102621171c
+
+
+
+
+
+
+0
+
+action
+dir
+
+business
+dir
+
+dao
+dir
+

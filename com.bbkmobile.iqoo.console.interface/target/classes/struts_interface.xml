@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE struts PUBLIC
+    "-//Apache Software Foundation//DTD Struts Configuration 2.0//EN"
+    "http://struts.apache.org/dtds/struts-2.0.dtd">
+
+<!-- START SNIPPET: xworkSample -->
+<struts>
+	<!-- 所有接口重定向配置 -->
+	<package name="searchbaidu_old" namespace="/port" extends="default">
+		<action name="packages/" class="iAppInfoAction" method="getResultByKey">
+
+			<result type="chain" name="to_searchlist">
+				<param name="namespace">/search</param>
+				<param name="actionName">res</param>
+			</result>
+			<result type="chain" name="subtype_list">
+				<param name="namespace">/iApptype</param>
+				<param name="actionName">packages</param>
+			</result>
+		</action>
+
+		<action name="packages_recommend/">
+			<result type="chain">
+				<!-- <param name="namespace">/recommendation</param> -->
+				<param name="namespace">/interface</param>
+				<param name="actionName">packages_recommend</param>
+			</result>
+		</action>
+
+		<action name="advertisings/">
+			<result type="chain">
+				<param name="namespace">/iAdvertisement</param>
+				<param name="actionName">advertisings</param>
+			</result>
+		</action>
+		<action name="package/">
+			<result type="chain">
+				<param name="namespace">/iAppinfo</param>
+				<param name="actionName">getPackage</param>
+			</result>
+		</action>
+		<action name="packages_update/">
+			<result type="chain">
+				<param name="namespace">/iAppinfo</param>
+				<param name="actionName">packages_update</param>
+			</result>
+		</action>
+
+		<action name="advertisings_soft/">
+			<result type="chain">
+				<param name="namespace">/iAdvertisement</param>
+				<param name="actionName">advertisings_soft</param>
+			</result>
+		</action>
+
+		<action name="printEhcache/">
+			<result type="chain">
+				<param name="namespace">/iAdvertisement</param>
+				<param name="actionName">printEhcache</param>
+			</result>
+		</action>
+
+		<action name="categories/">
+			<result type="chain">
+				<!-- <param name="namespace">/apptype</param> -->
+				<param name="namespace">/iApptype</param>
+				<param name="actionName">categories</param>
+			</result>
+		</action>
+
+		<action name="packages_top/">
+			<result type="chain">
+				<!-- <param name="namespace">/contentmanage</param> -->
+				<param name="namespace">/iContentmanage</param>
+				<param name="actionName">packages_top</param>
+			</result>
+		</action>
+
+		<action name="postComments/">
+			<result type="chain">
+				<param name="namespace">/iUserfeedback</param>
+				<param name="actionName">postComments</param>
+			</result>
+		</action>
+
+		<action name="comments/">
+			<result type="chain">
+				<!-- <param name="namespace">/commentReview</param> -->
+				<param name="namespace">/iCommentReview</param>
+				<param name="actionName">comments</param>
+			</result>
+		</action>
+
+		<action name="reporterr/">
+			<result type="chain">
+				<param name="namespace">/userfeedback</param>
+				<param name="actionName">reporterr</param>
+			</result>
+		</action>
+		<!-- <action name="reporterr/"> <result type="chain"> <param name="namespace">/errorreport</param> 
+			<param name="actionName">reporterr</param> </result> </action> -->
+
+		<action name="hubapps/">
+			<result type="chain">
+				<param name="namespace">/hubmanage</param>
+				<param name="actionName">hubapps</param>
+			</result>
+		</action>
+
+		<action name="hubhotapps/">
+			<result type="chain">
+				<param name="namespace">/hubmanage</param>
+				<param name="actionName">hubhotapps</param>
+			</result>
+		</action>
+
+
+		<action name="subjects/">
+			<result type="chain">
+				<param name="namespace">/topic</param>
+				<param name="actionName">topics</param>
+			</result>
+		</action>
+
+		<action name="subjects_soft/">
+			<result type="chain">
+				<param name="namespace">/topic</param>
+				<param name="actionName">topics_soft</param>
+			</result>
+		</action>
+
+		<action name="downfile/">
+			<result type="chain">
+				<param name="namespace">/iAppinfo</param>
+				<param name="actionName">downloadApkFile</param>
+			</result>
+		</action>
+		<action name="recommendGame">
+			<result type="chain">
+				<param name="namespace">/interface</param>
+				<param name="actionName">getRecommendGame</param>
+			</result>
+		</action>
+		<action name="recommendApp">
+			<result type="chain">
+				<param name="namespace">/interface</param>
+				<param name="actionName">getRecommendApp</param>
+			</result>
+		</action>
+	</package>
+	
+	<!-- advertise -->
+	<package name="iAdvertisement" namespace="/iAdvertisement" extends="default">
+		<action name="*" class="iAdvertisementAction" method="{1}">
+		</action>
+	</package>
+	<package name="startpage" namespace="/startpage" extends="default">
+		<action name="startpage" class="iAdvertisementAction" method="getValidStartPage" />
+	</package>
+	
+	<!-- appInfo -->
+	<package name="iAppInfoAction" namespace="/iAppinfo" extends="default">
+		<action name="*" class="iAppInfoAction" method="{1}">
+		</action>
+	</package>
+	
+	<!-- apptype -->
+	<package name="iPersonalTypeAction" namespace="/personal" extends="default">
+		<action name="personalTypeApps" class="iPersonalTypeAction" method="personalTypeApps"></action>
+		<action name="personalType" class="iPersonalTypeAction" method="personalType"></action>
+	</package>
+	<package name="iAppTypeAction" namespace="/iApptype" extends="default">
+		<action name="*" class="iAppTypeAction" method="{1}"></action>
+	</package>
+	
+	<!-- contentmanage -->
+	<package name="iContentmanage" namespace="/iContentmanage" extends="default">
+		<action name="packages_top" class="iAppRankSetAction" method="packages_top"></action>
+	</package>
+	
+	<!-- commentReview -->
+	<package name="iCommentReview" namespace="/iCommentReview" extends="default">
+		<action name="*" class="iCommentReviewAction" method="{1}"></action>
+	</package>
+	
+	<!-- search -->
+	<package name="iSearchHotAction" namespace="/keys" extends="default">
+		<action name="popupWords" class="iSearchHotAction" method="searchPopupWords"></action>
+		<action name="appSearchWords" class="iSearchHotAction" method="searchSearchWords"></action>
+	</package>
+	<package name="searchbaidu" namespace="/search" extends="default">
+		<action name="sug" class="iSearchSugAction" method="searchSug" />
+		<!-- <action name="res" class="searchResultAction" method="searchResult" /> -->
+		<action name="res" class="iSearchResultAction" method="searchResult" />
+		<action name="hotwords" class="iSearchHotAction" method="searchHotWords" />
+	</package>
+	
+	<!-- recommendation -->
+	<package name="interfaceRecommendation" namespace="/interface" extends="default">
+		<action name="getRecommendApp" class="iRecommendSoftAction" method="getRecommendApp"></action>
+		<action name="getRecommendGame" class="iRecommendSoftAction" method="getRecommendGame"></action>
+		<action name="packages_recommend" class="iRcommendationAction" method="packages_recommend"></action>
+	</package>
+	<package name="rec" namespace="/rec" extends="default">
+		<action name="newapps" class="iRcommendationAction" method="newapps"></action>
+		<action name="installedapps" class="iRcommendationAction"
+			method="installedapps"></action>
+	</package>
+	<!-- 相关推荐 -->
+	<package name="app" namespace="/app" extends="default">
+		<action name="rec" class="iRelatedRecAction" method="relatedRecApps" />
+	</package>
+	
+	<package name="iUserFeedBack" namespace="/iUserfeedback" extends="default">
+		<action name="*" class="iUserFeedbackAction" method="{1}"></action>
+	</package>
+	
+	<!-- 焦点图 -->
+	<package name="focuspics" namespace="/focuspic" extends="default">
+		<action name="focuspics" class="iFocusPicAction" method="focuspics"/>
+	</package>
+	<!-- 活动图 -->
+	<package name="activitys" namespace="/activity" extends="default">
+		<action name="activities" class="iActivityAction" method="activities"/>
+	</package>
+	<!-- 专题 -->
+	<package name="topics" namespace="/topic" extends="default">
+		<action name="topics" class="iTopicInfoAction" method="topics"/>
+		<action name="topics_soft" class="iTopicInfoAction" method="topics_soft"/>
+	</package>
+	
+	<!-- 必备 -->
+	<package name="amust" namespace="/amust" extends="default">
+		<action name="*" class="indexAction" method="{1}"/>
+	</package>
+	
+	<package name="cacheMonitor" namespace="/cacheMonitor" extends="json-default">
+		<action name="*" class="cacheMonitor" method="{1}"/>
+	</package>
+	<!-- push -->
+	<package name="pushAction" namespace="/push" extends="default">
+		<action name="pushback" class="iPushAction" method="pushback"/>
+		<action name="pushFeedback" class="iPushAction" method="pushFeedback"/>
+	</package>
+	
+	<package name="third_party" namespace="/app" extends="default">
+		<action name="apkinfo">
+			<result type="chain">
+				<param name="namespace">/iAppinfo</param>
+				<param name="actionName">getDownloadApkFileUrl</param>
+			</result>
+		</action>
+	</package>
+	
+	<package name="download" namespace="/appinfo" extends="default">
+		<action name="downloadApkFile">
+			<result type="chain">
+				<param name="namespace">/iAppinfo</param>
+				<param name="actionName">downloadApkFile</param>
+			</result>
+		</action>
+	</package>
+</struts>
+<!-- END SNIPPET: xworkSample -->
+

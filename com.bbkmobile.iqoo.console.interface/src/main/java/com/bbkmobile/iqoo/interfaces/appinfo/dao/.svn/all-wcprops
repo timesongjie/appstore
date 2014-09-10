@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 129
+/repositories/IqooSourceCode/!svn/ver/9722/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/interfaces/appinfo/dao
+END
+SystemPackageDao.java
+K 25
+svn:wc:ra_dav:version-url
+V 151
+/repositories/IqooSourceCode/!svn/ver/9722/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/interfaces/appinfo/dao/SystemPackageDao.java
+END
+SystemPackageDaoImpl.java
+K 25
+svn:wc:ra_dav:version-url
+V 155
+/repositories/IqooSourceCode/!svn/ver/9722/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/interfaces/appinfo/dao/SystemPackageDaoImpl.java
+END
+AppInfoDAO.java
+K 25
+svn:wc:ra_dav:version-url
+V 146
+/repositories/IqooSourceCode/!svn/ver/10036/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/interfaces/appinfo/dao/AppInfoDAO.java
+END
+AppInfoDAOImpl.java
+K 25
+svn:wc:ra_dav:version-url
+V 150
+/repositories/IqooSourceCode/!svn/ver/10036/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/interfaces/appinfo/dao/AppInfoDAOImpl.java
+END

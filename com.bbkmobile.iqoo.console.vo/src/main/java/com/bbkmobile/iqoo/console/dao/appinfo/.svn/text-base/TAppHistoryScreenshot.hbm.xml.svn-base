@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 2012-1-9 9:11:11 by Hibernate Tools 3.4.0.CR1 -->
+<hibernate-mapping>
+    <class name="com.bbkmobile.iqoo.console.dao.appinfo.TAppHistoryScreenshot" table="t_app_screenshot_history">
+        <id name="id" type="java.lang.Long">
+            <column name="id" />
+            <generator class="identity" />
+        </id>
+        <property name="app_id" type="java.lang.Long">
+            <column name="app_id" length="50">
+            </column>
+        </property>
+        
+        <property name="screenshot" type="string">
+            <column name="screenshot" length="100" not-null="true">
+            </column>
+        </property>
+        
+        <property name="picorder" type="java.lang.Integer">
+			<column name="picorder"></column>
+		</property>			
+		
+		<property name="add_date" type="timestamp">
+			<column name="add_date" length="19">
+			</column>
+		</property>
+		
+		<property name="appVersionCode" type="string">
+		   <column length="10" name="appVersionCode">
+		   </column>
+		  </property>
+	<property name="appPackage" type="string">
+	   <column length="100" name="appPackage">
+	   </column>
+  </property>  
+				
+    </class>
+</hibernate-mapping>

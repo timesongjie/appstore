@@ -1,0 +1,52 @@
+package com.bbkmobile.iqoo.console.dao.appinfo;
+
+import java.util.List;
+
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+public class TAppScreenshotDAOImpl extends HibernateDaoSupport implements TAppScreenshotDAO {
+
+	@Override
+	public void deleteByProperty(TAppScreenshot appScreenshot)
+			throws Exception {
+		getHibernateTemplate().delete(appScreenshot);
+	}
+
+	@Override
+	public TAppScreenshot findByProperty(Object property, Object value)
+			throws Exception {
+		String queryString = "from TAppScreenshot where " + property + "=?";
+		Session session = getSession();
+		Query queryObj = session.createQuery(queryString);
+		queryObj.setParameter(0,value);
+		if(queryObj.list().size() > 0){
+			return (TAppScreenshot) queryObj.list().get(0);
+		}
+		return null;
+		
+	}
+
+	@Override
+	public List<TAppScreenshot> listAppScreenshot(AppInfo appInfo)
+			throws Exception {
+		String queryString = "from TAppScreenshot where appInfo=?";
+		Session session = getSession();
+		Query queryObj = session.createQuery(queryString);
+		queryObj.setEntity(0, appInfo);
+		return queryObj.list();
+	}
+
+	@Override
+	public Long saveAppScreenshot(TAppScreenshot appScreenshot)
+			throws Exception {
+		Long id = null;
+		Long app_id = appScreenshot.getAppInfo().getId();
+		AppInfo appInfo = (AppInfo)getSession().get(AppInfo.class,app_id);
+		appScreenshot.setAppVersionCode(appInfo.getAppVersionCode());
+		getHibernateTemplate().save(appScreenshot);
+		return id;
+	}
+
+}

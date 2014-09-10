@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 125
+/repositories/IqooSourceCode/!svn/ver/2261/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/notice
+END
+NoticeInfo.java
+K 25
+svn:wc:ra_dav:version-url
+V 141
+/repositories/IqooSourceCode/!svn/ver/1231/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/notice/NoticeInfo.java
+END
+NoticeInfo.hbm.xml
+K 25
+svn:wc:ra_dav:version-url
+V 144
+/repositories/IqooSourceCode/!svn/ver/2261/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/notice/NoticeInfo.hbm.xml
+END
+NoticeInfoDAO.java
+K 25
+svn:wc:ra_dav:version-url
+V 144
+/repositories/IqooSourceCode/!svn/ver/1231/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/notice/NoticeInfoDAO.java
+END
+NoticeInfoDAOImpl.java
+K 25
+svn:wc:ra_dav:version-url
+V 148
+/repositories/IqooSourceCode/!svn/ver/1231/trunk/mobileInternet/market/code/console/src/com/bbkmobile/iqoo/console/dao/notice/NoticeInfoDAOImpl.java
+END

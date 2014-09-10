@@ -1,0 +1,29 @@
+/**
+ * 
+ */
+package com.bbkmobile.iqoo.console.dao.login;
+
+import java.util.List;
+
+/**
+ * @author wangbo
+ * @version 1.0.0.0/2011-7-16
+ */
+public interface BbkAdminUserDAO {
+
+	public void save(BbkAdminUser transientInstance) throws Exception;
+
+	public void delete(BbkAdminUser persistentInstance)throws Exception;
+	
+	public void deleteByID(Integer id)throws Exception;
+
+	public BbkAdminUser findById(java.lang.Integer id) throws Exception;
+
+	public List findAll() throws Exception;
+	
+	public Boolean exists(BbkAdminUser transientInstance) throws Exception;
+	
+	public BbkAdminUser findByNameAndPwd(String name, String pwd) throws Exception;
+	
+	public void updateUser(BbkAdminUser user) throws Exception;
+}

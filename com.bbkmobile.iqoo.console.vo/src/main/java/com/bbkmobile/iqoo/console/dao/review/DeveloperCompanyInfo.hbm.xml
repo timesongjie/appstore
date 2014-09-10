@@ -1,0 +1,153 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 2012-1-5 17:13:51 by Hibernate Tools 3.4.0.CR1 -->
+<hibernate-mapping>
+	<class name="com.bbkmobile.iqoo.console.dao.review.DeveloperCompanyInfo"
+		table="t_developer_company_info">
+		<id name="id" type="java.lang.Long">
+			<column name="id" />
+			<generator class="identity" />
+		</id>
+
+		<many-to-one name="developer"
+			class="com.bbkmobile.iqoo.console.dao.appinfo.Developer" column="developer_id"
+			cascade="save-update" outer-join="true" fetch="select" lazy="false"
+			not-null="true" unique="true" />
+
+		<property name="company_name" type="string">
+			<column name="company_name" length="50">
+			</column>
+		</property>
+
+		<property name="company_address" type="string">
+			<column name="company_address" length="200">
+			</column>
+		</property>
+
+		<property name="zip_code" type="string">
+			<column name="zip_code" length="10">
+			</column>
+		</property>
+
+		<property name="phone_number" type="string">
+			<column name="phone_number" length="15">
+			</column>
+		</property>
+
+		<property name="license_number" type="string">
+			<column name="license_number" length="50">
+			</column>
+		</property>
+
+		<property name="license_scan_pic" type="string">
+			<column name="license_scan_pic" length="50">
+			</column>
+		</property>
+
+		<property name="tax_number" type="string">
+			<column name="tax_number" length="50">
+			</column>
+		</property>
+
+		<property name="tax_scan_pic" type="string">
+			<column name="tax_scan_pic" length="50">
+			</column>
+		</property>
+
+		<property name="account_name" type="string">
+			<column name="account_name" length="20">
+			</column>
+		</property>
+
+		<property name="bank_account" type="string">
+			<column name="bank_account" length="24">
+			</column>
+		</property>
+
+		<property name="bank_name" type="string">
+			<column name="bank_name" length="30">
+			</column>
+		</property>
+
+		<property name="bank_branch" type="string">
+			<column name="bank_branch" length="50">
+			</column>
+		</property>
+
+		<property name="bank_address" type="string">
+			<column name="bank_address" length="100">
+			</column>
+		</property>
+
+		<property name="bank_license_num" type="string">
+			<column name="bank_license_num" length="50">
+			</column>
+		</property>
+
+		<property name="bank_license_pic" type="string">
+			<column name="bank_license_pic" length="50">
+			</column>
+		</property>
+
+		<property name="business_man" type="string">
+			<column name="business_man" length="20">
+			</column>
+		</property>
+
+		<property name="ID_type" type="char">
+			<column name="ID_type" length="1">
+			</column>
+		</property>
+
+		<property name="ID_number" type="string">
+			<column name="ID_number" length="20">
+			</column>
+		</property>
+
+		<property name="ID_scan_pic" type="string">
+			<column name="ID_scan_pic" length="50">
+			</column>
+		</property>
+
+		<property name="business_phone_number" type="string">
+			<column name="business_phone_number" length="15">
+			</column>
+		</property>
+
+		<property name="business_email" type="string">
+			<column name="business_email" length="25">
+			</column>
+		</property>
+
+		<property name="business_address" type="string">
+			<column name="business_address" length="200">
+			</column>
+		</property>
+
+		<property name="business_code" type="string">
+			<column name="business_code" length="10">
+			</column>
+		</property>
+
+		<property name="cooperation_type" type="java.lang.Short">
+			<column name="cooperation_type">
+			</column>
+		</property>
+
+		<property name="submit_time" type="timestamp">
+			<column name="submit_time" length="19" not-null="true">
+			</column>
+		</property>
+		<property name="verify_status" type="char">
+			<column name="verify_status" length="1">
+			</column>
+		</property>
+
+		<property name="sign_time" type="timestamp">
+			<column name="sign_time" length="19">
+			</column>
+		</property>
+
+	</class>
+</hibernate-mapping>

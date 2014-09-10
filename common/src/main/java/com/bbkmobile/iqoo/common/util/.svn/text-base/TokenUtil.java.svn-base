@@ -1,0 +1,15 @@
+package com.bbkmobile.iqoo.common.util;
+
+import com.bbkmobile.iqoo.console.constants.Constants;
+
+public class TokenUtil {
+    /**
+     * 获取下载地址的token
+     * @param app_id
+     * @return
+     */
+    public static String getDownloadApkToken(String app_id) {
+        String token = MD5.encode32(Constants.TOKEN_KEY + app_id);
+        return token;
+    }
+}

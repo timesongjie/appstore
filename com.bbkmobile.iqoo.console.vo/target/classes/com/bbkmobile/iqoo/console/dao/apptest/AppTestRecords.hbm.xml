@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 2012-1-5 17:13:51 by Hibernate Tools 3.4.0.CR1 -->
+<hibernate-mapping>
+	<class name="com.bbkmobile.iqoo.console.dao.apptest.AppTestRecords"
+		table="t_test_records">
+		<id name="id" type="java.lang.Long">
+			<column name="id" />
+			<generator class="identity" />
+		</id>
+
+		<many-to-one name="testUser"
+			class="com.bbkmobile.iqoo.console.dao.login.BbkAdminUser" column="test_user"
+			cascade="save-update" outer-join="true" fetch="select" lazy="false"
+			not-null="true" />
+
+		<many-to-one name="appInfo"
+			class="com.bbkmobile.iqoo.console.dao.appinfo.AppInfo" column="app_id"
+			cascade="save-update" outer-join="true" fetch="select" lazy="false"
+			not-null="true" />
+
+		<property name="testStatus" type="char">
+			<column name="test_status" length="1" not-null="true">
+			</column>
+		</property>
+		<property name="testOpinion" type="string">
+			<column name="test_opinion" length="2000">
+			</column>
+		</property>
+		<property name="testDate" type="timestamp">
+			<column name="test_date" length="19" not-null="true">
+			</column>
+		</property>
+		<property name="testReport" type="string">
+			<column name="test_report" length="100" not-null="false">
+			</column>
+		</property>
+	</class>
+</hibernate-mapping>

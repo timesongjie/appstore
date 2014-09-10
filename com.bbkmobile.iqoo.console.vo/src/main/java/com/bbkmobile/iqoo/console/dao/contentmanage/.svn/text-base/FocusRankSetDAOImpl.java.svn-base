@@ -1,0 +1,275 @@
+package com.bbkmobile.iqoo.console.dao.contentmanage;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+import com.bbkmobile.iqoo.common.logging.Lg;
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.console.activity.dao.ActivityDAO;
+import com.bbkmobile.iqoo.console.activity.dao.ActivityInfo;
+import com.bbkmobile.iqoo.console.constants.LgType;
+import com.bbkmobile.iqoo.console.constants.UtilTool;
+import com.bbkmobile.iqoo.console.dao.advertisement.AdInfoDAO;
+import com.bbkmobile.iqoo.console.dao.advertisement.Advertisement;
+import com.bbkmobile.iqoo.console.dao.advertisement.AdvertisementIcon;
+import com.bbkmobile.iqoo.console.dao.topic.TopicInfo;
+import com.bbkmobile.iqoo.console.dao.topic.TopicInfoDAO;
+import com.bbkmobile.iqoo.console.focus.dao.FocusPic;
+
+public class FocusRankSetDAOImpl extends HibernateDaoSupport implements FocusRankSetDAO{
+	private AdInfoDAO adInfoDAO;
+	private TopicInfoDAO topicInfoDAO;
+	private ActivityDAO activityDAO;
+	@Override
+	public List<FocusRank> searchFocusRankList(FocusRank focusRank, PageVO page) throws Exception {
+		StringBuffer sbSql = new StringBuffer("from FocusRank where valid_date<='"+focusRank.getToDate()+"' and valid_date>='"+focusRank.getFromDate()+"' ");
+		if(null!=focusRank.getObject_id()){
+			sbSql.append(" and object_id='"+focusRank.getObject_id()+"' ");
+		}
+		if(null!=focusRank.getType()){
+			sbSql.append(" and type='"+focusRank.getType()+"' ");
+			if(!UtilTool.checkStringNull(focusRank.getName())){
+				if(focusRank.getType()==1){ //查找专题
+					sbSql.append(" and object_id in(select id from TopicInfo where topic_name like '%"+focusRank.getName()+"%')");
+				}else if(focusRank.getType()==2){ //查找广告
+					sbSql.append(" and object_id in(select id from Advertisement where ad_name like '%"+focusRank.getName()+"%')");
+				}else if(focusRank.getType()==3){ //查找活动
+					sbSql.append(" and object_id in(select id from ActivityInfo where name like '%"+focusRank.getName()+"%')");
+				}
+			}		
+		}
+		sbSql.append(" order by valid_date,show_order ");
+		Session session = getSession();
+        Query queryObject = session.createQuery(sbSql.toString());
+        int startPosition = (page.getCurrentPageNum() -1)*page.getNumPerPage();
+        queryObject.setFirstResult(startPosition);
+        queryObject.setMaxResults(page.getNumPerPage());
+        List<FocusRank> focusRanks =  queryObject.list();
+		return focusRanks;
+	}
+
+	@Override
+	public Integer countFocusRank(FocusRank focusRank) throws Exception {
+		StringBuffer sbSql = new StringBuffer("select count(*) from FocusRank where valid_date<='"+focusRank.getToDate()+"' and valid_date>='"+focusRank.getFromDate()+"' ");
+		if(null!=focusRank.getObject_id()){
+			sbSql.append(" and object_id='"+focusRank.getObject_id()+"' ");
+		}
+		if(null!=focusRank.getType()){
+			sbSql.append(" and type='"+focusRank.getType()+"' ");
+			if(!UtilTool.checkStringNull(focusRank.getName())){
+				if(focusRank.getType()==1){ //查找专题
+					sbSql.append(" and object_id in(select id from TopicInfo where topic_name like '%"+focusRank.getName()+"%')");
+				}else if(focusRank.getType()==2){ //查找广告
+					sbSql.append(" and object_id in(select id from Advertisement where ad_name like '%"+focusRank.getName()+"%')");
+				}else if(focusRank.getType()==3){ //查找活动
+					sbSql.append(" and object_id in(select id from ActivityInfo where name like '%"+focusRank.getName()+"%')");
+				}
+			}		
+		}
+		Session session = getSession();
+		Query queryObject = session.createQuery(sbSql.toString());
+		Number num = (Number) queryObject.uniqueResult();
+		return num.intValue();		
+	}
+	@Override
+	public boolean addFocusRank(String id[],FocusRank focusRank) throws Exception{
+		String fromDate = focusRank.getFromDate();
+		String toDate = focusRank.getToDate();
+		SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd");
+		Date startDate = sdf.parse(fromDate);
+		Date endDate = sdf.parse(toDate);
+       while(startDate.getTime()<=endDate.getTime()){
+    	    Integer show_order;
+    	    focusRank.setValid_date(sdf.format(startDate));
+			show_order = maxFocusRankShowOrder(focusRank);
+			if (null == show_order) {
+				show_order = 0;
+			}
+			for (int i = 0; i < id.length; i++) {
+				FocusRank rankSetup2 = new FocusRank();
+				rankSetup2.setType(focusRank.getType());
+				rankSetup2.setObject_id(Long.parseLong(id[i]));
+				rankSetup2.setShow_order(++show_order);
+				rankSetup2.setValid_date(focusRank.getValid_date());
+				rankSetup2.setAdd_date(new Date());
+				rankSetup2.setOperation_type((short) 1);
+				if(!isExistFocusRankSetup(rankSetup2)){
+					getHibernateTemplate().save(rankSetup2);//如果数据库中不存在该记录，就插入
+				}
+			}
+			startDate = new Date(startDate.getTime() + 1 * 24 * 60 * 60 * 1000); //加一天
+       }
+		return true;
+	}
+	
+	@Override
+	public boolean deleteFocusRank(String id[]) throws Exception{
+		if(null!=id&&id.length>0){
+			for(String idStr : id){
+				String sql = "delete from t_focus_rank_setup where id='"+idStr+"' ";
+				this.getSession().createSQLQuery(sql).executeUpdate();
+			}
+		}
+		return true;
+	}
+	
+	@Override
+	public boolean updateFocusRank(String id[]) throws Exception{
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		String dateStr = sdf.format(new Date());
+		if(null!=id&&id.length>0){
+			for(String idStr : id){
+				String str[] = idStr.split(",");
+				if(null!=str&&str.length==3){
+					String sql = "update t_focus_rank_setup set show_order='"+str[1]+"', operation_type='"+str[2]+"', modify_date='"+dateStr+"' where id='"+str[0]+"' ";
+					this.getSession().createSQLQuery(sql).executeUpdate();
+				}
+			}
+		}
+		return true;
+	}
+	@Override
+	public boolean updateFocusPicWithSetUp() throws Exception{
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		Calendar day = Calendar.getInstance();
+		day.add(Calendar.DATE, -1);
+		String yesterday = sdf.format(day.getTime());
+		//获取当日排期，将List<FocuRank>转化成List<FocusPic>
+		List<FocusRank> list_rank = this.getHibernateTemplate().find("from FocusRank where valid_date=? order by show_order",sdf.format(new Date()));
+		if(null==list_rank||list_rank.size()<=0){
+			Lg.info(LgType.APP_DOWNLOAD_RANK, "今日没有排期的焦点图，焦点图不作任何处理");
+			return false;
+		}
+		List<FocusPic> new_focuspic = new ArrayList<FocusPic>();
+		for(FocusRank focusRank:list_rank){
+			FocusPic focusPic = new FocusPic();
+			if(focusRank.getType()==1){//专题
+				TopicInfo topic = topicInfoDAO.findTopicInfoById(focusRank.getObject_id());
+				focusPic.setName(topic.getTopic_name());
+				focusPic.setImg(topic.getTopic_icon());
+				focusPic.setAdd_date(topic.getAdd_date());
+				focusPic.setApp_count(topic.getApp_count());
+				focusPic.setApp_id(topic.getApp_id());
+			}else if(focusRank.getType()==2){//广告
+				Advertisement ad = adInfoDAO.getAdvertisementById(focusRank.getObject_id());
+				focusPic.setName(ad.getAd_name());
+				//focusPic.setImg(ad.getAd_icon());
+				String screenName="phone2";
+		        List<AdvertisementIcon> adImg=getHibernateTemplate().find("from AdvertisementIcon where advertisement.id=? and modelScreen.type=1 and modelScreen.value=?",focusRank.getObject_id(),screenName);
+		        focusPic.setImg(adImg.get(0).getIcon_url());
+				
+				focusPic.setAdd_date(ad.getAdd_date());
+				focusPic.setApp_count(ad.getApp_count());
+				focusPic.setApp_id(ad.getApp_id());
+			}else if(focusRank.getType()==3){//活动
+				ActivityInfo activity = activityDAO.findActivityInfoById(Integer.parseInt(focusRank.getObject_id()+""));
+				focusPic.setName(activity.getName());
+				focusPic.setImg(activity.getImg());
+				focusPic.setAdd_date(activity.getAdd_date());
+				focusPic.setApp_count(activity.getApp_count());
+				focusPic.setApp_id(activity.getApp_id());
+			}
+			focusPic.setObject_id(focusRank.getObject_id());
+			focusPic.setSet_date(new Date());
+			focusPic.setType(focusRank.getType());
+			focusPic.setShow_order(focusRank.getShow_order());
+			new_focuspic.add(focusPic);
+		}
+		//删除昨日排期的焦点图
+		String deleteYesterDayRankSetups = "delete from t_focus_picture where object_id in "
+				+ "(select object_id from t_focus_rank_setup  where  valid_date='" + yesterday + "')";
+		getSession().createSQLQuery(deleteYesterDayRankSetups).executeUpdate();
+		Lg.info(LgType.APP_DOWNLOAD_RANK, "成功删除昨日排期的焦点图");
+		//获取剩余焦点图
+		List<FocusPic> old_focuspic = this.getHibernateTemplate().find("from FocusPic order by show_order");
+		//合并新旧焦点图
+		List<FocusPic> list = createNewFocusPicList(new_focuspic,old_focuspic);
+		//删除剩余焦点图
+		String deleteRankSetups = "delete from t_focus_picture";
+		getSession().createSQLQuery(deleteRankSetups).executeUpdate();
+		this.getSession().clear();
+		//将合并的焦点图插入焦点图中
+		for(FocusPic pic:list){
+			this.getHibernateTemplate().save(pic);
+		}
+		return true;
+	}
+	
+	private List<FocusPic> createNewFocusPicList(List<FocusPic> new_list,List<FocusPic> old_list){
+		if(null==old_list||old_list.size()<=0){
+			return new_list;
+		}
+		if(null==new_list||new_list.size()<=0){
+			return old_list;
+		}
+		List<FocusPic> list = new ArrayList<FocusPic>();
+		list.addAll(new_list);
+		inner:for(FocusPic focusPic : old_list){
+			int order = focusPic.getShow_order();
+			Long object_id = focusPic.getObject_id();
+			Short type = focusPic.getType();
+			for(FocusPic focus : list){
+				if(object_id.equals(focus.getObject_id())&&type.equals(focus.getType())){
+					continue inner;
+				}
+			}
+			for(FocusPic focus : list){
+				if (order == focus.getShow_order()) {
+					order++;
+				}
+			}
+			focusPic.setShow_order(order);
+			list.add(focusPic);
+		}	
+		return list;
+	}
+	
+	private Integer maxFocusRankShowOrder(FocusRank focusRank){
+		Integer result= 0;
+		String sql ="select max(show_order) from t_focus_rank_setup where valid_date='"+focusRank.getValid_date()+"'";
+		Integer show_order = (Integer) getSession().createSQLQuery(sql).uniqueResult();
+		if (null != show_order) {
+			result = show_order;
+		}
+		return result;
+	}
+	
+	public boolean isExistFocusRankSetup(FocusRank focusRank) throws Exception {
+		List<FocusRank> focusRanks = this.getHibernateTemplate().find("from FocusRank where type=? and object_id=? and valid_date=?",focusRank.getType(),focusRank.getObject_id(),focusRank.getValid_date());
+		if(null!=focusRanks&&focusRanks.size()>0){
+			return true;
+		}
+		return false;
+	}
+
+	public AdInfoDAO getAdInfoDAO() {
+		return adInfoDAO;
+	}
+
+	public void setAdInfoDAO(AdInfoDAO adInfoDAO) {
+		this.adInfoDAO = adInfoDAO;
+	}
+
+	public TopicInfoDAO getTopicInfoDAO() {
+		return topicInfoDAO;
+	}
+
+	public void setTopicInfoDAO(TopicInfoDAO topicInfoDAO) {
+		this.topicInfoDAO = topicInfoDAO;
+	}
+
+	public ActivityDAO getActivityDAO() {
+		return activityDAO;
+	}
+
+	public void setActivityDAO(ActivityDAO activityDAO) {
+		this.activityDAO = activityDAO;
+	}
+}

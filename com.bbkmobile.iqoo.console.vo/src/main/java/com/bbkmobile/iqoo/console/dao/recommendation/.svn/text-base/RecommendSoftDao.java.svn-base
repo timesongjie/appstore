@@ -1,0 +1,43 @@
+package com.bbkmobile.iqoo.console.dao.recommendation;
+
+import java.util.List;
+
+import com.bbkmobile.iqoo.common.page.PageVO;
+
+public interface RecommendSoftDao {
+
+	int countRecommendAppRecords(RecommendApp recommendApp) throws Exception;  
+	
+    List<RecommendApp> getRecommendAppList(PageVO page, final RecommendApp recommendApp) throws Exception;
+    
+    List<RecommendApp> getAllRecommendAppList(RecommendApp recommendApp) throws Exception ;
+    
+    boolean deleteRecommendAppByID(Long[] ids) throws Exception ;
+    
+    boolean addRecommendApp(RecommendApp recommendApp) throws Exception;
+    
+    boolean updateRecommendAppShowOrder(RecommendApp recommendApp) throws Exception;
+    
+    boolean updateRecommendAppShowOrder(List<RecommendApp> recommendApp) throws Exception;
+    
+    
+	int countRecommendGameRecords(RecommendGame recommendGame) throws Exception;  
+	
+    List<RecommendGame> getRecommendGameList(PageVO page, final RecommendGame recommendGame) throws Exception;
+    
+    List<RecommendGame> getAllRecommendGameList(RecommendGame recommendGame) throws Exception ;
+    
+    boolean deleteRecommendGameByID(Long[] ids) throws Exception ;
+    
+    boolean addRecommendGame(RecommendGame recommendGame) throws Exception;
+    
+    boolean updateRecommendGameShowOrder(RecommendGame recommendGame) throws Exception;
+    
+    boolean updateRecommendGameShowOrder(List<RecommendGame> recommendGame) throws Exception;
+    
+    //interface
+   /* List getRecommendAppListForInterface(PageVO page, final RecommendApp recommendApp) throws Exception;
+
+	List<CommonResultAppInfo> getRecommendGameListForInterface(PageVO page,
+			RecommendGame recommendApp) throws Exception;*/
+}

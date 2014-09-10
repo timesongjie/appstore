@@ -1,0 +1,639 @@
+/**
+ * 
+ */
+package com.bbkmobile.iqoo.interfaces.search.util;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.dom4j.Document;
+import org.dom4j.DocumentHelper;
+import org.dom4j.Element;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Service;
+
+import com.bbkmobile.iqoo.common.json.JackSonParser;
+import com.bbkmobile.iqoo.common.json.ResultObject;
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.common.vo.RelationRecResultAppInfo;
+import com.bbkmobile.iqoo.console.action.search.SearchResultForm;
+import com.bbkmobile.iqoo.console.business.appinfo.AppInfoListVO;
+import com.bbkmobile.iqoo.console.business.search.baidu.SearchParameters;
+import com.bbkmobile.iqoo.console.business.search.baidu.SearchResult;
+import com.bbkmobile.iqoo.console.business.search.xml.SearchConstants;
+import com.bbkmobile.iqoo.console.business.search.xml.vo.AppVO;
+import com.bbkmobile.iqoo.console.business.search.xml.vo.SearchResultVO;
+import com.bbkmobile.iqoo.console.constants.Constants;
+import com.bbkmobile.iqoo.console.constants.UtilTool;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+import com.bbkmobile.iqoo.console.dao.appinfo.BaiduAppId;
+import com.bbkmobile.iqoo.console.dao.appinfo.SearchKey;
+import com.bbkmobile.iqoo.interfaces.appinfo.business.AppInfoService;
+import com.bbkmobile.iqoo.interfaces.appinfo.business.SystemPackageService;
+import com.bbkmobile.iqoo.interfaces.appinfo.dao.AppInfoDAO;
+import com.bbkmobile.iqoo.interfaces.common.ObjectTJson;
+
+/**
+ * @author wangbo
+ * 
+ */
+@Service("searchResultService")
+@Scope("prototype")
+public class SearchResultService {
+
+	/**
+	 * 
+	 * @param parameters
+	 * @param version
+	 *            协议版本
+	 * @return
+	 * @throws Exception
+	 */
+	@Resource(name = "iAppInfoDAO")
+	private AppInfoDAO appInfoDAO;
+
+	@Resource(name = "searchXmlProcessor")
+	private SearchXmlProcessor xmlProc;
+
+	@Resource(name = "iAppInfoService")
+	private AppInfoService appInfoService;
+
+	@Resource
+	private SystemPackageService systemPackageService;
+	
+	private final Log log = LogFactory.getLog(SearchResultService.class);
+
+	public String searchResForHigh(SearchResultForm requestParas)
+			throws Exception {								   //service for version greater then or equals 530 
+		requestParas.setRecordNum(Constants.APPS_PER_PAGE_20); // 控制每页返回20个
+		if (Constants.SWITCH_CLOSE_BAIDU_SEARCH) {
+			return xmlFromLocalOnly(requestParas);//TODO
+		}
+		if (SearchConstants.TARGET_BAIDU
+				.equals(requestParas.getTarget())) {
+			PageVO page = new PageVO();
+			page.setCurrentPageNum((requestParas.getPageNum() - 1) * 20);
+			SearchParameters parameters = formTSearchParam(requestParas,page,0);
+			SearchResultVO vo = fromBaidu(parameters);
+			return jsonFromBaidu(vo,requestParas);
+		} else {
+			log.warn("target=[" + requestParas.getTarget() + "]");
+			return jsonFromLocalOrBaidu(requestParas);//OK
+		}
+	}
+
+	public String searchRes(SearchResultForm requestParas) throws Exception {//service for version lower then 530 
+		requestParas.setRecordNum(Constants.APPS_PER_PAGE_20); // 控制每页返回20个
+		// pc工具:version>=300才进行百度垂搜
+		if ("1".equals(requestParas.getCs())) {
+			if (requestParas.getVersion() < 300) {
+				return xmlFromLocalOnly(requestParas);
+			} else {
+				if (SearchConstants.TARGET_LOCAL.equals(requestParas
+						.getTarget())) {
+					return xmlFromLocalOrBaidu(requestParas);
+				} else if (SearchConstants.TARGET_BAIDU.equals(requestParas
+						.getTarget())) {
+					return xmlFromBaidu(requestParas);
+				} else {
+					log.warn("target=[" + requestParas.getTarget() + "]");
+					return xmlFromLocalOrBaidu(requestParas);
+				}
+			}
+		}
+		if (Constants.SWITCH_CLOSE_BAIDU_SEARCH) {
+			return xmlFromLocalOnly(requestParas);
+		}
+		if (requestParas.getVersion() >= 300) { // 转JSON 只要关注这里就可以了
+			if (SearchConstants.TARGET_LOCAL.equals(requestParas.getTarget())) {
+				return xmlFromLocalOrBaidu(requestParas);
+			} else if (SearchConstants.TARGET_BAIDU.equals(requestParas
+					.getTarget())) {
+				return xmlFromBaidu(requestParas);
+			}
+		}
+		log.warn("target=[" + requestParas.getTarget() + "]");
+		return xmlFromLocalOrBaidu(requestParas);
+	}
+	private SearchKey formTKey(SearchResultForm requestParas){
+		SearchKey key = new SearchKey();
+		key.setKey_name(requestParas.getWord());
+		key.setApp_version(requestParas.getVersion());
+		key.setApps_per_page(requestParas.getRecordNum());
+		key.setCs(Integer.parseInt(requestParas.getCs()));
+		key.setImei(requestParas.getImei());
+		key.setModel(requestParas.getModel());
+		key.setPage_index(requestParas.getPageNum());
+		return key;
+	}
+	private SearchParameters formTSearchParam(SearchResultForm requestParas,PageVO page,int otherTotalCount)throws Exception{
+		SearchParameters parameters = new SearchParameters();
+		parameters.setDpi(requestParas.getDpi());
+		parameters.setVersion(requestParas.getOsversion());
+		parameters.setWord(requestParas.getWord());
+		parameters.setRecordNum(20);
+		
+		if (requestParas.getVersion() < 300 && 0 == page.getRecordCount()){//vo.getTotal_count()) { //for lower 300  去百度搜索
+			int pageTotal = (page.getNumPerPage() - 1 + otherTotalCount)//vo.getApps_per_page() 
+					/ page.getNumPerPage();//vo.getApps_per_page()
+			parameters.setPageNum((requestParas.getPageNum() - pageTotal - 1) * 20);
+		} else {
+			// 结合百度返回数据，当requestParas.getVersion()>=300时，包括搜索本地当前页数据为0的情况
+			parameters.setPageNum(page.getCurrentPageNum());
+		}
+		
+		return parameters;
+	}
+	//goto local
+	private AppInfoListVO fromLocal(SearchResultForm requestParas)
+			throws Exception {
+		SearchKey key = formTKey(requestParas);
+		return getAppInfoService().getAppInfoListForKey(key);
+	}
+	//goto baidu
+	private SearchResultVO fromBaidu(SearchParameters parameters)throws Exception {
+		String baiduXml = new SearchResult().search(parameters);
+		SearchResultVO searchResultVO = xmlProc.processSearchXml(baiduXml);
+		return searchResultVO;
+	}
+	private String jsonFromLocalOrBaidu(SearchResultForm requestParas)throws Exception { 
+		AppInfoListVO vo = fromLocal(requestParas);
+		String target = SearchConstants.FROM_LOCAL;
+		if (vo.getTotal_count() >= (vo.getApps_per_page())) {	//本地个数 多于需求或等于需求
+			if (vo.getTotal_count() == vo.getApps_per_page() + 1) {
+				vo.getAppInfoLs().remove(vo.getTotal_count() - 1); // 去掉最后一个
+			} else {
+				target = SearchConstants.FROM_BAIDU;
+				vo.setPage_index(0);
+			}
+			vo.setMaxPage(vo.getPage_index() + 1);
+			return ObjectTJson.getAppsJSON(vo,String.valueOf(requestParas.getVersion()),target);
+		}else{	//本地个数少于 需求 goto baidu
+			PageVO page = new PageVO();
+			SearchParameters parameters = formTSearchParam(requestParas,page,0);
+			return combineLocalAndBaidu(vo, fromBaidu(parameters),requestParas);
+		}
+	}
+	private String xmlFromLocalOrBaidu(SearchResultForm requestParas)
+			throws Exception {
+		// version>=300,返回页码重新按百度开始
+		AppInfoListVO vo = fromLocal(requestParas);
+		// int pageTotal = vo.getTotal_count();
+
+		// 搜索本地当前页能获取到vo.getApps_per_page() + 1条数据，则说明还存在下一页数据，故只返回本地数据即可。
+		// 或者刚好有vo.getApps_per_page()个的情况
+		if (vo.getTotal_count() >= (vo.getApps_per_page())) {
+			if (vo.getTotal_count() == vo.getApps_per_page() + 1) {
+				vo.getAppInfoLs().remove(vo.getTotal_count() - 1); // 去掉最后一个
+			}else{
+				vo.setPage_index(0);//个数正好，表示下一页去百度查询，客户端将改值加1
+			}
+			vo.setMaxPage(vo.getPage_index() + 1);
+			return  getAppInfoService().getAppInfoListForKeyNameForXml(vo,
+						(float) requestParas.getVersion());
+		} else {
+			SearchParameters parameters = null;
+			PageVO page = new PageVO();
+			if (requestParas.getVersion() < 300 && 0 == vo.getTotal_count()) {
+				SearchKey key = formTKey(requestParas);
+				int totalAppsCount = getAppInfoService().countAppsByKeyNameForModel(key);
+				
+				page.setNumPerPage(vo.getApps_per_page());
+				page.setRecordCount(vo.getTotal_count());
+				parameters = formTSearchParam(requestParas, page,totalAppsCount);
+			}else{
+				parameters = formTSearchParam(requestParas,page,0);
+			}
+			if (requestParas.getVersion() < 300 && 0 == vo.getTotal_count()) {
+				String baiduXml = new SearchResult().search(parameters);
+				AppInfoListVO vo2 = new AppInfoListVO();
+				vo2.setTotal_count(parameters.getRecordNum());
+				vo2.setApps_per_page(Constants.APPS_PER_PAGE_20);
+				String xmlResult = xmlProc.createXmlForPhone2(requestParas,vo2, baiduXml);
+				return xmlResult;
+			}else{
+				SearchResultVO searchResultVO = fromBaidu(parameters);
+				return combineLocalAndBaidu(requestParas, vo,
+							searchResultVO);
+			}
+
+		}
+
+	}
+	public String combineLocalAndBaidu(SearchResultForm requestParas,
+			AppInfoListVO vo, SearchResultVO searchResultVO) throws Exception {
+		String xml = null;
+		List<AppInfo> appInfoLocalLs = vo.getAppInfoLs();
+		List<AppVO> appVOLs = searchResultVO.getResult().getApps();
+
+		int page_index = vo.getPage_index();
+		int total_count = vo.getTotal_count() + page_index
+				* Constants.APPS_PER_PAGE_20;
+
+		Document doc = DocumentHelper.createDocument();
+		Element root = doc.addElement("PackageList");
+
+		if (appVOLs.size() > 0) {
+			int count = searchResultVO.getResult().getDisp_num();
+			int numPerPage = searchResultVO.getResult().getRn();
+			int pageNum = searchResultVO.getResult().getPn();
+
+			if (requestParas.getVersion() >= 300) { // if
+													// version>=300,返回页码和app总数重新按百度开始
+													// else
+													// 返回页码和app总数按本地数据+百度数据综合计算
+				root.addAttribute("maxpage",
+						((count + numPerPage - 1) / numPerPage) + "");
+				root.addAttribute("PageNo", (pageNum / numPerPage + 1) + "");
+				root.addAttribute("pageSize", numPerPage + "");
+				root.addAttribute("TotalCount", count + "");
+				root.addAttribute("from", SearchConstants.FROM_BAIDU);
+			} else {
+				// int vo_maxpage =
+				// (int)Math.ceil((float)total_count/apps_per_page);
+				// int vo_pageSize = vo.getTotal_count() %
+				// vo.getApps_per_page();
+				int vo_maxpage = vo.getPage_index();
+				int vo_pageSize = vo.getTotal_count();
+				root.addAttribute("maxpage",
+						((count + numPerPage - 1) / numPerPage) + vo_maxpage
+								- 1 + "");
+				root.addAttribute("PageNo", (pageNum / numPerPage + 1)
+						+ page_index - 1 + "");
+				root.addAttribute("pageSize", numPerPage + vo_pageSize - 1 + "");
+				root.addAttribute("TotalCount", count + total_count + "");
+				root.addAttribute("from", SearchConstants.FROM_BAIDU);
+			}
+		} else {
+
+			root.addAttribute(
+					"maxpage",
+					((vo.getTotal_count() + vo.getApps_per_page() - 1) / vo
+							.getApps_per_page()) + "");
+			root.addAttribute("PageNo", vo.getPage_index() + "");
+			root.addAttribute("pageSize", vo.getApps_per_page() + "");
+			root.addAttribute("TotalCount", vo.getTotal_count() + "");
+			root.addAttribute("from", SearchConstants.FROM_LOCAL);
+
+		}
+
+		addAppInfosXml(appInfoLocalLs, page_index, root,
+				requestParas.getVersion());
+
+		addBaiduAppsXml(requestParas, appVOLs, root);
+
+		xml = doc.asXML();
+
+		return xml;
+	}
+
+	public String combineLocalAndBaidu(AppInfoListVO vo,
+			SearchResultVO searchResultVO, SearchResultForm requestParas) throws Exception {
+
+		List<AppInfo> appInfoLocalLs = vo.getAppInfoLs();
+		List<AppVO> appVOLs = searchResultVO.getResult().getApps();
+
+		ResultObject<List<RelationRecResultAppInfo>> result = new ResultObject<List<RelationRecResultAppInfo>>();
+
+		List<RelationRecResultAppInfo> infos = null;
+		if (appInfoLocalLs != null && appInfoLocalLs.size() > 0) { // local
+																	// first
+			infos = ObjectTJson.appInfosTThis(appInfoLocalLs,
+					String.valueOf(requestParas.getVersion()));
+		}
+		if (appVOLs != null && appVOLs.size() > 0) {
+			int count = searchResultVO.getResult().getDisp_num();
+			int numPerPage = searchResultVO.getResult().getRn();
+			int pageNum = searchResultVO.getResult().getPn();
+			result.setMaxPage((count + numPerPage - 1) / numPerPage);
+			result.setPageNo(pageNum / numPerPage + 1);
+			result.setPageSize(numPerPage);
+			result.setTotalCount(count);
+
+			if (infos != null) {// baidu second
+				infos.addAll(appVOsTThis(appVOLs,
+						requestParas));
+			} else {
+				infos = appVOsTThis(appVOLs,
+						requestParas);
+			}
+		} else {
+			result.setMaxPage((vo.getTotal_count() + vo.getApps_per_page() - 1)
+					/ vo.getApps_per_page());
+			result.setPageNo(vo.getPage_index());
+			result.setPageSize(vo.getApps_per_page());
+			result.setTotalCount(vo.getTotal_count());
+		}
+		result.setResult(true);
+		result.setValue(infos);
+		return JackSonParser.bean2Json(result);
+	}
+
+	private void addAppInfosXml(List<AppInfo> appInfos, int page_index,
+			Element root, int appVersion) throws Exception {
+		if (null != appInfos && appInfos.size() > 0) {
+			int k = 1;
+			for (AppInfo appInfo : appInfos) {
+				Element appEle = null;
+				appEle = root.addElement("Package");
+				appEle.addElement("id").setText(appInfo.getId() + "");
+				appEle.addElement("tag").setText(appInfo.getTag() + "");
+				appEle.addElement("package_name").setText(
+						appInfo.getAppPackage());
+				// appEle.addElement("parent_id").setText(appInfo.getAppType().getParentId()
+				// + "");
+				appEle.addElement("parent_id").setText("null"); // 不在返回父类id
+				appEle.addElement("title_zh").setText(appInfo.getAppCnName());
+				appEle.addElement("title_en").setText(appInfo.getAppCnName());
+				appEle.addElement("icon_url").setText(
+						UtilTool.getDownloadImageHttpURL(appInfo.getAppIcon()));
+				// appEle.addElement("developer").setText(appInfo.getAppAuthor()==null?"":appInfo.getAppAuthor());
+				appEle.addElement("developer").setText(
+						appInfo.getAppAuthor() == null ? "" : appInfo
+								.getAppAuthor()); // app_version>=500时，页面不再显示开发者
+				appEle.addElement("score")
+						.setText(appInfo.getAvgComment() + "");
+				appEle.addElement("raters_count").setText(
+						appInfo.getCommentCount() + "");
+				appEle.addElement("version_name").setText(
+						appInfo.getAppVersion() == null ? "" : appInfo
+								.getAppVersion());
+				appEle.addElement("version_code").setText(
+						appInfo.getAppVersionCode());
+				appEle.addElement("download_url").setText(
+						UtilTool.getHttpURL("/appinfo/downloadApkFile?id="
+								+ appInfo.getId() + "&app_version="
+								+ appVersion));
+				appEle.addElement("size").setText(appInfo.getApkSize() + "");
+				appEle.addElement("download_count").setText(
+						appInfo.getDownloadCount() + "");
+				appEle.addElement("patchs").setText(
+						appInfo.getPatchs() == null ? "" : appInfo.getPatchs());
+				appEle.addElement("from").setText(SearchConstants.FROM_LOCAL);
+
+				if (1 == page_index && k == 1) {
+					appEle.addElement("offical").setText(
+							appInfo.getOfficial() + "");
+
+					if (appVersion >= 520) {
+						if (appInfo.getOfficial() == '1') {
+							appEle.addElement("remark")
+									.setText(
+											appInfoDAO.getRemarkByAppId(appInfo
+													.getId())); // 第一页的第一个为官方，则返回remark
+						}
+					}
+
+				} else {
+					appEle.addElement("offical").setText("0");
+				}
+
+				k++;
+
+			}
+		}
+	}
+
+	private void addBaiduAppsXml(SearchResultForm requestParas,
+			List<AppVO> appVOLs, Element packageListEle) throws Exception {
+		for (AppVO app : appVOLs) {
+			Element appEle = null;
+			AppInfo appInfo = null;
+			requestParas.setAppPackageName(app.getPackagename());
+			if (systemPackageService.isSystemPackage(app.getPackagename()) || (appInfo = appInfoDAO
+					.getAppInfoByPackageName(requestParas)) != null ) {
+				if (null != appInfo
+						&& appInfo.getAppStatus() != Constants.APP_OFFSALE) {
+					appEle = packageListEle.addElement("Package");
+					appEle.addElement("id").setText(appInfo.getId() + "");
+					appEle.addElement("tag").setText(appInfo.getTag() + "");
+					appEle.addElement("package_name").setText(
+							appInfo.getAppPackage());
+					appEle.addElement("parent_id").setText("null");
+					appEle.addElement("title_zh").setText(
+							appInfo.getAppCnName());
+					appEle.addElement("title_en").setText(
+							appInfo.getAppCnName());
+					// appEle.addElement("icon_url").setText(appInfo.getAppIcon());
+					appEle.addElement("icon_url").setText(
+							appInfo.getAppIcon() == null ? "" : UtilTool
+									.getDownloadImageHttpURL(appInfo
+											.getAppIcon()));
+					// appEle.addElement("developer").setText(appInfo.getAppAuthor()==null?"":appInfo.getAppAuthor());
+					appEle.addElement("developer").setText(
+							appInfo.getAppAuthor() == null ? "" : appInfo
+									.getAppAuthor());
+					appEle.addElement("score").setText(
+							appInfo.getAvgComment() + "");
+					appEle.addElement("raters_count").setText(
+							appInfo.getCommentCount() + "");
+					appEle.addElement("version_name").setText(
+							appInfo.getAppVersion() == null ? "" : appInfo
+									.getAppVersion());
+					appEle.addElement("version_code").setText(
+							appInfo.getAppVersionCode());
+					appEle.addElement("download_url").setText(
+							UtilTool.getHttpURL("/appinfo/downloadApkFile?id="
+									+ appInfo.getId() + "&app_version="
+									+ requestParas.getVersion()));
+					appEle.addElement("size")
+							.setText(appInfo.getApkSize() + "");
+					appEle.addElement("download_count").setText(
+							appInfo.getDownloadCount() + "");
+					appEle.addElement("patchs").setText(
+							appInfo.getPatchs() == null ? "" : appInfo
+									.getPatchs());
+					appEle.addElement("from").setText(
+							SearchConstants.FROM_LOCAL);
+					appEle.addElement("offical").setText("0");
+				}
+			} else {
+				String baidu_id = null;
+				if (requestParas.getVersion() >= 500) { // 直接返回百度id
+					baidu_id = app.getDocid();
+				} else {
+					BaiduAppId baiduAppId = new BaiduAppId();
+					baiduAppId.setBaidu_id(app.getDocid());
+					BaiduAppId baiduAppIdResult = null;
+					baiduAppIdResult = appInfoDAO
+							.getLocalBaiduAppId(baiduAppId);
+
+					if (null == baiduAppIdResult) {
+						baiduAppIdResult = appInfoDAO
+								.saveBaiduAppId(baiduAppId);
+					}
+					baidu_id = "-" + baiduAppIdResult.getId().toString(); // 使id变成负数
+				}
+
+				appEle = packageListEle.addElement("Package");
+				// appEle.addElement("id").setText(app.getDocid());
+				appEle.addElement("id").setText(baidu_id);
+				appEle.addElement("package_name").setText(app.getPackagename());
+				appEle.addElement("parent_id").setText("null");
+				appEle.addElement("title_zh").setText(app.getSname());
+				appEle.addElement("title_en").setText(app.getSname());
+				appEle.addElement("icon_url").setText(app.getIconhdpi());
+				appEle.addElement("developer").setText(
+						SearchConstants.DEVELOPER_FROM_NETWORK);
+				appEle.addElement("score").setText(
+						Float.parseFloat(app.getScore()) / 20 + "");
+				appEle.addElement("raters_count").setText(app.getScore_count());
+				appEle.addElement("version_name").setText(app.getVersionname());
+				appEle.addElement("version_code").setText(
+						app.getVersioncode() + "");
+				appEle.addElement("download_url").setText(app.getUrl());
+				appEle.addElement("size").setText(
+						app.getPackagesize() / 1024 + "");
+				appEle.addElement("download_count").setText(
+						app.getDownload_count() + "");
+				appEle.addElement("from").setText(SearchConstants.FROM_BAIDU);
+				String offical = "0";
+				appEle.addElement("offical").setText(offical);
+			}
+		}
+	}
+	public String xmlFromLocalOnly(SearchResultForm requestParas)
+			throws Exception {
+		SearchKey key = new SearchKey();
+		String xml = null;
+
+		key.setKey_name(requestParas.getWord());
+		key.setApp_version(requestParas.getVersion());
+		key.setApps_per_page(requestParas.getRecordNum());
+		if (null != requestParas.getCs()) {
+			key.setCs(Integer.parseInt(requestParas.getCs()));
+		}
+		key.setImei(requestParas.getImei());
+		key.setModel(requestParas.getModel());
+		key.setPage_index(requestParas.getPageNum());
+		/*
+		 * if ("0".equals(requestParas.getCs())) {// 手机 key.setType_id(0);//
+		 * 表示所有类别 } else { if (null != requestParas.getCls()) {
+		 * key.setType_id(Integer.parseInt(requestParas.getCls()));// 表示搜索哪一类别 }
+		 * else { key.setType_id(0);// 表示所有类别 } }
+		 */
+		try {
+			xml = getAppInfoService().getAppInfoListForKeyNameForXml(key);
+		} catch (Exception e) {
+			// log.error("查询本地数据异常: ", e);
+			throw e;
+		}
+
+		return xml;
+	}
+
+	public String xmlFromBaidu(SearchResultForm requestParas) throws Exception {
+
+		PageVO page = new PageVO();
+		page.setCurrentPageNum((requestParas.getPageNum() - 1) * 20);
+		SearchParameters parameters = formTSearchParam(requestParas,page,0);
+		String baiduXml = new SearchResult().search(parameters);
+		// SearchXmlProcessor xmlProc = new SearchXmlProcessor();
+		String xmlResult = xmlProc.createXmlForPhone(requestParas, baiduXml);
+		return xmlResult;
+	}
+	public String jsonFromBaidu(SearchResultVO vo,SearchResultForm requestParas)throws Exception{
+		int count = vo.getResult().getDisp_num();
+		int numPerPage = vo.getResult().getRn();
+		int pageNum = vo.getResult().getPn()/numPerPage + 1;
+		int maxpage = (count + numPerPage -1)/numPerPage;
+		
+		List<RelationRecResultAppInfo>  infos = appVOsTThis(vo.getResult().getApps(),requestParas);
+		ResultObject<List<RelationRecResultAppInfo>> result = new ResultObject<List<RelationRecResultAppInfo>>();
+		result.setResult(true);
+		result.setValue(infos);
+		result.setMaxPage(maxpage);
+		result.setPageNo(pageNum);
+		result.setPageSize(numPerPage);
+		result.setTotalCount(count);
+		
+		return JackSonParser.bean2Json(result);
+	}
+	
+    private List<RelationRecResultAppInfo> appVOsTThis(List<AppVO> apps,SearchResultForm requestParas)throws Exception{
+		if(apps != null){
+			List<RelationRecResultAppInfo> list = new ArrayList<RelationRecResultAppInfo>(apps.size());
+			for(AppVO app : apps){
+	    		RelationRecResultAppInfo rec = appVOTThis(app, requestParas);
+	    		if(rec != null){
+	    			list.add(rec);
+	    		}
+	    	}
+			return list;
+		}
+		return null;
+	};
+	private RelationRecResultAppInfo appVOTThis(AppVO app,SearchResultForm requestParas) throws Exception{
+    	if(app != null){
+    		AppInfo appInfo = null;
+			requestParas.setAppPackageName(app.getPackagename());
+			if (systemPackageService.isSystemPackage(app.getPackagename()) || (appInfo = appInfoDAO
+					.getAppInfoByPackageName(requestParas)) != null ) {
+    			 if(appInfo != null && appInfo.getAppStatus() != Constants.APP_OFFSALE){
+    				 RelationRecResultAppInfo info = new RelationRecResultAppInfo();
+    	 	    		info.setId(appInfo.getId());
+    	 	    		info.setPackage_name(appInfo.getAppPackage());
+    	 	    		info.setTitle_zh(appInfo.getAppCnName());
+    	 	    		info.setTitle_en(appInfo.getAppEnName());
+    	 	    		info.setIcon_url(appInfo.getAppIcon());
+    	 	    		info.setDeveloper(appInfo.getAppAuthor() == null ? "" : appInfo
+								.getAppAuthor());
+    	 	    		info.setVersion_name(appInfo.getAppVersion());
+    	 	    		info.setVersion_code(appInfo.getAppVersionCode());
+    	 	    		info.setDownload_url(appInfo.getAppApk());
+    	 	    		info.setSize(appInfo.getApkSize()/1024);
+    	 	    		info.setDownload_count(appInfo.getDownloadCount());
+    	 	    		info.setOffical('0');
+    	 	    		info.setFrom(SearchConstants.FROM_LOCAL);
+    	 	    		return info;
+    			 }
+    		 }else{
+    			RelationRecResultAppInfo info = new RelationRecResultAppInfo();
+ 	    		info.setId(Long.valueOf(StringUtils.defaultIfEmpty(app.getDocid(), "0")));
+ 	    		info.setPackage_name(app.getPackagename());
+ 	    		info.setTitle_zh(app.getSname());
+ 	    		info.setTitle_en(app.getSname());
+ 	    		info.setIcon_url(app.getIcon());
+ 	    		info.setDeveloper(SearchConstants.DEVELOPER_FROM_NETWORK);
+ 	    		info.setVersion_name(app.getVersionname());
+ 	    		info.setVersion_code(app.getVersioncode() + "");
+ 	    		info.setDownload_url(app.getUrl());
+ 	    		info.setSize((int)app.getPackagesize()/1024);
+ 	    		info.setDownload_count(Integer.valueOf(StringUtils.defaultIfEmpty(app.getDownload_count(),"0")));
+ 	    		info.setOffical('0');
+ 	    		info.setFrom(SearchConstants.FROM_BAIDU);
+ 	    		return info; 
+    		 }
+    	}
+    	return null;
+	}
+	public AppInfoService getAppInfoService() {
+		return appInfoService;
+	}
+
+	public void setAppInfoService(AppInfoService appInfoService) {
+		this.appInfoService = appInfoService;
+	}
+
+	public AppInfoDAO getAppInfoDAO() {
+		return this.appInfoDAO;
+	}
+
+	public void setAppInfoDAO(AppInfoDAO appInfoDAO) {
+		this.appInfoDAO = appInfoDAO;
+	}
+
+	public SearchXmlProcessor getXmlProc() {
+		return this.xmlProc;
+	}
+
+	public void setXmlProc(SearchXmlProcessor xmlProc) {
+		this.xmlProc = xmlProc;
+	}
+
+}

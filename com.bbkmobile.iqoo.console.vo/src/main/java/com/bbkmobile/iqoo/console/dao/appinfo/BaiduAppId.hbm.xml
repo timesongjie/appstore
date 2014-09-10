@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping>
+	<class name="com.bbkmobile.iqoo.console.dao.appinfo.BaiduAppId"
+		table="t_app_baidu">
+		<id name="id" type="java.lang.Long">
+			<column name="id" />
+			<generator class="identity" />
+		</id>
+		<property name="baidu_id" type="string">
+			<column name="baidu_id" length="50">
+			</column>
+		</property>
+
+		<property name="url" type="string">
+			<column name="url" length="800">
+			</column>
+		</property>
+	</class>
+
+
+</hibernate-mapping>

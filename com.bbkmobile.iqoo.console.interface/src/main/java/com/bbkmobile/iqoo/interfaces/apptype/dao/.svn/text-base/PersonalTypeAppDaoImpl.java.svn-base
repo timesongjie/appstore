@@ -1,0 +1,130 @@
+package com.bbkmobile.iqoo.interfaces.apptype.dao;
+
+import java.sql.SQLException;
+import java.util.List;
+
+import org.apache.commons.lang.StringUtils;
+import org.hibernate.Criteria;
+import org.hibernate.Hibernate;
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Restrictions;
+import org.springframework.orm.hibernate3.HibernateCallback;
+import org.springframework.stereotype.Repository;
+
+import com.bbkmobile.iqoo.common.page.PageVO;
+import com.bbkmobile.iqoo.common.vo.CommonResultAppInfo;
+import com.bbkmobile.iqoo.console.dao.appinfo.AppInfo;
+import com.bbkmobile.iqoo.console.dao.apptype.PersonalType;
+import com.bbkmobile.iqoo.console.dao.apptype.PersonalTypeApp;
+import com.bbkmobile.iqoo.console.dao.modelmgr.Model;
+import com.bbkmobile.iqoo.console.dao.recommendation.AppInfoFilter;
+import com.bbkmobile.iqoo.interfaces.common.AnnotationBaseDao;
+@Repository("iPersonalTypeAppDao")
+public class PersonalTypeAppDaoImpl extends AnnotationBaseDao implements PersonalTypeAppDao{
+
+	@Override
+	public List<CommonResultAppInfo> listForInterface(final PersonalTypeApp app,
+			final PageVO page, String orderBy, final Model model) throws Exception {
+		return getHibernateTemplate().execute(new HibernateCallback<List<CommonResultAppInfo>>() {
+			@SuppressWarnings("unchecked")
+			@Override
+			public List<CommonResultAppInfo> doInHibernate(Session session)
+					throws HibernateException, SQLException {
+				final PersonalType type = app.getType();
+				return new AppInfoFilter(session){
+					@Override
+					public String preSql() {
+						return "select this_.orderSort as sortOrder,";
+					}
+					@Override
+					public String postSql() {
+						return " from t_type_personal_app this_ ,t_type_personal personalty1_,t_app_info appinfo1_ where"
+								+ "  this_.type_id = personalty1_.id and this_.app_id = appinfo1_.id and this_.type_id = :typeId";
+					}
+					@Override
+					public String orderSq() {
+						return " order by this_.orderSort asc ";
+					}
+					@Override
+					public void queryAssign() {
+						this.getQuery().addScalar("sortOrder",Hibernate.INTEGER);
+						this.getQuery().setInteger("typeId", type.getId());
+					}
+					
+				}.execute(page, model);
+			}
+			
+		});
+	}
+////////统计时统一过滤////////
+	private void filter(AppInfo info,Criteria criteria) {
+		Criteria app_criteria = criteria.createCriteria("appInfo", "appInfo");
+		if (StringUtils.isNotBlank(info.getFilter_model())) {
+			if(info.getMinSdkVersion() != null){
+				app_criteria.add(Restrictions.or(Restrictions.le(
+						"minSdkVersion", info.getMinSdkVersion()), Restrictions
+						.isNull("minSdkVersion")));
+			}
+			if(info.getMaxSdkVersion() != null){
+				app_criteria.add(Restrictions.or(Restrictions.ge(
+						"maxSdkVersion", info.getMaxSdkVersion()), Restrictions
+						.isNull("maxSdkVersion")));
+			}
+			if(StringUtils.isNotBlank(info.getCPU_ABI())){
+	            String sql="(CPU_ABI is null";
+	            String cpuabis[]=info.getCPU_ABI().split(","); 
+	            for(int i=0; i<cpuabis.length; i++)
+	            {
+	                String cpuabi=cpuabis[i];
+	                sql=sql+" or CPU_ABI like '%,"+cpuabi+",%'";                          
+	            }
+	            sql=sql+")";
+	            app_criteria.add(Restrictions.sqlRestriction(sql)); 
+	        }
+			app_criteria.add(Restrictions
+					.sqlRestriction("(appStatus=0 or (appStatus=13 and filter_model not like '%," + info.getFilter_model() + ",%'))"));
+		}
+		else{
+			app_criteria.add(Restrictions.ne("appStatus", (short) 12));
+	    }
+	}
+	@Override
+	public int count(PersonalTypeApp app) throws Exception {
+		Criteria createCriteria = getSession().createCriteria(PersonalTypeApp.class);
+		if(app != null){
+			if(app.getType() != null && app.getType().getId() != null){
+				Criteria criterion = createCriteria.createCriteria("type", Criteria.LEFT_JOIN);
+				criterion.add(Restrictions.eq("id", app.getType().getId()));
+			}
+		}
+		//createCriteria.createCriteria("appInfo", Criteria.LEFT_JOIN);
+		filter(app.getAppInfo(),createCriteria);
+		Integer result = ((Integer) createCriteria.setProjection(Projections.rowCount()).uniqueResult());
+		if(result != null){
+			return result.intValue();
+		}
+		return 0;
+	}
+	@Override
+	public List<PersonalType> list(PersonalType type) throws Exception {
+		Session session = getSession();
+		if(type != null){
+			Criteria criteria = session.createCriteria(PersonalType.class);
+			if(type.getId() != null){
+				criteria.add(Restrictions.eq("id", type.getId()));
+			}
+			if(type.getName() != null){
+				criteria.add(Restrictions.eq("name", type.getName()));
+			}
+			if(type.getTag() != null){
+				criteria.add(Restrictions.eq("tag", type.getTag()));
+			}
+			criteria.addOrder(Order.asc("order"));
+			return criteria.list();
+		}
+		return session.createCriteria(PersonalType.class).addOrder(Order.asc("order")).list();
+	}
+}

@@ -1,0 +1,27 @@
+/**
+ * 
+ */
+package com.bbkmobile.iqoo.console.dao.example;
+
+import java.util.List;
+
+import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
+
+/**
+ * @author wangbo
+ * @version 1.0.0.0/2011-11-18
+ */
+
+@SuppressWarnings({"unchecked"})
+public class PersonDaoImpl extends HibernateDaoSupport implements PersonDao {
+
+	/* (non-Javadoc)
+	 * @see com.bbkmobile.iqoo.www.dao.PersonDao#findAll()
+	 */
+	
+	public List<Person> findAll() {
+		
+		return getHibernateTemplate().find("from Person");
+	}
+
+}

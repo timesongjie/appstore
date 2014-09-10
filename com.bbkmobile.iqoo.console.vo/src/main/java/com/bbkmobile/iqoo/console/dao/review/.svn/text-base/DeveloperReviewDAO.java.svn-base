@@ -1,0 +1,36 @@
+package com.bbkmobile.iqoo.console.dao.review;
+
+import java.util.List;
+
+import com.bbkmobile.iqoo.console.dao.appinfo.Developer;
+
+public interface DeveloperReviewDAO {
+
+	//个人开发者
+	List<DeveloperPersonalInfo> findAllDeveloperReview(DeveloperPersonalInfo personalInfo,
+			int startRecord) throws Exception;
+
+	int countAllPersonalRecords(DeveloperPersonalInfo personalInfo) throws Exception;
+
+	DeveloperPersonalInfo findPersonalDetailInfo(Integer id) throws Exception;
+
+	boolean addDeveloperReviewRecord(
+			DeveloperReviewRecords developerReviewRecords, Integer adminUserId) throws Exception;
+
+	List<DeveloperReviewRecords> findDeveloperReviewRecords(Developer developer) throws Exception;
+
+	
+	//企业开发者
+	int countAllCompanyRecords(DeveloperCompanyInfo companyInfo) throws Exception;
+	List<DeveloperCompanyInfo> findAllCompanyReview(DeveloperCompanyInfo companyInfo,
+			int startRecord) throws Exception;
+
+	DeveloperCompanyInfo findCompanyDetailInfo(Long id) throws Exception;
+	
+	boolean addCompanyReviewRecord(
+			DeveloperReviewRecords developerReviewRecords, Integer adminUserId) throws Exception;
+
+	DeveloperCompanyInfo findCompanyByDeveloper(Integer id) throws Exception;
+
+	DeveloperPersonalInfo findPersonalByDeveloper(Integer id) throws Exception;
+}
